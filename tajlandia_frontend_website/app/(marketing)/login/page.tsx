@@ -1,20 +1,15 @@
 import type { Metadata } from "next";
-import { ComingSoon } from "@/components/shared/ComingSoon";
 import { createPageMetadata } from "@/lib/seo/metadata";
 import { routes } from "@/lib/constants/routes";
+import { LoginPage } from "@/modules/login";
 
 export const metadata: Metadata = createPageMetadata({
   title: "Login",
-  description: "Account access will be introduced with the authentication module.",
+  description: "Sign in to continue your Tajlandia journey.",
   path: routes.login,
   index: false,
 });
 
-export default function LoginPage() {
-  return (
-    <ComingSoon
-      title="Login is coming soon"
-      description="Authentication will be added as an independent module when account features are ready."
-    />
-  );
+export default function LoginRoutePage() {
+  return <LoginPage />;
 }
