@@ -5,8 +5,6 @@ import { ExploreMapPage } from "../ExploreMapPage";
 describe("ExploreMapPage", () => {
   it("renders the explore module heading", () => {
     render(<ExploreMapPage />);
-    expect(
-      screen.getByRole("heading", { name: /explore map is next/i }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /discover thailand/i })).toBeInTheDocument();
   });
 });

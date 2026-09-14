@@ -1,6 +1,5 @@
 "use client";
 
-import { usePathname } from "next/navigation";
 import { BrandLogo } from "@/components/ui/BrandLogo";
 import { Button } from "@/components/ui/Button";
 import { Container } from "@/components/ui/Container";
@@ -10,17 +9,9 @@ import { routes } from "@/lib/constants/routes";
 import { cn } from "@/lib/utils/cn";
 
 export function SiteHeader() {
-  const pathname = usePathname();
-  const isHome = pathname === routes.home;
-
   return (
     <header
-      className={cn(
-        "z-40 w-full",
-        isHome
-          ? "absolute inset-x-0 top-0 bg-transparent"
-          : "sticky top-0 border-b border-line/80 bg-white/95 backdrop-blur-md",
-      )}
+      className={cn("sticky top-0 z-40 w-full border-b border-line/80 bg-white/95 backdrop-blur-md")}
     >
       <Container className="grid h-[4.5rem] grid-cols-[auto_1fr_auto] items-center gap-3 sm:h-20 lg:grid-cols-[1fr_auto_1fr] lg:gap-6">
         <BrandLogo />

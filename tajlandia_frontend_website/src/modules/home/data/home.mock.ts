@@ -125,21 +125,20 @@ export const homePageContent: HomePageContent = {
     ],
   },
   testimonials: {
-    eyebrow: "See why",
+    eyebrow: "Your",
     headingBefore: "Something worth",
-    headingAccent: "trusting",
+    headingAccent: "Keeping",
     items: [
       {
         id: "amelia",
-        quote:
-          "The map made Thailand feel understandable. I could compare regions without bouncing between ten different sites.",
+        quote: "A digital keepsake, issued the moment you claim your fragment.",
         name: "Amelia Hart",
         role: "Lifestyle buyer, UK",
         image: {
-          src: "/images/home/testimonial.jpg",
-          alt: "Amelia Hart with her partner in Thailand",
-          width: 1600,
-          height: 1200,
+          src: "/images/home/certificate.png",
+          alt: "Tajlandia certificate of symbolic ownership",
+          width: 484,
+          height: 608,
         },
         order: 1,
         isActive: true,
@@ -153,9 +152,9 @@ export const homePageContent: HomePageContent = {
   },
   cta: {
     title: "Your piece of Thailand",
-    subtitle: "The future is waiting.",
+    subtitle: "Join the priority list. We'll let you know when the map opens.",
     cta: {
-      label: "Explore",
+      label: "Explore Thailand →",
       href: routes.explore,
     },
     image: {
