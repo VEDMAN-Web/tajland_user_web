@@ -1,5 +1,6 @@
+import { Button } from "@/components/ui/Button";
 import { Container } from "@/components/ui/Container";
-import { SectionHeading } from "@/components/ui/SectionHeading";
+import { routes } from "@/lib/constants/routes";
 import { HomeMedia } from "../components/HomeMedia";
 import type { HomePageContent } from "../types/home.types";
 
@@ -8,57 +9,41 @@ type TestimonialsSectionProps = {
 };
 
 export function TestimonialsSection({ content }: TestimonialsSectionProps) {
-  const [featured, ...rest] = content.items;
+  const [featured] = content.items;
 
   if (!featured) {
     return null;
   }
 
   return (
-    <section className="bg-[#F7F8FC] py-16 md:py-24">
+    <section id="certificate" className="bg-white py-20 md:py-28">
       <Container>
-        <div className="grid items-center gap-10 lg:grid-cols-2 lg:gap-16">
-          <div className="min-w-0">
-            <SectionHeading align="left" eyebrow={content.eyebrow} className="mb-0">
-              {content.headingBefore}{" "}
-              <span className="font-display italic text-brand-red">
-                {content.headingAccent}
-              </span>
-            </SectionHeading>
-            {rest.length > 0 ? (
-              <ul className="mt-8 space-y-4">
-                {rest.map((item) => (
-                  <li key={item.id} className="rounded-[1.5rem] bg-white p-5 shadow-sm">
-                    <p className="text-navy">{item.quote}</p>
-                    <p className="mt-3 text-sm font-semibold text-navy">{item.name}</p>
-                    <p className="text-sm text-muted">{item.role}</p>
-                  </li>
-                ))}
-              </ul>
-            ) : null}
+        <div className="grid items-center gap-12 lg:grid-cols-[1fr_0.82fr] lg:gap-20">
+          <div className="min-w-0 lg:pl-8">
+            <p className="font-display text-[15px] text-navy">
+              {content.eyebrow} <span className="italic text-brand-red">Keepsake</span>
+            </p>
+            <h2 className="mt-5 max-w-[450px] font-display text-[47px] leading-[1.03] tracking-[-0.04em] text-navy sm:text-[56px]">
+              {content.headingBefore}
+              <br />
+              worth <span className="italic text-brand-red">{content.headingAccent}.</span>
+            </h2>
+            <p className="mt-6 max-w-[500px] text-[16px] leading-6 text-foreground">
+              {featured.quote}
+            </p>
+            <Button href={routes.explore} className="mt-7" size="md">
+              Get yours →
+            </Button>
           </div>
-          <figure className="relative min-h-[22rem] min-w-0 overflow-hidden rounded-[2rem] bg-navy shadow-[0_18px_50px_rgba(11,31,77,0.18)] sm:min-h-[26rem]">
+          <figure className="flex min-w-0 justify-center lg:justify-end">
             {featured.image ? (
               <HomeMedia
                 image={featured.image}
-                fill
-                sizes="(min-width: 1024px) 40vw, 100vw"
-                className="object-cover"
+                priority
+                sizes="(max-width: 1024px) 80vw, 390px"
+                className="h-auto w-full max-w-[350px] object-contain"
               />
             ) : null}
-            <div className="absolute inset-0 bg-gradient-to-t from-navy/85 via-navy/25 to-transparent" />
-            <figcaption className="absolute inset-x-0 bottom-0 p-6 text-white sm:p-8">
-              {content.rating ? (
-                <p className="mb-3 text-sm font-semibold tracking-wide text-white/90">
-                  {content.rating.score} · {content.rating.label}
-                </p>
-              ) : null}
-              <blockquote className="text-base leading-7 sm:text-lg">
-                “{featured.quote}”
-              </blockquote>
-              <p className="mt-4 text-sm font-semibold">{featured.name}</p>
-              <p className="text-sm text-white/75">{featured.role}</p>
-            </figcaption>
           </figure>
         </div>
       </Container>

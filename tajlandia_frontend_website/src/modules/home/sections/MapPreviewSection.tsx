@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { Container } from "@/components/ui/Container";
-import { SectionHeading } from "@/components/ui/SectionHeading";
 import { ThailandMap } from "../components/ThailandMap";
 import type { HomePageContent } from "../types/home.types";
 
@@ -10,32 +9,42 @@ type MapPreviewSectionProps = {
 
 export function MapPreviewSection({ content }: MapPreviewSectionProps) {
   const map = <ThailandMap pins={content.pins} />;
+  const headingLead = content.headingBefore.replace(/\s+experience$/, "");
 
   return (
-    <section className="bg-[#F4F6FB] py-16 md:py-24">
+    <section id="map" className="bg-white py-16 md:py-20">
       <Container>
-        <SectionHeading>
-          {content.headingBefore}{" "}
-          <span className="italic text-brand-red">{content.headingAccent}</span>
-          {content.headingAfter ? ` ${content.headingAfter}` : null}
-        </SectionHeading>
-        {content.description ? (
-          <p className="mx-auto mb-10 max-w-2xl text-center text-muted">
-            {content.description}
+        <div className="mb-10 grid items-end gap-8 lg:mb-12 lg:grid-cols-[1fr_0.72fr] lg:gap-12">
+          <div>
+            <p className="mb-4 font-display text-[18px] text-navy">
+              What you <span className="italic text-brand-red">Receive</span>
+            </p>
+            <h2 className="max-w-[600px] font-display text-[42px] font-semibold leading-[0.98] tracking-[-0.04em] text-navy sm:text-[54px] lg:text-[60px]">
+              {headingLead}
+              <br />
+              experience <span className="italic text-brand-red">{content.headingAccent}.</span>
+              {content.headingAfter ? ` ${content.headingAfter}` : null}
+            </h2>
+          </div>
+          <p className="max-w-[560px] justify-self-start text-[22px] leading-7 text-muted lg:justify-self-end lg:pb-1 lg:text-right">
+            {content.description ?? "Explore the map, discover a place that resonates with you, and claim its story as your own."}
           </p>
-        ) : null}
-        <div className="overflow-hidden rounded-[2rem] bg-white px-4 py-8 shadow-[0_16px_50px_rgba(11,31,77,0.08)] md:px-10">
-          {content.cta ? (
-            <Link
-              href={content.cta.href}
-              className="block rounded-[1.5rem] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-navy"
-              aria-label={content.cta.label}
-            >
-              {map}
-            </Link>
-          ) : (
-            map
-          )}
+        </div>
+
+        <div className="relative overflow-hidden rounded-[2rem] bg-[#eaf8f8] p-2 shadow-[0_16px_50px_rgba(11,31,77,0.08)] sm:p-3">
+          <div className="overflow-hidden rounded-[1.5rem]">
+            {content.cta ? (
+              <Link
+                href={content.cta.href}
+                className="block rounded-[1.5rem] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-navy"
+                aria-label={content.cta.label}
+              >
+                {map}
+              </Link>
+            ) : (
+              map
+            )}
+          </div>
         </div>
       </Container>
     </section>
