@@ -5,23 +5,25 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { mainNavigation } from "@/lib/constants/navigation";
 import { routes } from "@/lib/constants/routes";
+import { logoutAction } from "@/modules/auth/services/logout.service";
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/utils/cn";
+import type { AuthUser } from "@/modules/auth/types/auth.types";
 
-export function MobileNav() {
+type MobileNavProps = {
+  user: AuthUser | null;
+};
+
+export function MobileNav({ user }: MobileNavProps) {
   const [open, setOpen] = useState(false);
   const menuId = useId();
   const pathname = usePathname();
 
   useEffect(() => {
-    if (!open) {
-      return;
-    }
+    if (!open) return;
 
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setOpen(false);
-      }
+      if (event.key === "Escape") setOpen(false);
     };
 
     document.addEventListener("keydown", onKeyDown);
@@ -69,7 +71,6 @@ export function MobileNav() {
           <nav className="flex flex-col gap-1">
             {mainNavigation.map((item) => {
               const isActive = pathname === item.href;
-
               return (
                 <Link
                   key={item.href}
@@ -87,17 +88,38 @@ export function MobileNav() {
             })}
           </nav>
           <div className="mt-8 flex flex-col gap-3">
-            <Button
-              href={routes.signup}
-              variant="secondary"
-              className="w-full"
-              onClick={() => setOpen(false)}
-            >
-              Sign Up
-            </Button>
-            <Button href={routes.login} className="w-full" onClick={() => setOpen(false)}>
-              Login
-            </Button>
+            {user ? (
+              <>
+                <p className="text-center text-[13px] font-medium text-navy">
+                  Signed in as {user.name}
+                </p>
+                <Button href={routes.dashboard} className="w-full" onClick={() => setOpen(false)}>
+                  Dashboard
+                </Button>
+                <form action={logoutAction}>
+                  <button
+                    type="submit"
+                    className="h-11 w-full rounded-[9px] border border-[#e5e7eb] text-[12px] font-medium text-[#d52b35] transition hover:border-[#d52b35] hover:bg-[#fff5f5]"
+                  >
+                    Logout
+                  </button>
+                </form>
+              </>
+            ) : (
+              <>
+                <Button
+                  href={routes.signup}
+                  variant="secondary"
+                  className="w-full"
+                  onClick={() => setOpen(false)}
+                >
+                  Sign Up
+                </Button>
+                <Button href={routes.login} className="w-full" onClick={() => setOpen(false)}>
+                  Login
+                </Button>
+              </>
+            )}
           </div>
         </div>
       ) : null}

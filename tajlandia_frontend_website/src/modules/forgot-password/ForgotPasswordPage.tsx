@@ -8,6 +8,7 @@ import {
   forgotPasswordSchema,
   type ForgotPasswordFormValues,
 } from "./schemas/forgot-password.schema";
+import { forgotPasswordAction } from "./services/forgot-password.service";
 
 type ForgotPasswordErrors = Partial<Record<keyof ForgotPasswordFormValues, string>>;
 
@@ -20,15 +21,18 @@ export function ForgotPasswordPage() {
   const [values, setValues] = useState<ForgotPasswordFormValues>(initialValues);
   const [errors, setErrors] = useState<ForgotPasswordErrors>({});
   const [successMessage, setSuccessMessage] = useState("");
+  const [apiError, setApiError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const router = useRouter();
 
   function updateField(field: keyof ForgotPasswordFormValues, value: string | boolean) {
     setValues((current) => ({ ...current, [field]: value }));
     setErrors((current) => ({ ...current, [field]: undefined }));
     setSuccessMessage("");
+    setApiError("");
   }
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     const result = forgotPasswordSchema.safeParse(values);
@@ -45,11 +49,29 @@ export function ForgotPasswordPage() {
 
       setErrors(nextErrors);
       setSuccessMessage("");
+      setApiError("");
       return;
     }
 
     setErrors({});
-    router.push(`/otp?email=${encodeURIComponent(result.data.email)}`);
+    setSuccessMessage("");
+    setApiError("");
+    setIsSubmitting(true);
+
+    try {
+      const actionResult = await forgotPasswordAction(result.data);
+
+      if (actionResult.ok) {
+        // Navigate to OTP page with email
+        router.push(`/otp?email=${encodeURIComponent(actionResult.email)}`);
+      } else {
+        setApiError(actionResult.message);
+      }
+    } catch {
+      setApiError("Unable to process your request right now. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -134,9 +156,14 @@ export function ForgotPasswordPage() {
                   {successMessage}
                 </p>
               ) : null}
+              {apiError ? (
+                <p role="alert" className="mt-4 text-center text-[12px] text-[#d52b35]">
+                  {apiError}
+                </p>
+              ) : null}
 
-              <button type="submit" className="mt-5 h-11 w-full rounded-[9px] bg-navy text-[12px] font-medium text-white shadow-[0_3px_5px_rgba(11,31,77,0.18)] transition hover:bg-navy-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy">
-                Send Code
+              <button type="submit" disabled={isSubmitting} className="mt-5 h-11 w-full rounded-[9px] bg-navy text-[12px] font-medium text-white shadow-[0_3px_5px_rgba(11,31,77,0.18)] transition hover:bg-navy-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy disabled:cursor-not-allowed disabled:opacity-60">
+                {isSubmitting ? "Sending Code..." : "Send Code"}
               </button>
             </form>
           </div>

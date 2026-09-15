@@ -1,16 +1,19 @@
 "use server";
 
-import { z } from "zod";
+import { redirect } from "next/navigation";
 import { apiPost, isApiError } from "@/lib/api/client";
+import { setSession } from "@/lib/auth/session";
+import { loginResponseSchema } from "@/modules/auth";
 import { loginSchema, type LoginFormValues } from "../schemas/login.schema";
-
-const loginResponseSchema = z.unknown();
 
 export type LoginActionResult =
   | { ok: true }
   | { ok: false; message: string };
 
-export async function loginAction(values: LoginFormValues): Promise<LoginActionResult> {
+export async function loginAction(
+  values: LoginFormValues,
+  returnTo?: string
+): Promise<LoginActionResult> {
   const parsed = loginSchema.safeParse(values);
 
   if (!parsed.success) {
@@ -18,19 +21,41 @@ export async function loginAction(values: LoginFormValues): Promise<LoginActionR
   }
 
   try {
-    await apiPost("/auth/login", parsed.data, loginResponseSchema);
-    return { ok: true };
-  } catch (error) {
-    if (isApiError(error)) {
-      if (error.status === 401 || error.status === 403) {
-        return { ok: false, message: "Invalid email or password." };
-      }
+    const response = await apiPost("/auth/login", parsed.data, loginResponseSchema);
 
-      if (error.status === 400) {
-        return { ok: false, message: "Please check your email and password." };
-      }
+    // Store session in httpOnly cookies
+    await setSession({
+      accessToken: response.data.accessToken,
+      refreshToken: response.data.refreshToken,
+      user: response.data.user,
+    });
+  } catch (error) {
+    // Next.js redirect() works by throwing a special internal error.
+    // Re-throw anything that is not an ApiError so redirect propagates.
+    if (!isApiError(error)) {
+      throw error;
+    }
+
+    // Log the actual error for debugging
+    console.error("Login API error:", {
+      status: error.status,
+      code: error.code,
+      message: error.message,
+    });
+
+    if (error.status === 401 || error.status === 403) {
+      return { ok: false, message: "Invalid email or password." };
+    }
+
+    if (error.status === 400) {
+      return { ok: false, message: "Please check your email and password." };
     }
 
     return { ok: false, message: "Unable to log in right now. Please try again." };
   }
+
+  // redirect() is called outside try/catch so it can throw freely
+  // Redirect to return URL or home page
+  const destination = returnTo || "/";
+  redirect(destination);
 }

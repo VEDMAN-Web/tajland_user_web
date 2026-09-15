@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState, type ClipboardEvent, type FormEvent, type KeyboardEvent } from "react";
 import { routes } from "@/lib/constants/routes";
 import { otpSchema } from "./schemas/otp.schema";
+import { verifyOtpAction, resendOtpAction } from "./services/otp.service";
 
 const OTP_LENGTH = 6;
 
@@ -15,6 +16,8 @@ export function OtpPage() {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [secondsRemaining, setSecondsRemaining] = useState(30);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isResending, setIsResending] = useState(false);
   const inputRefs = useRef<Array<HTMLInputElement | null>>([]);
 
   useEffect(() => {
@@ -66,7 +69,7 @@ export function OtpPage() {
     inputRefs.current[Math.min(pasted.length, OTP_LENGTH) - 1]?.focus();
   }
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const code = digits.join("");
     const result = otpSchema.safeParse(code);
@@ -77,19 +80,60 @@ export function OtpPage() {
       return;
     }
 
-    // No OTP API exists yet, so the entered code cannot be verified safely here.
-    setError("OTP verification is unavailable until the backend verification service is connected.");
-    setMessage("");
-  }
-
-  function resendCode() {
-    if (secondsRemaining > 0) {
+    const emailParam = searchParams.get("email");
+    if (!emailParam) {
+      setError("Email is required. Please start from the forgot password page.");
       return;
     }
 
-    setSecondsRemaining(30);
     setError("");
-    setMessage("A new code can be requested when the backend service is connected.");
+    setMessage("");
+    setIsSubmitting(true);
+
+    try {
+      const actionResult = await verifyOtpAction(emailParam, code);
+
+      if (actionResult.ok) {
+        setMessage("OTP verified successfully");
+      } else {
+        setError(actionResult.message);
+      }
+    } catch {
+      setError("Unable to verify OTP right now. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  async function resendCode() {
+    if (secondsRemaining > 0 || isResending) {
+      return;
+    }
+
+    const emailParam = searchParams.get("email");
+    if (!emailParam) {
+      setError("Email is required. Please start from the forgot password page.");
+      return;
+    }
+
+    setIsResending(true);
+    setError("");
+    setMessage("");
+
+    try {
+      const actionResult = await resendOtpAction(emailParam);
+
+      if (actionResult.ok) {
+        setSecondsRemaining(30);
+        setMessage(actionResult.message);
+      } else {
+        setError(actionResult.message);
+      }
+    } catch {
+      setError("Unable to resend code right now. Please try again.");
+    } finally {
+      setIsResending(false);
+    }
   }
 
   return (
@@ -143,8 +187,8 @@ export function OtpPage() {
               {error ? <p role="alert" className="mt-3 text-center text-[11px] text-[#d52b35]">{error}</p> : null}
               {message ? <p role="status" className="mt-3 text-center text-[11px] text-green-600">{message}</p> : null}
 
-              <button type="submit" className="mt-5 h-11 w-full rounded-[9px] bg-navy text-[12px] font-medium text-white shadow-[0_3px_5px_rgba(11,31,77,0.18)] transition hover:bg-navy-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy">
-                Verify Code
+              <button type="submit" disabled={isSubmitting} className="mt-5 h-11 w-full rounded-[9px] bg-navy text-[12px] font-medium text-white shadow-[0_3px_5px_rgba(11,31,77,0.18)] transition hover:bg-navy-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy disabled:cursor-not-allowed disabled:opacity-60">
+                {isSubmitting ? "Verifying..." : "Verify Code"}
               </button>
             </form>
 
@@ -152,7 +196,9 @@ export function OtpPage() {
               Didn&apos;t receive the code? {secondsRemaining > 0 ? (
                 <span className="text-[#d9272e]">Resend in 00:{String(secondsRemaining).padStart(2, "0")}</span>
               ) : (
-                <button type="button" onClick={resendCode} className="text-[#d9272e] hover:underline">Resend code</button>
+                <button type="button" onClick={resendCode} disabled={isResending} className="text-[#d9272e] hover:underline disabled:cursor-not-allowed disabled:opacity-60">
+                  {isResending ? "Sending..." : "Resend code"}
+                </button>
               )}
             </p>
           </div>

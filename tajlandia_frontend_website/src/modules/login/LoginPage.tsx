@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { loginSchema, type LoginFormValues } from "./schemas/login.schema";
 import { loginAction } from "./services/login.service";
 
@@ -54,6 +55,9 @@ function GoogleIcon() {
 }
 
 export function LoginPage() {
+  const searchParams = useSearchParams();
+  const returnTo = searchParams.get("from") || undefined;
+  
   const [values, setValues] = useState<LoginFormValues>({ email: "", password: "" });
   const [errors, setErrors] = useState<LoginErrors>({});
   const [showPassword, setShowPassword] = useState(false);
@@ -93,11 +97,10 @@ export function LoginPage() {
     setIsSubmitting(true);
 
     try {
-      const actionResult = await loginAction(validationResult.data);
+      const actionResult = await loginAction(validationResult.data, returnTo);
 
-      if (actionResult.ok) {
-        setSuccessMessage("Login successful");
-      } else {
+      // loginAction redirects on success — this branch only runs on failure
+      if (!actionResult.ok) {
         setApiError(actionResult.message);
       }
     } catch {
