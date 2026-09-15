@@ -1,20 +1,9 @@
 export type CspOptions = {
   nonce: string;
   isDev: boolean;
-  apiOrigin?: string;
 };
 
-export function buildContentSecurityPolicy({ nonce, isDev, apiOrigin }: CspOptions): string {
-  let apiConnectOrigin = "";
-
-  if (apiOrigin) {
-    try {
-      apiConnectOrigin = ` ${new URL(apiOrigin).origin}`;
-    } catch {
-      apiConnectOrigin = "";
-    }
-  }
-
+export function buildContentSecurityPolicy({ nonce, isDev }: CspOptions): string {
   return [
     "default-src 'self'",
     `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${isDev ? " 'unsafe-eval'" : ""}`,
@@ -25,7 +14,7 @@ export function buildContentSecurityPolicy({ nonce, isDev, apiOrigin }: CspOptio
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",
-    `connect-src 'self'${apiConnectOrigin}`,
+    "connect-src 'self'",
     "frame-src 'none'",
     "frame-ancestors 'none'",
     "upgrade-insecure-requests",

@@ -1,25 +1,10 @@
+"use server";
+
 import { z } from "zod";
 import { apiPost, isApiError } from "@/lib/api/client";
-import { storeAuthTokens } from "@/lib/auth/token-storage";
 import { loginSchema, type LoginFormValues } from "../schemas/login.schema";
 
-const loginResponseSchema = z.object({
-  success: z.literal(true),
-  message: z.string(),
-  data: z.object({
-    accessToken: z.string().min(1),
-    refreshToken: z.string().min(1),
-    user: z.object({
-      id: z.string(),
-      name: z.string(),
-      email: z.string().email(),
-      role: z.string(),
-      isActive: z.boolean(),
-      isEmailVerified: z.boolean(),
-      lastLoginAt: z.string().datetime().nullable(),
-    }),
-  }),
-});
+const loginResponseSchema = z.unknown();
 
 export type LoginActionResult =
   | { ok: true }
@@ -33,9 +18,7 @@ export async function loginAction(values: LoginFormValues): Promise<LoginActionR
   }
 
   try {
-    const response = await apiPost("/auth/login", parsed.data, loginResponseSchema);
-    storeAuthTokens(response.data.accessToken, response.data.refreshToken);
-
+    await apiPost("/auth/login", parsed.data, loginResponseSchema);
     return { ok: true };
   } catch (error) {
     if (isApiError(error)) {
@@ -45,14 +28,6 @@ export async function loginAction(values: LoginFormValues): Promise<LoginActionR
 
       if (error.status === 400) {
         return { ok: false, message: "Please check your email and password." };
-      }
-
-      if (error.status === 422) {
-        return { ok: false, message: "Please check your email and password." };
-      }
-
-      if (error.status === 404 || error.status >= 500) {
-        return { ok: false, message: "Unable to log in right now. Please try again." };
       }
     }
 
