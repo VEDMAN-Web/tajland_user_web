@@ -3,28 +3,21 @@ import "server-only";
 import type { ZodType } from "zod";
 import { getServerEnv } from "@/lib/config/server-env";
 import { joinSameOriginUrl } from "@/lib/security/urls";
+import { ApiError, type ApiGetOptions, type ApiPostOptions } from "@/lib/api/client";
 
 const DEFAULT_TIMEOUT_MS = 8_000;
 const MAX_RESPONSE_BYTES = 1_000_000;
 
-export class ApiError extends Error {
-  readonly status: number;
-  readonly code: string;
-
-  constructor(message: string, status: number, code = "API_ERROR") {
-    super(message);
-    this.name = "ApiError";
-    this.status = status;
-    this.code = code;
-  }
-}
-
-export type ApiGetOptions = {
-  fetchImpl?: typeof fetch;
-  timeoutMs?: number;
-};
-
-export type ApiPostOptions = ApiGetOptions;
+/**
+ * Authenticated variants of apiGet/apiPost that inject the user's access token
+ * instead of the API_SECRET. Used for endpoints that require a logged-in user:
+ * - GET /auth/me
+ * - POST /auth/change-password
+ * - POST /auth/logout
+ *
+ * For unauthenticated endpoints (register, login, refresh), use the standard
+ * apiGet/apiPost from client.ts.
+ */
 
 function resolveApiUrl(baseUrl: string, path: string): URL {
   const url = joinSameOriginUrl(baseUrl, path);
@@ -36,8 +29,9 @@ function resolveApiUrl(baseUrl: string, path: string): URL {
   return url;
 }
 
-export async function apiGet<T>(
+export async function authenticatedApiGet<T>(
   path: string,
+  accessToken: string,
   schema: ZodType<T>,
   options: ApiGetOptions = {},
 ): Promise<T> {
@@ -50,9 +44,8 @@ export async function apiGet<T>(
   const url = resolveApiUrl(env.API_BASE_URL, path);
   const headers = new Headers({ Accept: "application/json" });
 
-  if (env.API_SECRET) {
-    headers.set("Authorization", `Bearer ${env.API_SECRET}`);
-  }
+  // Inject user's access token instead of API_SECRET
+  headers.set("Authorization", `Bearer ${accessToken}`);
 
   const controller = new AbortController();
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
@@ -85,31 +78,22 @@ export async function apiGet<T>(
   }
 
   if (!response.ok) {
-    // Try to get error details from response body
-    let errorMessage = "The request failed";
-    try {
-      const errorJson: any = await response.json();
-      errorMessage = errorJson?.message || errorJson?.error || errorMessage;
-    } catch {
-      // If response body is not JSON, use default message
-    }
-    
-    throw new ApiError(errorMessage, response.status, "API_REQUEST_FAILED");
+    throw new ApiError("The request failed", response.status, "API_REQUEST_FAILED");
   }
 
   const json: unknown = await response.json();
   const parsed = schema.safeParse(json);
 
   if (!parsed.success) {
-    console.error("API response validation failed:", parsed.error);
     throw new ApiError("Unexpected API response", 502, "API_INVALID_RESPONSE");
   }
 
   return parsed.data;
 }
 
-export async function apiPost<T>(
+export async function authenticatedApiPost<T>(
   path: string,
+  accessToken: string,
   body: unknown,
   schema: ZodType<T>,
   options: ApiPostOptions = {},
@@ -126,9 +110,8 @@ export async function apiPost<T>(
     "Content-Type": "application/json",
   });
 
-  if (env.API_SECRET) {
-    headers.set("Authorization", `Bearer ${env.API_SECRET}`);
-  }
+  // Inject user's access token instead of API_SECRET
+  headers.set("Authorization", `Bearer ${accessToken}`);
 
   const controller = new AbortController();
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
@@ -162,39 +145,15 @@ export async function apiPost<T>(
   }
 
   if (!response.ok) {
-    // Try to get error details from response body
-    let errorMessage = "The request failed";
-    try {
-      const errorJson: any = await response.json();
-      errorMessage = errorJson?.message || errorJson?.error || errorMessage;
-    } catch {
-      // If response body is not JSON, use default message
-    }
-    
-    console.error("API POST error:", {
-      url: url.toString(),
-      status: response.status,
-      message: errorMessage,
-    });
-    
-    throw new ApiError(errorMessage, response.status, "API_REQUEST_FAILED");
+    throw new ApiError("The request failed", response.status, "API_REQUEST_FAILED");
   }
 
   const json: unknown = await response.json();
   const parsed = schema.safeParse(json);
 
   if (!parsed.success) {
-    console.error("API response validation failed:", {
-      url: url.toString(),
-      validationError: parsed.error,
-      receivedData: json,
-    });
     throw new ApiError("Unexpected API response", 502, "API_INVALID_RESPONSE");
   }
 
   return parsed.data;
-}
-
-export function isApiError(error: unknown): error is ApiError {
-  return error instanceof ApiError;
 }

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState, type FormEvent } from "react";
 import { routes } from "@/lib/constants/routes";
 import { signupSchema, type SignupFormValues } from "./schemas/signup.schema";
+import { signupAction } from "./services/signup.service";
 
 type SignupErrors = Partial<Record<keyof SignupFormValues, string>>;
 
@@ -49,14 +50,17 @@ export function SignupPage() {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
+  const [apiError, setApiError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   function updateField(field: keyof SignupFormValues, value: string | boolean) {
     setValues((current) => ({ ...current, [field]: value }));
     setErrors((current) => ({ ...current, [field]: undefined }));
     setSuccessMessage("");
+    setApiError("");
   }
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     const result = signupSchema.safeParse(values);
@@ -81,12 +85,27 @@ export function SignupPage() {
 
       setErrors(nextErrors);
       setSuccessMessage("");
+      setApiError("");
       return;
     }
 
-    // Account creation is not implemented yet. Keep this form frontend-only.
     setErrors({});
-    setSuccessMessage("Account created successfully");
+    setSuccessMessage("");
+    setApiError("");
+    setIsSubmitting(true);
+
+    try {
+      const actionResult = await signupAction(result.data);
+
+      // signupAction redirects on success — this branch only runs on failure
+      if (!actionResult.ok) {
+        setApiError(actionResult.message);
+      }
+    } catch {
+      setApiError("Unable to create your account right now. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   function fieldClass(hasError: boolean) {
@@ -234,8 +253,13 @@ export function SignupPage() {
                   {successMessage}
                 </p>
               ) : null}
-              <button type="submit" className="mt-5 h-11 w-full rounded-[9px] bg-navy text-[12px] font-medium text-white shadow-[0_3px_5px_rgba(11,31,77,0.18)] transition hover:bg-navy-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy">
-                Create Account
+              {apiError ? (
+                <p role="alert" className="mt-4 text-center text-[12px] text-[#d52b35]">
+                  {apiError}
+                </p>
+              ) : null}
+              <button type="submit" disabled={isSubmitting} className="mt-5 h-11 w-full rounded-[9px] bg-navy text-[12px] font-medium text-white shadow-[0_3px_5px_rgba(11,31,77,0.18)] transition hover:bg-navy-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy disabled:cursor-not-allowed disabled:opacity-60">
+                {isSubmitting ? "Creating Account..." : "Create Account"}
               </button>
             </form>
 
