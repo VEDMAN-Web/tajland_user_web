@@ -1,7 +1,6 @@
-import "server-only";
-
 import type { ZodType } from "zod";
-import { getServerEnv } from "@/lib/config/server-env";
+import { getPublicEnv } from "@/lib/config/public-env";
+import { getAccessToken } from "@/lib/auth/token-storage";
 import { joinSameOriginUrl } from "@/lib/security/urls";
 
 const DEFAULT_TIMEOUT_MS = 8_000;
@@ -36,23 +35,34 @@ function resolveApiUrl(baseUrl: string, path: string): URL {
   return url;
 }
 
+async function createHeaders(contentType?: string) {
+  const headers = new Headers({ Accept: "application/json" });
+  const accessToken = getAccessToken();
+
+  if (contentType) {
+    headers.set("Content-Type", contentType);
+  }
+
+  if (accessToken) {
+    headers.set("Authorization", `Bearer ${accessToken}`);
+  }
+
+  return headers;
+}
+
 export async function apiGet<T>(
   path: string,
   schema: ZodType<T>,
   options: ApiGetOptions = {},
 ): Promise<T> {
-  const env = getServerEnv();
+  const env = getPublicEnv();
 
-  if (!env.API_BASE_URL) {
+  if (!env.NEXT_PUBLIC_API_URL) {
     throw new ApiError("API is not configured", 500, "API_NOT_CONFIGURED");
   }
 
-  const url = resolveApiUrl(env.API_BASE_URL, path);
-  const headers = new Headers({ Accept: "application/json" });
-
-  if (env.API_SECRET) {
-    headers.set("Authorization", `Bearer ${env.API_SECRET}`);
-  }
+  const url = resolveApiUrl(env.NEXT_PUBLIC_API_URL, path);
+  const headers = await createHeaders();
 
   const controller = new AbortController();
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
@@ -104,21 +114,14 @@ export async function apiPost<T>(
   schema: ZodType<T>,
   options: ApiPostOptions = {},
 ): Promise<T> {
-  const env = getServerEnv();
+  const env = getPublicEnv();
 
-  if (!env.API_BASE_URL) {
+  if (!env.NEXT_PUBLIC_API_URL) {
     throw new ApiError("API is not configured", 500, "API_NOT_CONFIGURED");
   }
 
-  const url = resolveApiUrl(env.API_BASE_URL, path);
-  const headers = new Headers({
-    Accept: "application/json",
-    "Content-Type": "application/json",
-  });
-
-  if (env.API_SECRET) {
-    headers.set("Authorization", `Bearer ${env.API_SECRET}`);
-  }
+  const url = resolveApiUrl(env.NEXT_PUBLIC_API_URL, path);
+  const headers = await createHeaders("application/json");
 
   const controller = new AbortController();
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;

@@ -21,4 +21,14 @@ describe("buildContentSecurityPolicy", () => {
     expect(policy).toContain("unsafe-eval");
     expect(policy).not.toContain("unsafe-inline");
   });
+
+  it("allows the configured API origin for browser requests", () => {
+    const policy = buildContentSecurityPolicy({
+      nonce: "api-nonce",
+      isDev: false,
+      apiOrigin: "https://tajlandai-backend.onrender.com/api/v1",
+    });
+
+    expect(policy).toContain("connect-src 'self' https://tajlandai-backend.onrender.com");
+  });
 });

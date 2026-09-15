@@ -1,14 +1,15 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
-import { ApiError, apiGet, isApiError } from "./client";
-import { resetServerEnvCache } from "@/lib/config/server-env";
+import { ApiError, apiGet, apiPost, isApiError } from "./client";
+import { resetPublicEnvCache } from "@/lib/config/public-env";
 
 const schema = z.object({ id: z.string() });
 
 afterEach(() => {
-  resetServerEnvCache();
-  delete process.env.API_BASE_URL;
+  resetPublicEnvCache();
+  delete process.env.NEXT_PUBLIC_API_URL;
   delete process.env.API_SECRET;
+  window.localStorage.clear();
 });
 
 describe("apiGet", () => {
@@ -19,12 +20,12 @@ describe("apiGet", () => {
   });
 
   it("rejects absolute URLs", async () => {
-    process.env.API_BASE_URL = "https://api.tajlandia.test";
+    process.env.NEXT_PUBLIC_API_URL = "https://api.tajlandia.test";
     await expect(apiGet("https://evil.test/x", schema)).rejects.toBeInstanceOf(ApiError);
   });
 
   it("returns validated JSON on success", async () => {
-    process.env.API_BASE_URL = "https://api.tajlandia.test";
+    process.env.NEXT_PUBLIC_API_URL = "https://api.tajlandia.test";
     const fetchImpl = vi.fn().mockResolvedValue(
       new Response(JSON.stringify({ id: "home" }), {
         status: 200,
@@ -37,7 +38,7 @@ describe("apiGet", () => {
   });
 
   it("does not leak response bodies on failure", async () => {
-    process.env.API_BASE_URL = "https://api.tajlandia.test";
+    process.env.NEXT_PUBLIC_API_URL = "https://api.tajlandia.test";
     const fetchImpl = vi
       .fn()
       .mockResolvedValue(new Response("internal db password=secret", { status: 500 }));
@@ -49,7 +50,7 @@ describe("apiGet", () => {
   });
 
   it("rejects schema-invalid payloads", async () => {
-    process.env.API_BASE_URL = "https://api.tajlandia.test";
+    process.env.NEXT_PUBLIC_API_URL = "https://api.tajlandia.test";
     const fetchImpl = vi
       .fn()
       .mockResolvedValue(new Response(JSON.stringify({ nope: true }), { status: 200 }));
@@ -60,7 +61,7 @@ describe("apiGet", () => {
   });
 
   it("rejects oversized responses and identifies API errors", async () => {
-    process.env.API_BASE_URL = "https://api.tajlandia.test";
+    process.env.NEXT_PUBLIC_API_URL = "https://api.tajlandia.test";
     const fetchImpl = vi.fn().mockResolvedValue(
       new Response("{}", {
         status: 200,
@@ -74,13 +75,13 @@ describe("apiGet", () => {
     expect(isApiError(new Error("nope"))).toBe(false);
   });
 
-  it("sends the server secret and maps timeouts", async () => {
-    process.env.API_BASE_URL = "https://api.tajlandia.test";
-    process.env.API_SECRET = "super-secret-key-1";
+  it("sends the stored access token and maps timeouts", async () => {
+    process.env.NEXT_PUBLIC_API_URL = "https://api.tajlandia.test";
+    window.localStorage.setItem("tajlandia_access_token", "access-token");
 
     const fetchImpl = vi.fn().mockImplementation((_url, init: RequestInit) => {
       const headers = new Headers(init.headers);
-      expect(headers.get("Authorization")).toBe("Bearer super-secret-key-1");
+      expect(headers.get("Authorization")).toBe("Bearer access-token");
 
       return new Promise((_, reject) => {
         init.signal?.addEventListener("abort", () => {
@@ -99,12 +100,31 @@ describe("apiGet", () => {
   });
 
   it("maps network failures to a generic unavailable error", async () => {
-    process.env.API_BASE_URL = "https://api.tajlandia.test";
+    process.env.NEXT_PUBLIC_API_URL = "https://api.tajlandia.test";
     const fetchImpl = vi.fn().mockRejectedValue(new Error("ECONNRESET"));
 
     await expect(apiGet("/home", schema, { fetchImpl })).rejects.toMatchObject({
       code: "API_UNAVAILABLE",
       message: "Unable to reach the API",
     });
+  });
+});
+
+describe("apiPost", () => {
+  it("uses the configured API base URL and sends the JSON body", async () => {
+    process.env.NEXT_PUBLIC_API_URL = "https://tajlandai-backend.onrender.com/api/v1";
+    const fetchImpl = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ id: "login" }), { status: 200 }),
+    );
+
+    await apiPost("/auth/login", { email: "", password: "" }, schema, { fetchImpl });
+
+    expect(fetchImpl).toHaveBeenCalledWith(
+      new URL("https://tajlandai-backend.onrender.com/api/v1/auth/login"),
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ email: "", password: "" }),
+      }),
+    );
   });
 });

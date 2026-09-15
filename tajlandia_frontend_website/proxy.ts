@@ -6,6 +6,7 @@ export function proxy(request: NextRequest) {
   const contentSecurityPolicy = buildContentSecurityPolicy({
     nonce,
     isDev: process.env.NODE_ENV === "development",
+    apiOrigin: process.env.NEXT_PUBLIC_API_URL,
   });
 
   const requestHeaders = new Headers(request.headers);
