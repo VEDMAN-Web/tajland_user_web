@@ -79,7 +79,7 @@ export function ExploreMapPage() {
       </section>
 
       <section className="px-4 pt-14 sm:px-8 md:pt-20">
-        <Container className="max-w-[1415px]">
+        <Container>
           <div className="mb-7 flex items-end justify-between gap-5">
             <div>
               <h2 className="font-display text-[42px] leading-none tracking-[-0.04em] text-navy sm:text-[60px]">Explore by <span className="italic text-brand-red">Destination</span></h2>
@@ -107,7 +107,7 @@ export function ExploreMapPage() {
       </section>
 
       <section className="px-4 pt-14 sm:px-8 md:pt-20">
-        <Container className="max-w-[1580px]">
+        <Container>
           <Card className="grid items-stretch gap-8 overflow-hidden p-2 sm:p-3 lg:min-h-[628px] lg:grid-cols-2 lg:gap-10">
             <div className="relative min-h-[300px] overflow-hidden rounded-[1.25rem] bg-navy lg:min-h-0">
               <Image src="/images/explore/featured-thailand.jpg" alt="Thailand destination coastline" fill sizes="(max-width: 1024px) 100vw, 45vw" className="h-full w-full object-cover" />

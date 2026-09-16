@@ -14,7 +14,7 @@ export function HowItWorksSection({ content }: HowItWorksSectionProps) {
   const stepLabels = ["EXPLORE", "CHOOSE", "CLAIM", "CERTIFICATE"];
 
   return (
-    <section className="bg-white py-20 md:py-24 lg:py-28">
+    <section id="how-it-works" className="bg-white py-20 md:py-24 lg:py-28">
       <Container>
         <div className="mx-auto max-w-2xl text-center">
           <h2 className="font-display text-[39px] leading-none tracking-[-0.04em] text-navy sm:text-[45px]">

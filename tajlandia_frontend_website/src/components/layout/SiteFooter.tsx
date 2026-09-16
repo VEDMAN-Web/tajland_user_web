@@ -32,7 +32,7 @@ export function SiteFooter() {
         <div>
           <p className="mb-6 text-[17px] font-semibold text-navy">Company</p>
           <ul className="space-y-3 text-[15px]">
-            <li>Journal</li>
+            <li><FooterLink href="/#how-it-works">Journal</FooterLink></li>
             <li><FooterLink href="/#map">Map</FooterLink></li>
             <li><FooterLink href="/#certificate">Certificate</FooterLink></li>
             <li>FAQ</li>
