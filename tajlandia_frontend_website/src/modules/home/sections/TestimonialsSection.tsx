@@ -16,7 +16,7 @@ export function TestimonialsSection({ content }: TestimonialsSectionProps) {
   }
 
   return (
-    <section id="certificate" className="bg-white py-20 md:py-28">
+    <section id="certificate" className="bg-white py-[60px]">
       <Container>
         <div className="grid items-center gap-12 lg:grid-cols-[1fr_0.82fr] lg:gap-20">
           <div className="min-w-0 lg:pl-8">
