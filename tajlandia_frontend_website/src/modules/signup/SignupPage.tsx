@@ -1,9 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useState, type FormEvent } from "react";
+import { useRouter } from "next/navigation";
+import React, { useState } from "react";
 import { routes } from "@/lib/constants/routes";
 import { signupSchema, type SignupFormValues } from "./schemas/signup.schema";
+import { requestSignupOtpAction } from "./services/signup.service";
 
 type SignupErrors = Partial<Record<keyof SignupFormValues, string>>;
 
@@ -44,19 +46,23 @@ const initialValues: SignupFormValues = {
 };
 
 export function SignupPage() {
+  const router = useRouter();
   const [values, setValues] = useState<SignupFormValues>(initialValues);
   const [errors, setErrors] = useState<SignupErrors>({});
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
+  const [apiError, setApiError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   function updateField(field: keyof SignupFormValues, value: string | boolean) {
     setValues((current) => ({ ...current, [field]: value }));
     setErrors((current) => ({ ...current, [field]: undefined }));
     setSuccessMessage("");
+    setApiError("");
   }
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     const result = signupSchema.safeParse(values);
@@ -81,12 +87,38 @@ export function SignupPage() {
 
       setErrors(nextErrors);
       setSuccessMessage("");
+      setApiError("");
       return;
     }
 
-    // Account creation is not implemented yet. Keep this form frontend-only.
     setErrors({});
-    setSuccessMessage("Account created successfully");
+    setSuccessMessage("");
+    setApiError("");
+    setIsSubmitting(true);
+
+    try {
+      // Store signup form data in sessionStorage for OTP verification
+      sessionStorage.setItem("signupFormData", JSON.stringify(result.data));
+
+      // Prepare for OTP verification and redirect to OTP page
+      const actionResult = await requestSignupOtpAction(result.data);
+
+      if (actionResult.ok && actionResult.redirectUrl) {
+        setSuccessMessage("Redirecting to OTP verification...");
+        // Redirect to OTP page with default 123456 for testing
+        setTimeout(() => {
+          router.push(actionResult.redirectUrl!);
+        }, 800);
+      } else if (!actionResult.ok) {
+        setApiError(actionResult.message);
+        sessionStorage.removeItem("signupFormData");
+      }
+    } catch {
+      setApiError("Unable to process signup right now. Please try again.");
+      sessionStorage.removeItem("signupFormData");
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   function fieldClass(hasError: boolean) {
@@ -237,8 +269,13 @@ export function SignupPage() {
                   {successMessage}
                 </p>
               ) : null}
-              <button type="submit" className="mt-5 h-11 w-full rounded-[9px] bg-navy text-[12px] font-medium text-white shadow-[0_3px_5px_rgba(11,31,77,0.18)] transition hover:bg-navy-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy">
-                Create Account
+              {apiError ? (
+                <p role="alert" className="mt-4 text-center text-[12px] text-[#d52b35]">
+                  {apiError}
+                </p>
+              ) : null}
+              <button type="submit" disabled={isSubmitting} className="mt-5 h-11 w-full rounded-[9px] bg-navy text-[12px] font-medium text-white shadow-[0_3px_5px_rgba(11,31,77,0.18)] transition hover:bg-navy-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy disabled:cursor-not-allowed disabled:opacity-60">
+                {isSubmitting ? "Creating Account..." : "Create Account"}
               </button>
             </form>
 
