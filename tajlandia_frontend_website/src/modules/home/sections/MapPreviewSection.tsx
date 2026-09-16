@@ -12,9 +12,9 @@ export function MapPreviewSection({ content }: MapPreviewSectionProps) {
   const headingLead = content.headingBefore.replace(/\s+experience$/, "");
 
   return (
-    <section id="map" className="bg-white py-16 md:py-20">
+    <section id="map" className="bg-white py-[60px]">
       <Container>
-        <div className="mb-10 grid items-end gap-8 lg:mb-12 lg:grid-cols-[1fr_0.72fr] lg:gap-12">
+        <div className="mb-[60px] grid items-end gap-8 lg:mb-[60px] lg:grid-cols-[1fr_0.72fr] lg:gap-12">
           <div>
             <p className="mb-4 font-display text-[18px] text-navy">
               What you <span className="italic text-brand-red">Receive</span>

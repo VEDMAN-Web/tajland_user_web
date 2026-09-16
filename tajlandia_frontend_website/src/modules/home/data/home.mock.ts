@@ -13,10 +13,10 @@ export const homePageContent: HomePageContent = {
       href: routes.explore,
     },
     image: {
-      src: "/images/home/hero.jpg",
+      src: "/images/home/hero-reference.jpg",
       alt: "Thai temples under a clear blue sky",
-      width: 1920,
-      height: 1080,
+      width: 800,
+      height: 600,
     },
   },
   features: {

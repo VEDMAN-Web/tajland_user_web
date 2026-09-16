@@ -13,7 +13,7 @@ export function FeatureSection({ content }: FeatureSectionProps) {
   }
 
   return (
-    <section className="bg-white py-16 md:py-24">
+    <section className="bg-white py-[60px]">
       <Container>
         <SectionHeading description={content.subtitle}>{content.heading}</SectionHeading>
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">

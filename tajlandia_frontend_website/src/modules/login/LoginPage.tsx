@@ -127,6 +127,9 @@ export function LoginPage() {
 
         <div className="flex items-center px-4 py-12 sm:px-12 lg:px-[76px] lg:py-16">
           <div className="w-full max-w-[410px] lg:mx-auto">
+            <Link href="/" className="mb-4 inline-flex text-[12px] font-medium text-muted transition hover:text-navy">
+              ← Back to Home
+            </Link>
             <h2 className="text-[27px] font-semibold tracking-[-0.03em] text-navy">Welcome back</h2>
             <p className="mt-2 text-[12px] text-muted">Sign in to continue your Tajlandia journey.</p>
 

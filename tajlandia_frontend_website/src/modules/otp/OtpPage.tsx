@@ -2,13 +2,13 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useRef, useState, type ClipboardEvent, type FormEvent, type KeyboardEvent } from "react";
+import { Suspense, useEffect, useRef, useState, type ClipboardEvent, type FormEvent, type KeyboardEvent } from "react";
 import { routes } from "@/lib/constants/routes";
 import { otpSchema } from "./schemas/otp.schema";
 
 const OTP_LENGTH = 6;
 
-export function OtpPage() {
+function OtpPageContent() {
   const searchParams = useSearchParams();
   const email = searchParams.get("email") ?? "your email address";
   const [digits, setDigits] = useState<string[]>(Array(OTP_LENGTH).fill(""));
@@ -168,5 +168,13 @@ export function OtpPage() {
         </div>
       </div>
     </section>
+  );
+}
+
+export function OtpPage() {
+  return (
+    <Suspense fallback={<div className="min-h-[100svh] bg-white" />}>
+      <OtpPageContent />
+    </Suspense>
   );
 }
