@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Cormorant_Garamond, Plus_Jakarta_Sans } from "next/font/google";
+import { Cormorant_Garamond, Manrope, Playfair_Display, Plus_Jakarta_Sans } from "next/font/google";
 import { getPublicEnv } from "@/lib/config/public-env";
 import { brand } from "@/lib/constants/brand";
 import "./globals.css";
@@ -13,6 +13,18 @@ const cormorant = Cormorant_Garamond({
   variable: "--font-cormorant",
   subsets: ["latin"],
   weight: ["500", "600", "700"],
+});
+
+const playfairDisplay = Playfair_Display({
+  variable: "--font-playfair-display",
+  subsets: ["latin"],
+  weight: ["600"],
+});
+
+const manrope = Manrope({
+  variable: "--font-manrope",
+  subsets: ["latin"],
+  weight: ["400"],
 });
 
 const publicEnv = getPublicEnv();
@@ -37,7 +49,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${plusJakarta.variable} ${cormorant.variable} h-full antialiased`}
+      className={`${plusJakarta.variable} ${cormorant.variable} ${playfairDisplay.variable} ${manrope.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col font-sans">{children}</body>
     </html>

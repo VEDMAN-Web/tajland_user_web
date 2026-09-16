@@ -111,6 +111,9 @@ export function SignupPage() {
 
         <div className="flex items-center px-4 py-12 sm:px-12 lg:px-[80px] lg:py-16">
           <div className="w-full max-w-[422px] lg:mx-auto">
+            <Link href="/" className="mb-4 inline-flex text-[12px] font-medium text-muted transition hover:text-navy">
+              ← Back to Home
+            </Link>
             <h2 className="text-[27px] font-semibold tracking-[-0.03em] text-navy">Create your account</h2>
             <p className="mt-2 text-[12px] text-muted">start your journey and claim your little piece of Thailand.</p>
 

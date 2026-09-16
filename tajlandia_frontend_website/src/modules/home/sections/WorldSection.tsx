@@ -14,7 +14,7 @@ export function WorldSection({ content }: WorldSectionProps) {
   }
 
   return (
-    <section className="bg-white pb-16 md:pb-24" aria-label={content.alt}>
+    <section className="bg-white pb-[60px]" aria-label={content.alt}>
       <Container>
         <div className="overflow-hidden rounded-[1.75rem] bg-[#111318] shadow-[0_28px_80px_rgba(11,31,77,0.18)] ring-1 ring-black/10">
           <div className="relative flex h-11 items-center gap-3 border-b border-white/5 bg-[#1a1d24] px-4 sm:h-12 sm:px-5">
