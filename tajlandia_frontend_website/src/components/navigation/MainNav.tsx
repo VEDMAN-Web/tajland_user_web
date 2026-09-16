@@ -18,7 +18,7 @@ export function MainNav({ className }: MainNavProps) {
       className={cn("hidden items-center gap-6 lg:flex xl:gap-10", className)}
     >
       {mainNavigation.map((item) => {
-        const isActive = pathname === item.href;
+        const isActive = pathname === item.href.split("?")[0];
 
         return (
           <Link

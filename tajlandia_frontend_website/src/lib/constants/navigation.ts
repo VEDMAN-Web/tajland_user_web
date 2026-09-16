@@ -4,7 +4,7 @@ export const mainNavigation = [
   { href: routes.home, label: "Home" },
   { href: routes.explore, label: "Explore Map" },
   { href: routes.blog, label: "Blog" },
-  { href: routes.contact, label: "Get in Touch" },
+  { href: `${routes.contact}?inquiry=1`, label: "Get in Touch" },
 ] as const;
 
 export const footerNavigation = {
