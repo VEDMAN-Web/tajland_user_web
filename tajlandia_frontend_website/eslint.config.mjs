@@ -7,7 +7,6 @@ const moduleInternals = {
   message: "Import feature modules through their public API (@/modules/<name>).",
 };
 
-
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
