@@ -1,7 +1,10 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useRouter } from "next/navigation";
+import React, { useState } from "react";
 import Link from "next/link";
+import { routes } from "@/lib/constants/routes";
+import { setAuthToken, setAuthUser } from "@/lib/api/auth.utils";
 import { loginSchema, type LoginFormValues } from "./schemas/login.schema";
 import { loginAction } from "./services/login.service";
 
@@ -54,21 +57,20 @@ function GoogleIcon() {
 }
 
 export function LoginPage() {
+  const router = useRouter();
   const [values, setValues] = useState<LoginFormValues>({ email: "", password: "" });
   const [errors, setErrors] = useState<LoginErrors>({});
   const [showPassword, setShowPassword] = useState(false);
-  const [successMessage, setSuccessMessage] = useState("");
   const [apiError, setApiError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   function updateField(field: keyof LoginFormValues, value: string) {
     setValues((current) => ({ ...current, [field]: value }));
     setErrors((current) => ({ ...current, [field]: undefined }));
-    setSuccessMessage("");
     setApiError("");
   }
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     const validationResult = loginSchema.safeParse(values);
@@ -82,13 +84,11 @@ export function LoginPage() {
         }
       }
       setErrors(nextErrors);
-      setSuccessMessage("");
       setApiError("");
       return;
     }
 
     setErrors({});
-    setSuccessMessage("");
     setApiError("");
     setIsSubmitting(true);
 
@@ -96,7 +96,15 @@ export function LoginPage() {
       const actionResult = await loginAction(validationResult.data);
 
       if (actionResult.ok) {
-        setSuccessMessage("Login successful");
+        // Store authentication data
+        if (actionResult.token) {
+          setAuthToken(actionResult.token);
+        }
+        if (actionResult.user) {
+          setAuthUser(actionResult.user);
+        }
+        // Redirect to dashboard
+        router.push(routes.dashboard);
       } else {
         setApiError(actionResult.message);
       }
@@ -186,11 +194,6 @@ export function LoginPage() {
                 <Link href="/forgot-password" className="font-medium text-[#d9272e] hover:underline">Forgot password?</Link>
               </div>
 
-              {successMessage ? (
-                <p role="status" className="mt-5 text-center text-[12px] font-medium text-green-600">
-                  {successMessage}
-                </p>
-              ) : null}
               {apiError ? (
                 <p role="alert" className="mt-5 text-center text-[12px] text-[#d52b35]">
                   {apiError}
