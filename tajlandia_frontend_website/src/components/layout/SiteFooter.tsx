@@ -22,7 +22,7 @@ function FooterLink({ href, children }: { href: string; children: React.ReactNod
 export function SiteFooter() {
   return (
     <footer className="relative overflow-hidden bg-[#fbfcfd] text-[#74777d]">
-      <div className="pointer-events-none absolute inset-0 opacity-60 [background-image:radial-gradient(ellipse_at_20%_20%,rgba(11,31,77,0.035)_0%,transparent_48%),radial-gradient(ellipse_at_80%_70%,rgba(11,31,77,0.025)_0%,transparent_48%)]" aria-hidden="true" />
+      <div className="pointer-events-none absolute inset-0 opacity-60 gradient-footer-bg" aria-hidden="true" />
       <Container className="relative grid gap-12 py-14 md:grid-cols-[1.55fr_0.72fr_0.72fr_1fr] md:gap-10 md:py-20">
         <div className="max-w-[330px]">
           <BrandLogo compact />

@@ -96,7 +96,7 @@ export function ContactPage({ inquiryOpen: initialInquiryOpen = false }: { inqui
         </Container>
       </section>
 
-      <div className="mt-14 h-36 bg-[#fbfcfd] [background-image:radial-gradient(ellipse_at_20%_0%,rgba(11,31,77,0.035)_0%,transparent_52%),radial-gradient(ellipse_at_80%_100%,rgba(11,31,77,0.025)_0%,transparent_52%)]" aria-hidden="true" />
+      <div className="mt-14 h-36 bg-[#fbfcfd] gradient-contact-bg" aria-hidden="true" />
 
       {inquiryOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#dce3ef]/65 px-4 backdrop-blur-[3px]" role="presentation">
