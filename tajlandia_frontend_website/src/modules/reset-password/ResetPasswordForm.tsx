@@ -156,9 +156,9 @@ export function ResetPasswordForm() {
               <input id="reset-new-password" name="newPassword" type={showNewPassword ? "text" : "password"} autoComplete="new-password" placeholder="hello@example.com" value={values.newPassword} onChange={(event) => updateField("newPassword", event.target.value)} aria-invalid={Boolean(errors.newPassword)} aria-describedby={errors.newPassword ? "reset-new-password-error" : "reset-password-strength"} className={inputClass(Boolean(errors.newPassword))} />
               <button type="button" aria-label={showNewPassword ? "Hide new password" : "Show new password"} onClick={() => setShowNewPassword((current) => !current)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#b7b8bb] focus-visible:rounded focus-visible:outline-2 focus-visible:outline-navy"><EyeIcon hidden={!showNewPassword} /></button>
             </div>
-            <div id="reset-password-strength" className="mt-4 flex items-center gap-1" aria-live="polite">
-              <div className="h-[3px] flex-1 overflow-hidden bg-[#e5e7eb]"><div className="h-full transition-all" style={{ width: strength.width, backgroundColor: strength.color }} /></div>
-              <span className="ml-1 min-w-[34px] text-right text-[10px]" style={{ color: strength.color }}>{strength.label}</span>
+            <div id="reset-password-strength" className="mt-4 flex items-center gap-1" aria-live="polite" style={{ "--strength-width": strength.width, "--strength-color": strength.color } as React.CSSProperties}>
+              <div className="h-[3px] flex-1 overflow-hidden bg-[#e5e7eb]"><div className="strength-bar h-full transition-all" /></div>
+              <span className="strength-label ml-1 min-w-[34px] text-right text-[10px]">{strength.label}</span>
             </div>
             {errors.newPassword ? <p id="reset-new-password-error" className="mt-1.5 text-[11px] text-[#d52b35]">{errors.newPassword}</p> : null}
           </div>
