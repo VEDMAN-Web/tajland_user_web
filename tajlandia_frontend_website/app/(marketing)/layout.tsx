@@ -26,7 +26,7 @@ export default async function MarketingLayout({
       <SiteHeader />
       <main
         id="main-content"
-        className="w-full"
+        className="flex flex-col"
         tabIndex={-1}
       >
         {children}
