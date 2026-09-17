@@ -10,7 +10,7 @@ export default async function MarketingLayout({
   const nonce = (await headers()).get("x-nonce") ?? undefined;
 
   return (
-    <div className="flex min-h-full flex-col">
+    <>
       <script
         nonce={nonce}
         dangerouslySetInnerHTML={{
@@ -32,6 +32,6 @@ export default async function MarketingLayout({
         {children}
       </main>
       <SiteFooter />
-    </div>
+    </>
   );
 }
