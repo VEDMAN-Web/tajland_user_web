@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { HomePage } from "@/modules/home";
+import { HomeEntryRedirect } from "@/modules/home/HomeEntryRedirect";
 import { createPageMetadata } from "@/lib/seo/metadata";
 import { brand } from "@/lib/constants/brand";
 import { routes } from "@/lib/constants/routes";
@@ -11,5 +12,9 @@ export const metadata: Metadata = createPageMetadata({
 });
 
 export default function Page() {
-  return <HomePage />;
+  return (
+    <HomeEntryRedirect>
+      <HomePage />
+    </HomeEntryRedirect>
+  );
 }

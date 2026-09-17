@@ -5,13 +5,14 @@ import { Card } from "@/components/ui/Card";
 import { Container } from "@/components/ui/Container";
 import { routes } from "@/lib/constants/routes";
 
-const destinations = [
+export const destinations = [
   {
     name: "Phuket",
     badge: "ICON",
     detail: "Island life, reimagined.",
     locations: "24 locations",
     image: "/images/explore/phuket.jpg",
+    coordinates: [98.3381, 7.8804] as [number, number],
   },
   {
     name: "Krabi",
@@ -19,6 +20,7 @@ const destinations = [
     detail: "Where limestone meets the sea.",
     locations: "16 locations",
     image: "/images/explore/krabi.jpg",
+    coordinates: [98.9063, 8.0863] as [number, number],
   },
   {
     name: "Chiang Mai",
@@ -26,6 +28,31 @@ const destinations = [
     detail: "Mountains, culture and quiet.",
     locations: "12 locations",
     image: "/images/explore/chiang-mai.jpg",
+    coordinates: [98.9853, 18.7883] as [number, number],
+  },
+  {
+    name: "Bangkok",
+    badge: "POPULAR",
+    detail: "Thailand's vibrant capital.",
+    locations: "18 locations",
+    image: "/images/explore/featured-thailand.jpg",
+    coordinates: [100.5018, 13.7563] as [number, number],
+  },
+  {
+    name: "Pattaya",
+    badge: "STANDARD",
+    detail: "Coastal energy and city life.",
+    locations: "10 locations",
+    image: "/images/explore/featured-thailand.jpg",
+    coordinates: [100.8825, 12.9236] as [number, number],
+  },
+  {
+    name: "Ayutthaya",
+    badge: "STANDARD",
+    detail: "History among ancient temples.",
+    locations: "8 locations",
+    image: "/images/explore/featured-thailand.jpg",
+    coordinates: [100.5684, 14.3532] as [number, number],
   },
 ] as const;
 
