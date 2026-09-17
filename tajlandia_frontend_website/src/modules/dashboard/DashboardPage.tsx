@@ -40,13 +40,13 @@ export function DashboardPage() {
           <BrandLogo compact href={routes.dashboard} />
           <div className="flex items-center gap-3">
           <nav className="hidden h-9 items-center gap-1 rounded-full bg-white p-1 shadow-[0_5px_20px_rgba(11,31,77,0.1)] sm:flex">
-            <Link href={routes.dashboard} className="inline-flex h-7 items-center rounded-full bg-navy px-4 text-[16px] font-medium text-white" style={{ fontFamily: "var(--font-manrope)" }}>Home</Link>
-            <Link href="/dashboard/explore" className="inline-flex h-7 items-center rounded-full px-4 text-[16px] font-medium hover:bg-[#f5f7fa]" style={{ fontFamily: "var(--font-manrope)" }}>Explore Map</Link>
-            <Link href="/dashboard/my-land" className="inline-flex h-7 items-center rounded-full px-4 text-[16px] font-medium hover:bg-[#f5f7fa]" style={{ fontFamily: "var(--font-manrope)" }}>My Land</Link>
+            <Link href={routes.dashboard} className="font-manrope inline-flex h-7 items-center rounded-full bg-navy px-4 text-[16px] font-medium text-white">Home</Link>
+            <Link href="/dashboard/explore" className="font-manrope inline-flex h-7 items-center rounded-full px-4 text-[16px] font-medium hover:bg-[#f5f7fa]">Explore Map</Link>
+            <Link href="/dashboard/my-land" className="font-manrope inline-flex h-7 items-center rounded-full px-4 text-[16px] font-medium hover:bg-[#f5f7fa]">My Land</Link>
           </nav>
           <div className="flex items-center gap-2">
             <div className="relative hidden sm:block">
-              <button type="button" aria-expanded={isLanguageOpen} onClick={() => setIsLanguageOpen((open) => !open)} className="flex h-9 min-w-20 items-center justify-center gap-2 rounded-full bg-white px-3 text-[10px] shadow-[0_5px_20px_rgba(11,31,77,0.08)]"><Image src={language === "EN" ? "/images/dashboard/en-flag.svg" : "/images/dashboard/pl-flag.svg"} alt="" width={20} height={14} /> <span className="text-[15px] font-medium" style={{ fontFamily: "'Rethink Sans', sans-serif" }}>{language}</span><span aria-hidden="true" className="ml-1 inline-block h-2 w-2 -translate-y-0.5 rotate-45 border-b-2 border-r-2 border-navy" /></button>
+              <button type="button" aria-expanded={isLanguageOpen} onClick={() => setIsLanguageOpen((open) => !open)} className="flex h-9 min-w-20 items-center justify-center gap-2 rounded-full bg-white px-3 text-[10px] shadow-[0_5px_20px_rgba(11,31,77,0.08)]"><Image src={language === "EN" ? "/images/dashboard/en-flag.svg" : "/images/dashboard/pl-flag.svg"} alt="" width={20} height={14} /> <span className="font-rethink text-[15px] font-medium">{language}</span><span aria-hidden="true" className="ml-1 inline-block h-2 w-2 -translate-y-0.5 rotate-45 border-b-2 border-r-2 border-navy" /></button>
               {isLanguageOpen ? <div className="absolute right-0 top-10 z-20 w-36 rounded-xl bg-white p-1 text-[10px] shadow-[0_8px_24px_rgba(11,31,77,0.14)]"><button type="button" onClick={() => { setLanguage("EN"); setIsLanguageOpen(false); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left hover:bg-[#f5f7fa]"><Image src="/images/dashboard/en-flag.svg" alt="" width={20} height={14} /> EN — English</button><button type="button" onClick={() => { setLanguage("PL"); setIsLanguageOpen(false); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left hover:bg-[#f5f7fa]"><Image src="/images/dashboard/pl-flag.svg" alt="" width={20} height={14} /> PL — Polish</button></div> : null}
             </div>
             <button type="button" aria-label="Cart"><Icon><Image src="/images/dashboard/cart.png" alt="" width={28} height={24} /></Icon></button>
@@ -61,12 +61,12 @@ export function DashboardPage() {
 
       <main className="mx-auto w-full max-w-[1180px] px-5 py-8 sm:px-8 sm:py-10">
         <section className="flex items-end justify-between gap-6">
-          <div><p className="text-[14px] font-bold uppercase tracking-[0.08em] text-navy" style={{ fontFamily: "var(--font-manrope)" }}>Your Tajlandia Home</p><h1 className="mt-2 text-[36px] font-semibold leading-none tracking-[-0.04em] text-[#171717] sm:text-[48px]" style={{ fontFamily: "var(--font-manrope)" }}>Welcome back, {firstName} <span className="text-brand-red">✦</span></h1><p className="mt-2 text-[16px] font-normal text-[#9aa3ad]" style={{ fontFamily: "var(--font-manrope)" }}>Here’s everything you own in Thailand.</p></div>
-          <Link href="/dashboard/explore" className="hidden rounded-full bg-navy px-5 py-3 text-[16px] font-medium text-white sm:inline-flex" style={{ fontFamily: "var(--font-manrope)" }}>Explore Thailand →</Link>
+          <div><p className="font-manrope text-[14px] font-bold uppercase tracking-[0.08em] text-navy">Your Tajlandia Home</p><h1 className="font-manrope mt-2 text-[36px] font-semibold leading-none tracking-[-0.04em] text-[#171717] sm:text-[48px]">Welcome back, {firstName} <span className="text-brand-red">✦</span></h1><p className="font-manrope mt-2 text-[16px] font-normal text-[#9aa3ad]">Here’s everything you own in Thailand.</p></div>
+          <Link href="/dashboard/explore" className="font-manrope hidden rounded-full bg-navy px-5 py-3 text-[16px] font-medium text-white sm:inline-flex">Explore Thailand →</Link>
         </section>
 
         <section className="mt-7 rounded-[18px] border border-[#e6eaf0] px-4 py-5 sm:px-6">
-          <div className="flex items-center justify-between gap-4"><div><p className="text-[12px] font-bold uppercase tracking-[0.08em] text-navy" style={{ fontFamily: "var(--font-manrope)" }}>Ownership Overview</p><h2 className="mt-1 text-[24px] font-semibold text-[#171717]" style={{ fontFamily: "var(--font-manrope)" }}>Your Collection</h2></div><p className="hidden text-[14px] font-bold text-navy sm:block" style={{ fontFamily: "var(--font-manrope)" }}>● All holdings verified across Thailand</p></div>
+          <div className="flex items-center justify-between gap-4"><div><p className="font-manrope text-[12px] font-bold uppercase tracking-[0.08em] text-navy">Ownership Overview</p><h2 className="font-manrope mt-1 text-[24px] font-semibold text-[#171717]">Your Collection</h2></div><p className="font-manrope hidden text-[14px] font-bold text-navy sm:block">● All holdings verified across Thailand</p></div>
           <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3"><Stat icon="⌖" value="8000" label="Total Land (Sq Rai)" tone="blue" /><Stat icon="◉" value="12" label="Plots Claimed" tone="green" /><Stat icon="▥" value="05" label="Regions" tone="purple" /><Stat icon="◉" value="48,500" label="Total Spent" tone="gold" /></div>
         </section>
 
@@ -83,7 +83,7 @@ export function DashboardPage() {
 
 function Stat({ icon, value, label, tone }: { icon: string; value: string; label: string; tone: "blue" | "green" | "purple" | "gold" }) {
   const tones = { blue: "bg-[#f1f6ff] text-[#1156b5]", green: "bg-[#effaf3] text-[#198b55]", purple: "bg-[#fbf2ff] text-[#8b21b7]", gold: "bg-[#fff9e9] text-[#bd8a00]" };
-  return <div className={`min-h-[70px] rounded-[10px] p-3 ${tones[tone]}`}><span className="text-[13px]">{icon}</span><strong className="mt-2 block text-[20px] font-black" style={{ fontFamily: "var(--font-manrope)" }}>{value}{tone === "blue" ? " sq ft" : ""}</strong><span className="block text-[14px] font-semibold text-[#697586]" style={{ fontFamily: "var(--font-manrope)" }}>{label}</span></div>;
+  return <div className={`min-h-[70px] rounded-[10px] p-3 ${tones[tone]}`}><span className="text-[13px]">{icon}</span><strong className="font-manrope mt-2 block text-[20px] font-black">{value}{tone === "blue" ? " sq ft" : ""}</strong><span className="font-manrope block text-[14px] font-semibold text-[#697586]">{label}</span></div>;
 }
 
 function PurchaseCard() {
