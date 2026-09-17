@@ -1,5 +1,6 @@
 import { HomeMedia } from "../components/HomeMedia";
 import { Button } from "@/components/ui/Button";
+import { GetInTouchLauncher } from "../components/GetInTouchLauncher";
 import type { HomePageContent } from "../types/home.types";
 
 type HeroSectionProps = {
@@ -57,6 +58,7 @@ export function HeroSection({ content }: HeroSectionProps) {
           ) : null}
         </div>
       </div>
+      <GetInTouchLauncher />
     </section>
   );
 }

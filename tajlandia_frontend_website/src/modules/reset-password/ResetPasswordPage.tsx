@@ -1,9 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useState, type FormEvent } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import React, { useState } from "react";
 import { routes } from "@/lib/constants/routes";
 import { resetPasswordSchema, type ResetPasswordFormValues } from "./schemas/reset-password.schema";
+import { resetPasswordAction } from "./services/reset-password.service";
 
 type ResetPasswordErrors = Partial<Record<keyof ResetPasswordFormValues, string>>;
 
@@ -41,20 +43,33 @@ function getStrength(password: string) {
 }
 
 export function ResetPasswordPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const email = searchParams.get("email") ?? "";
+  const otp = searchParams.get("otp") ?? "";
+
+  React.useEffect(() => {
+    console.log("[ResetPasswordPage] Email from URL:", email);
+    console.log("[ResetPasswordPage] OTP from URL:", otp);
+  }, [email, otp]);
+
   const [values, setValues] = useState<ResetPasswordFormValues>(initialValues);
   const [errors, setErrors] = useState<ResetPasswordErrors>({});
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
+  const [apiError, setApiError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const strength = getStrength(values.newPassword);
 
   function updateField(field: keyof ResetPasswordFormValues, value: string) {
     setValues((current) => ({ ...current, [field]: value }));
     setErrors((current) => ({ ...current, [field]: undefined }));
     setSuccessMessage("");
+    setApiError("");
   }
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const result = resetPasswordSchema.safeParse(values);
 
@@ -68,12 +83,39 @@ export function ResetPasswordPage() {
       }
       setErrors(nextErrors);
       setSuccessMessage("");
+      setApiError("");
       return;
     }
 
-    // Password reset is not implemented until a real backend is connected.
+    if (!email) {
+      setApiError("Email is required. Please start the password reset process again.");
+      return;
+    }
+
     setErrors({});
-    setSuccessMessage("Password reset successfully");
+    setSuccessMessage("");
+    setApiError("");
+    setIsSubmitting(true);
+
+    try {
+      console.log("[ResetPasswordPage] Calling resetPasswordAction with:", { email, otp, passwordLength: result.data.newPassword.length });
+      const actionResult = await resetPasswordAction(email, otp, result.data);
+      console.log("[ResetPasswordPage] Action result:", actionResult);
+
+      if (actionResult.ok) {
+        setSuccessMessage(actionResult.message);
+        // Redirect to login after a short delay
+        setTimeout(() => {
+          router.push(routes.login);
+        }, 2000);
+      } else {
+        setApiError(actionResult.message);
+      }
+    } catch {
+      setApiError("Unable to reset password right now. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   function inputClass(hasError: boolean) {
@@ -122,7 +164,19 @@ export function ResetPasswordPage() {
               </div>
 
               {successMessage ? <p role="status" className="mt-4 text-center text-[12px] font-medium text-green-600">{successMessage}</p> : null}
-              <button type="submit" className="mt-6 h-11 w-full rounded-[9px] bg-navy text-[12px] font-medium text-white shadow-[0_3px_5px_rgba(11,31,77,0.18)] transition hover:bg-navy-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy">Reset Password</button>
+              {successMessage ? (
+                <p role="status" className="mt-5 text-center text-[12px] font-medium text-green-600">
+                  {successMessage}
+                </p>
+              ) : null}
+              {apiError ? (
+                <p role="alert" className="mt-5 text-center text-[12px] text-[#d52b35]">
+                  {apiError}
+                </p>
+              ) : null}
+              <button type="submit" disabled={isSubmitting} className="mt-6 h-11 w-full rounded-[9px] bg-navy text-[12px] font-medium text-white shadow-[0_3px_5px_rgba(11,31,77,0.18)] transition hover:bg-navy-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy disabled:cursor-not-allowed disabled:opacity-60">
+                {isSubmitting ? "Resetting Password..." : "Reset Password"}
+              </button>
             </form>
           </div>
 
