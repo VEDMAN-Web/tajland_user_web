@@ -3,15 +3,9 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { BrandLogo } from "@/components/ui/BrandLogo";
-import { clearAuth } from "@/lib/api/auth.utils";
 import { routes } from "@/lib/constants/routes";
 import { useAuth } from "@/lib/hooks/useAuth";
-
-function Icon({ children }: { children: React.ReactNode }) {
-  return <span className="flex h-9 w-9 items-center justify-center rounded-full bg-white text-navy shadow-[0_5px_20px_rgba(11,31,77,0.08)]">{children}</span>;
-}
+import { DashboardNavbar } from "./DashboardNavbar";
 
 function LoadingSpinner() {
   return <div className="flex min-h-[100svh] items-center justify-center bg-white text-sm text-muted">Loading dashboard...</div>;
@@ -20,9 +14,6 @@ function LoadingSpinner() {
 export function DashboardPage() {
   const router = useRouter();
   const { isAuthenticated, user, isLoading } = useAuth();
-  const [language, setLanguage] = useState<"EN" | "PL">("EN");
-  const [isLanguageOpen, setIsLanguageOpen] = useState(false);
-  const [isProfileOpen, setIsProfileOpen] = useState(false);
 
   if (!isLoading && !isAuthenticated) {
     router.replace(routes.login);
@@ -31,10 +22,10 @@ export function DashboardPage() {
   if (isLoading) return <LoadingSpinner />;
 
   const firstName = user?.name?.trim().split(/\s+/)[0] || "User";
-  function logout() { clearAuth(); router.replace(routes.login); }
 
   return (
     <div className="min-h-[100svh] bg-white text-navy">
+<<<<<<< Updated upstream
       <header className="sticky top-0 z-50 bg-transparent">
         <div className="mx-auto flex h-[54px] w-full max-w-[1280px] items-center justify-between px-5 sm:px-8 lg:px-16">
           <BrandLogo compact href={routes.dashboard} />
@@ -58,6 +49,9 @@ export function DashboardPage() {
           </div>
         </div>
       </header>
+=======
+      <DashboardNavbar active="home" />
+>>>>>>> Stashed changes
 
       <main className="mx-auto w-full max-w-[1180px] px-5 py-8 sm:px-8 sm:py-10">
         <section className="flex items-end justify-between gap-6">
