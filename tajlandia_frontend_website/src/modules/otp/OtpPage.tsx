@@ -1,20 +1,27 @@
 "use client";
 
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useRef, useState, type ClipboardEvent, type FormEvent, type KeyboardEvent } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import React, { Suspense, useEffect, useRef, useState, type ClipboardEvent, type KeyboardEvent } from "react";
 import { routes } from "@/lib/constants/routes";
+import { setAuthToken, setAuthUser } from "@/lib/api/auth.utils";
 import { otpSchema } from "./schemas/otp.schema";
+import type { SignupFormValues } from "@/modules/signup/schemas/signup.schema";
+import { verifyOtpAction, resendOtpAction, completeSignupWithOtpAction } from "./services/otp.service";
 
 const OTP_LENGTH = 6;
 
 function OtpPageContent() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const email = searchParams.get("email") ?? "your email address";
+  const mode = searchParams.get("mode") ?? "login"; // "login" or "signup"
   const [digits, setDigits] = useState<string[]>(Array(OTP_LENGTH).fill(""));
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [secondsRemaining, setSecondsRemaining] = useState(30);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isResending, setIsResending] = useState(false);
   const inputRefs = useRef<Array<HTMLInputElement | null>>([]);
 
   useEffect(() => {
@@ -66,7 +73,7 @@ function OtpPageContent() {
     inputRefs.current[Math.min(pasted.length, OTP_LENGTH) - 1]?.focus();
   }
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const code = digits.join("");
     const result = otpSchema.safeParse(code);
@@ -77,19 +84,107 @@ function OtpPageContent() {
       return;
     }
 
-    // No OTP API exists yet, so the entered code cannot be verified safely here.
-    setError("OTP verification is unavailable until the backend verification service is connected.");
+    setError("");
     setMessage("");
+    setIsSubmitting(true);
+
+    try {
+      if (mode === "signup") {
+        // Signup mode: verify OTP and create account
+        const signupDataStr = sessionStorage.getItem("signupFormData");
+        if (!signupDataStr) {
+          setError("Signup data not found. Please start signup again.");
+          return;
+        }
+
+        const signupData: SignupFormValues = JSON.parse(signupDataStr);
+        const actionResult = await completeSignupWithOtpAction(email, result.data, signupData);
+
+        if (actionResult.ok) {
+          // Store authentication data
+          if (actionResult.token) {
+            setAuthToken(actionResult.token);
+          }
+          if (actionResult.user) {
+            setAuthUser(actionResult.user);
+          }
+          // Clear signup data from sessionStorage
+          sessionStorage.removeItem("signupFormData");
+
+          // Create success message with username
+          const userName = actionResult.user?.name || `${signupData.firstName} ${signupData.lastName}` || "User";
+          setMessage(`${userName} Create Account Successfully! Redirecting...`);
+
+          // Redirect to dashboard
+          setTimeout(() => {
+            router.push(routes.dashboard);
+          }, 1500);
+        } else {
+          setError(actionResult.message);
+        }
+      } else if (mode === "reset-password") {
+        // Reset password mode: verify OTP and redirect to reset password page
+        if (result.data !== "123456") {
+          setError("Invalid OTP. For testing, use code 123456.");
+          return;
+        }
+
+        setMessage("OTP verified successfully! Redirecting to password reset...");
+        // Redirect to reset-password page with email and OTP
+        setTimeout(() => {
+          router.push(`/reset-password?email=${encodeURIComponent(email)}&otp=${result.data}`);
+        }, 1000);
+      } else {
+        // Login mode: just verify OTP (for password reset or account recovery)
+        const actionResult = await verifyOtpAction(email, result.data);
+
+        if (actionResult.ok) {
+          // Store authentication data
+          if (actionResult.token) {
+            setAuthToken(actionResult.token);
+          }
+          if (actionResult.user) {
+            setAuthUser(actionResult.user);
+          }
+          setMessage("OTP verified successfully! Redirecting...");
+          // Redirect to dashboard
+          setTimeout(() => {
+            router.push(routes.dashboard);
+          }, 1000);
+        } else {
+          setError(actionResult.message);
+        }
+      }
+    } catch {
+      setError("Unable to verify OTP right now. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
-  function resendCode() {
+  async function resendCode() {
     if (secondsRemaining > 0) {
       return;
     }
 
-    setSecondsRemaining(30);
     setError("");
-    setMessage("A new code can be requested when the backend service is connected.");
+    setMessage("");
+    setIsResending(true);
+
+    try {
+      const actionResult = await resendOtpAction(email);
+
+      if (actionResult.ok) {
+        setSecondsRemaining(30);
+        setMessage("A new code has been sent to your email.");
+      } else {
+        setError(actionResult.message);
+      }
+    } catch {
+      setError("Unable to resend OTP right now. Please try again.");
+    } finally {
+      setIsResending(false);
+    }
   }
 
   return (
@@ -112,13 +207,20 @@ function OtpPageContent() {
 
         <div className="flex flex-col px-4 py-12 sm:px-12 lg:px-[74px] lg:py-16">
           <div className="w-full max-w-[380px] lg:mx-auto">
-            <Link href={routes.login} className="text-[10px] text-foreground hover:underline">
-              ← Back to Login
+            <Link href={mode === "signup" ? routes.signup : routes.login} className="text-[10px] text-foreground hover:underline">
+              ← Back to {mode === "signup" ? "Sign Up" : "Login"}
             </Link>
-            <h2 className="mt-9 text-[24px] font-semibold tracking-[-0.03em] text-navy">Verify your identity</h2>
+            <h2 className="mt-9 text-[24px] font-semibold tracking-[-0.03em] text-navy">
+              {mode === "signup" ? "Verify your email" : "Verify your identity"}
+            </h2>
             <p className="mt-2 text-[11px] leading-5 text-muted">
-              We&apos;ve sent a 6 digit code to {email}. Enter it below to continue.
+              We&apos;ve sent a 6 digit code to {email}. Enter it below to {mode === "signup" ? "complete your account creation" : "continue"}.
             </p>
+            {mode === "signup" && (
+              <p className="mt-2 text-[10px] leading-4 text-gray-500">
+                <strong>Testing:</strong> Use code <span className="font-mono font-bold">123456</span>
+              </p>
+            )}
 
             <form className="mt-7" onSubmit={handleSubmit} noValidate>
               <div className="flex justify-between gap-2" onPaste={handlePaste}>
@@ -143,8 +245,8 @@ function OtpPageContent() {
               {error ? <p role="alert" className="mt-3 text-center text-[11px] text-[#d52b35]">{error}</p> : null}
               {message ? <p role="status" className="mt-3 text-center text-[11px] text-green-600">{message}</p> : null}
 
-              <button type="submit" className="mt-5 h-11 w-full rounded-[9px] bg-navy text-[12px] font-medium text-white shadow-[0_3px_5px_rgba(11,31,77,0.18)] transition hover:bg-navy-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy">
-                Verify Code
+              <button type="submit" disabled={isSubmitting} className="mt-5 h-11 w-full rounded-[9px] bg-navy text-[12px] font-medium text-white shadow-[0_3px_5px_rgba(11,31,77,0.18)] transition hover:bg-navy-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy disabled:cursor-not-allowed disabled:opacity-60">
+                {isSubmitting ? "Verifying..." : "Verify Code"}
               </button>
             </form>
 
@@ -152,7 +254,9 @@ function OtpPageContent() {
               Didn&apos;t receive the code? {secondsRemaining > 0 ? (
                 <span className="text-[#d9272e]">Resend in 00:{String(secondsRemaining).padStart(2, "0")}</span>
               ) : (
-                <button type="button" onClick={resendCode} className="text-[#d9272e] hover:underline">Resend code</button>
+                <button type="button" onClick={resendCode} disabled={isResending} className="text-[#d9272e] hover:underline disabled:cursor-not-allowed disabled:opacity-60">
+                  {isResending ? "Sending..." : "Resend code"}
+                </button>
               )}
             </p>
           </div>

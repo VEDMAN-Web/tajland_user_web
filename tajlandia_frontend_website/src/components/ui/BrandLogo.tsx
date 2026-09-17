@@ -7,12 +7,13 @@ import { cn } from "@/lib/utils/cn";
 type BrandLogoProps = {
   className?: string;
   compact?: boolean;
+  href?: string;
 };
 
-export function BrandLogo({ className, compact = false }: BrandLogoProps) {
+export function BrandLogo({ className, compact = false, href = routes.home }: BrandLogoProps) {
   return (
     <Link
-      href={routes.home}
+      href={href}
       className={cn("inline-flex shrink-0 items-center", className)}
       aria-label={`${brand.name} home`}
     >

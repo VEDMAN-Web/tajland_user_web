@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, type FormEvent } from "react";
+import React, { useState } from "react";
 import { routes } from "@/lib/constants/routes";
 import {
   forgotPasswordSchema,
   type ForgotPasswordFormValues,
 } from "./schemas/forgot-password.schema";
+import { requestPasswordResetOtpAction } from "./services/forgot-password.service";
 
 type ForgotPasswordErrors = Partial<Record<keyof ForgotPasswordFormValues, string>>;
 
@@ -20,15 +21,18 @@ export function ForgotPasswordPage() {
   const [values, setValues] = useState<ForgotPasswordFormValues>(initialValues);
   const [errors, setErrors] = useState<ForgotPasswordErrors>({});
   const [successMessage, setSuccessMessage] = useState("");
+  const [apiError, setApiError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const router = useRouter();
 
   function updateField(field: keyof ForgotPasswordFormValues, value: string | boolean) {
     setValues((current) => ({ ...current, [field]: value }));
     setErrors((current) => ({ ...current, [field]: undefined }));
     setSuccessMessage("");
+    setApiError("");
   }
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     const result = forgotPasswordSchema.safeParse(values);
@@ -45,11 +49,35 @@ export function ForgotPasswordPage() {
 
       setErrors(nextErrors);
       setSuccessMessage("");
+      setApiError("");
       return;
     }
 
     setErrors({});
-    router.push(`/otp?email=${encodeURIComponent(result.data.email)}`);
+    setSuccessMessage("");
+    setApiError("");
+    setIsSubmitting(true);
+
+    try {
+      const actionResult = await requestPasswordResetOtpAction(result.data);
+
+      if (actionResult.ok) {
+        if (actionResult.redirectUrl) {
+          setSuccessMessage("OTP sent to your email! Redirecting...");
+          setTimeout(() => {
+            router.push(actionResult.redirectUrl!);
+          }, 800);
+        } else {
+          setSuccessMessage("OTP sent successfully!");
+        }
+      } else {
+        setApiError(actionResult.message);
+      }
+    } catch {
+      setApiError("Unable to process password reset right now. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
