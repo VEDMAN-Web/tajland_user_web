@@ -61,11 +61,15 @@ export function ForgotPasswordPage() {
     try {
       const actionResult = await requestPasswordResetOtpAction(result.data);
 
-      if (actionResult.ok && actionResult.redirectUrl) {
-        setSuccessMessage("OTP sent to your email! Redirecting...");
-        setTimeout(() => {
-          router.push(actionResult.redirectUrl!);
-        }, 800);
+      if (actionResult.ok) {
+        if (actionResult.redirectUrl) {
+          setSuccessMessage("OTP sent to your email! Redirecting...");
+          setTimeout(() => {
+            router.push(actionResult.redirectUrl!);
+          }, 800);
+        } else {
+          setSuccessMessage("OTP sent successfully!");
+        }
       } else {
         setApiError(actionResult.message);
       }
