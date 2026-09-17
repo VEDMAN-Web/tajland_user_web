@@ -1,229 +1,91 @@
-'use client';
+"use client";
 
-import { useRouter } from 'next/navigation';
-import { useAuth } from '@/lib/hooks/useAuth';
-import { routes } from '@/lib/constants/routes';
-import { clearAuth } from '@/lib/api/auth.utils';
+import Image from "next/image";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { BrandLogo } from "@/components/ui/BrandLogo";
+import { clearAuth } from "@/lib/api/auth.utils";
+import { routes } from "@/lib/constants/routes";
+import { useAuth } from "@/lib/hooks/useAuth";
+
+function Icon({ children }: { children: React.ReactNode }) {
+  return <span className="flex h-9 w-9 items-center justify-center rounded-full bg-white text-navy shadow-[0_5px_20px_rgba(11,31,77,0.08)]">{children}</span>;
+}
 
 function LoadingSpinner() {
-  return (
-    <div className="flex items-center justify-center min-h-screen">
-      <div className="text-center">
-        <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-navy/10 mb-4">
-          <div className="w-8 h-8 border-4 border-navy/20 border-t-navy rounded-full animate-spin" />
-        </div>
-        <p className="text-sm text-muted">Loading dashboard...</p>
-      </div>
-    </div>
-  );
+  return <div className="flex min-h-[100svh] items-center justify-center bg-white text-sm text-muted">Loading dashboard...</div>;
 }
 
 export function DashboardPage() {
   const router = useRouter();
   const { isAuthenticated, user, isLoading } = useAuth();
+  const [language, setLanguage] = useState<"EN" | "PL">("EN");
+  const [isLanguageOpen, setIsLanguageOpen] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
 
-  // Redirect to login if not authenticated
   if (!isLoading && !isAuthenticated) {
-    router.push(routes.login);
+    router.replace(routes.login);
     return null;
   }
+  if (isLoading) return <LoadingSpinner />;
 
-  if (isLoading) {
-    return <LoadingSpinner />;
-  }
-
-  const handleLogout = () => {
-    clearAuth();
-    router.push(routes.login);
-  };
-
-  const userName = user?.name || 'User';
-  const userEmail = user?.email || '';
+  const firstName = user?.name?.trim().split(/\s+/)[0] || "User";
+  function logout() { clearAuth(); router.replace(routes.login); }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-navy rounded-full flex items-center justify-center">
-                <span className="text-white text-sm font-bold">T</span>
-              </div>
-              <span className="text-lg font-semibold text-navy">tajlandia</span>
+    <div className="min-h-[100svh] bg-white text-navy">
+      <header className="sticky top-0 z-50 bg-transparent">
+        <div className="mx-auto flex h-[54px] w-full max-w-[1280px] items-center justify-between px-5 sm:px-8 lg:px-16">
+          <BrandLogo compact href={routes.dashboard} />
+          <div className="flex items-center gap-3">
+          <nav className="hidden h-9 items-center gap-1 rounded-full bg-white p-1 shadow-[0_5px_20px_rgba(11,31,77,0.1)] sm:flex">
+            <Link href={routes.dashboard} className="inline-flex h-7 items-center rounded-full bg-navy px-4 text-[16px] font-medium text-white" style={{ fontFamily: "var(--font-manrope)" }}>Home</Link>
+            <Link href="/dashboard/explore" className="inline-flex h-7 items-center rounded-full px-4 text-[16px] font-medium hover:bg-[#f5f7fa]" style={{ fontFamily: "var(--font-manrope)" }}>Explore Map</Link>
+            <Link href="/dashboard/my-land" className="inline-flex h-7 items-center rounded-full px-4 text-[16px] font-medium hover:bg-[#f5f7fa]" style={{ fontFamily: "var(--font-manrope)" }}>My Land</Link>
+          </nav>
+          <div className="flex items-center gap-2">
+            <div className="relative hidden sm:block">
+              <button type="button" aria-expanded={isLanguageOpen} onClick={() => setIsLanguageOpen((open) => !open)} className="flex h-9 min-w-20 items-center justify-center gap-2 rounded-full bg-white px-3 text-[10px] shadow-[0_5px_20px_rgba(11,31,77,0.08)]"><Image src={language === "EN" ? "/images/dashboard/en-flag.svg" : "/images/dashboard/pl-flag.svg"} alt="" width={20} height={14} /> <span className="text-[15px] font-medium" style={{ fontFamily: "'Rethink Sans', sans-serif" }}>{language}</span><span aria-hidden="true" className="ml-1 inline-block h-2 w-2 -translate-y-0.5 rotate-45 border-b-2 border-r-2 border-navy" /></button>
+              {isLanguageOpen ? <div className="absolute right-0 top-10 z-20 w-36 rounded-xl bg-white p-1 text-[10px] shadow-[0_8px_24px_rgba(11,31,77,0.14)]"><button type="button" onClick={() => { setLanguage("EN"); setIsLanguageOpen(false); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left hover:bg-[#f5f7fa]"><Image src="/images/dashboard/en-flag.svg" alt="" width={20} height={14} /> EN — English</button><button type="button" onClick={() => { setLanguage("PL"); setIsLanguageOpen(false); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left hover:bg-[#f5f7fa]"><Image src="/images/dashboard/pl-flag.svg" alt="" width={20} height={14} /> PL — Polish</button></div> : null}
             </div>
-
-            <nav className="hidden md:flex items-center gap-6">
-              <a href={routes.explore} className="text-sm font-medium text-navy hover:text-navy-deep">
-                Home
-              </a>
-              <a href={routes.explore} className="text-sm font-medium text-muted hover:text-foreground">
-                Explore Map
-              </a>
-              <a href={routes.explore} className="text-sm font-medium text-muted hover:text-foreground">
-                My Land
-              </a>
-            </nav>
-
-            <div className="flex items-center gap-4">
-              <button className="p-2 text-muted hover:text-foreground transition">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-              </button>
-              <button className="p-2 text-muted hover:text-foreground transition">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                </svg>
-              </button>
-              <button onClick={handleLogout} className="p-2 text-muted hover:text-foreground transition">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2zm0 0V5a2 2 0 012-2h2a2 2 0 012 2v12a2 2 0 01-2 2h-2a2 2 0 01-2-2v-4" />
-                </svg>
-              </button>
+            <button type="button" aria-label="Cart"><Icon><Image src="/images/dashboard/cart.png" alt="" width={28} height={24} /></Icon></button>
+            <div className="relative">
+              <button type="button" aria-label="Profile" aria-expanded={isProfileOpen} onClick={() => setIsProfileOpen((open) => !open)}><Icon><Image src="/images/dashboard/profile.png" alt="" width={22} height={22} /></Icon></button>
+              {isProfileOpen ? <div className="absolute right-0 top-10 z-20 rounded-xl bg-white p-1 shadow-[0_8px_24px_rgba(11,31,77,0.14)]"><button type="button" onClick={logout} className="whitespace-nowrap rounded-lg px-4 py-2 text-left text-[10px] hover:bg-[#f5f7fa]">Logout</button></div> : null}
             </div>
+          </div>
           </div>
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Welcome Section */}
-        <div className="bg-white rounded-lg border-2 border-blue-400 p-8 mb-8">
-          <div className="flex items-start justify-between">
-            <div>
-              <p className="text-xs font-semibold text-blue-600 tracking-wide mb-2">YOUR TAJLANDIA HOME</p>
-              <h1 className="text-3xl font-bold text-navy mb-6">
-                Welcome back, <span className="text-red-500">{userName.split(' ')[0]}</span> <span className="text-red-500 text-2xl">◆</span>
-              </h1>
+      <main className="mx-auto w-full max-w-[1180px] px-5 py-8 sm:px-8 sm:py-10">
+        <section className="flex items-end justify-between gap-6">
+          <div><p className="text-[14px] font-bold uppercase tracking-[0.08em] text-navy" style={{ fontFamily: "var(--font-manrope)" }}>Your Tajlandia Home</p><h1 className="mt-2 text-[36px] font-semibold leading-none tracking-[-0.04em] text-[#171717] sm:text-[48px]" style={{ fontFamily: "var(--font-manrope)" }}>Welcome back, {firstName} <span className="text-brand-red">✦</span></h1><p className="mt-2 text-[16px] font-normal text-[#9aa3ad]" style={{ fontFamily: "var(--font-manrope)" }}>Here’s everything you own in Thailand.</p></div>
+          <Link href="/dashboard/explore" className="hidden rounded-full bg-navy px-5 py-3 text-[16px] font-medium text-white sm:inline-flex" style={{ fontFamily: "var(--font-manrope)" }}>Explore Thailand →</Link>
+        </section>
 
-              {/* Stats Grid */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="p-4 bg-blue-50 rounded-lg">
-                  <p className="text-xs text-muted mb-1">OWNERSHIP DETAILS</p>
-                  <p className="text-2xl font-bold text-navy">8000</p>
-                  <p className="text-xs text-muted">sqft in total</p>
-                </div>
-                <div className="p-4 bg-green-50 rounded-lg">
-                  <p className="text-xs text-muted mb-1">YOUR COLLECTION</p>
-                  <p className="text-2xl font-bold text-green-600">12</p>
-                  <p className="text-xs text-muted">Pinned Locations</p>
-                </div>
-                <div className="p-4 bg-purple-50 rounded-lg">
-                  <p className="text-xs text-muted mb-1">LAND REGIONS</p>
-                  <p className="text-2xl font-bold text-purple-600">05</p>
-                  <p className="text-xs text-muted">Regions</p>
-                </div>
-                <div className="p-4 bg-yellow-50 rounded-lg">
-                  <p className="text-xs text-muted mb-1">TOTAL SPENT</p>
-                  <p className="text-2xl font-bold text-yellow-600">$48,500</p>
-                  <p className="text-xs text-muted">Total Spent</p>
-                </div>
-              </div>
-            </div>
+        <section className="mt-7 rounded-[18px] border border-[#e6eaf0] px-4 py-5 sm:px-6">
+          <div className="flex items-center justify-between gap-4"><div><p className="text-[12px] font-bold uppercase tracking-[0.08em] text-navy" style={{ fontFamily: "var(--font-manrope)" }}>Ownership Overview</p><h2 className="mt-1 text-[24px] font-semibold text-[#171717]" style={{ fontFamily: "var(--font-manrope)" }}>Your Collection</h2></div><p className="hidden text-[14px] font-bold text-navy sm:block" style={{ fontFamily: "var(--font-manrope)" }}>● All holdings verified across Thailand</p></div>
+          <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3"><Stat icon="⌖" value="8000" label="Total Land (Sq Rai)" tone="blue" /><Stat icon="◉" value="12" label="Plots Claimed" tone="green" /><Stat icon="▥" value="05" label="Regions" tone="purple" /><Stat icon="◉" value="48,500" label="Total Spent" tone="gold" /></div>
+        </section>
 
-            <a href={routes.explore} className="px-6 py-2 bg-navy text-white rounded-lg text-sm font-medium hover:bg-navy-deep transition whitespace-nowrap">
-              Explore Thailand →
-            </a>
-          </div>
-        </div>
+        <section className="mt-5 grid gap-4 lg:grid-cols-[0.92fr_1.08fr]">
+          <div className="rounded-[18px] border border-brand-red bg-[#fff8f8] p-5 sm:p-6"><div className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-red text-sm text-white">♔</div><p className="mt-5 text-[8px] font-semibold uppercase tracking-[0.08em] text-brand-red">Give a Little Piece</p><h2 className="mt-2 max-w-[320px] text-[20px] font-medium leading-tight text-[#171717]">Give a Little Piece of Thailand</h2><p className="mt-2 max-w-[330px] text-[10px] leading-4 text-[#9aa3ad]">Share a place worth remembering. Gift a Tajlandia plot to someone special and let them build their own collection.</p><button type="button" className="mt-5 rounded-full bg-brand-red px-5 py-2.5 text-[10px] text-white">Gift a plot →</button><div className="mt-5 border-t border-brand-red/15 pt-3 text-[8px] text-[#9aa3ad]">✓ Instant Digital Certificate &nbsp;&nbsp; ✓ Official Cadastre Deed</div></div>
+          <div className="relative min-h-[225px] overflow-hidden rounded-[18px]"><Image src="/images/explore/featured-thailand.jpg" alt="Thailand coastline" fill sizes="(max-width: 1024px) 100vw, 55vw" className="object-cover" /><div className="absolute inset-0 bg-gradient-to-t from-[#063f4b]/90 via-transparent to-transparent" /><div className="absolute inset-x-0 bottom-0 p-6 text-white"><h2 className="text-[23px] font-medium">Thailand Awaits</h2><p className="mt-1 max-w-[240px] text-[9px] leading-3 text-white/80">Discover beautiful locations and available plots across Thailand.</p><Link href="/dashboard/explore" className="mt-3 inline-block text-[9px]">Explore Thailand →</Link></div></div>
+        </section>
 
-        {/* Content Grid */}
-        <div className="grid md:grid-cols-2 gap-8">
-          {/* CTA Card */}
-          <div className="bg-white rounded-lg border-2 border-red-400 p-8">
-            <div className="flex items-start gap-4 mb-6">
-              <div className="w-10 h-10 bg-red-500 rounded-lg flex items-center justify-center">
-                <span className="text-white text-xl">📍</span>
-              </div>
-              <div>
-                <p className="text-xs font-semibold text-red-600 tracking-wide">OWN A LITTLE PIECE</p>
-                <h2 className="text-2xl font-bold text-navy">Give a Little Piece of Thailand</h2>
-              </div>
-            </div>
-            <p className="text-sm text-muted mb-6">Invest in authentic Thai real estate opportunities. Be part of something extraordinary while owning a piece of paradise.</p>
-            <button className="px-6 py-2 bg-red-500 text-white rounded-full text-sm font-medium hover:bg-red-600 transition">
-              Gift a Plot →
-            </button>
-            <div className="mt-6 flex gap-4 text-xs text-muted">
-              <span>√ Instant Digital Certificate</span>
-              <span>√ Official Deed & Proof</span>
-            </div>
-          </div>
-
-          {/* Feature Card */}
-          <div className="bg-gradient-to-br from-green-800 to-green-900 rounded-lg p-8 text-white overflow-hidden relative">
-            <div className="absolute inset-0 opacity-10">
-              <svg className="w-full h-full" viewBox="0 0 400 300" fill="none">
-                <circle cx="100" cy="100" r="80" fill="currentColor" />
-                <circle cx="350" cy="200" r="100" fill="currentColor" />
-              </svg>
-            </div>
-
-            <div className="relative z-10">
-              <h2 className="text-3xl font-bold mb-2">Thailand Awaits</h2>
-              <p className="text-green-100 mb-6">Discover breathtaking landscapes and exclusive real estate opportunities.</p>
-              <a href={routes.explore} className="inline-block px-6 py-2 bg-white text-green-900 rounded-lg text-sm font-medium hover:bg-green-50 transition">
-                Explore Thailand →
-              </a>
-            </div>
-          </div>
-        </div>
-
-        {/* Recent Purchases */}
-        <div className="mt-12">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold text-navy">Recent Purchase</h2>
-            <a href="#" className="text-sm text-navy hover:underline">
-              View All →
-            </a>
-          </div>
-
-          <div className="grid md:grid-cols-2 gap-6">
-            {/* Purchase Card 1 */}
-            <div className="bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition">
-              <div className="flex gap-4 p-4">
-                <div className="w-20 h-20 bg-gray-200 rounded-lg flex-shrink-0" />
-                <div className="flex-1">
-                  <p className="text-xs text-yellow-600 font-semibold mb-1">Yellow Ridge Plot</p>
-                  <h3 className="text-sm font-semibold text-navy mb-2">Yellow Ridge Plot</h3>
-                  <div className="flex items-center gap-2 text-xs text-muted mb-2">
-                    <span>📍 15 Sqft</span>
-                    <span>📅 10-01-2026</span>
-                  </div>
-                  <a href="#" className="text-xs text-navy font-medium hover:underline">
-                    View Item →
-                  </a>
-                </div>
-                <div className="text-right flex-shrink-0">
-                  <p className="text-xl font-bold text-navy">$2.50</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Purchase Card 2 */}
-            <div className="bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition">
-              <div className="flex gap-4 p-4">
-                <div className="w-20 h-20 bg-gray-200 rounded-lg flex-shrink-0" />
-                <div className="flex-1">
-                  <p className="text-xs text-purple-600 font-semibold mb-1">Heritage Ridge Plot</p>
-                  <h3 className="text-sm font-semibold text-navy mb-2">Heritage Ridge Plot</h3>
-                  <div className="flex items-center gap-2 text-xs text-muted mb-2">
-                    <span>📍 15 Sqft</span>
-                    <span>📅 10-01-2026</span>
-                  </div>
-                  <a href="#" className="text-xs text-navy font-medium hover:underline">
-                    View Item →
-                  </a>
-                </div>
-                <div className="text-right flex-shrink-0">
-                  <p className="text-xl font-bold text-navy">$2.50</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+        <section className="mt-6"><div className="flex items-end justify-between"><div><p className="text-[8px] font-semibold uppercase tracking-[0.08em] text-brand-red">Your Land Archive</p><h2 className="mt-1 text-[16px] font-medium">Recent Purchase</h2></div><Link href="/dashboard/my-land" className="text-[9px] font-medium">View All →</Link></div><div className="mt-3 grid gap-3 lg:grid-cols-2"><PurchaseCard /><PurchaseCard /></div></section>
       </main>
     </div>
   );
+}
+
+function Stat({ icon, value, label, tone }: { icon: string; value: string; label: string; tone: "blue" | "green" | "purple" | "gold" }) {
+  const tones = { blue: "bg-[#f1f6ff] text-[#1156b5]", green: "bg-[#effaf3] text-[#198b55]", purple: "bg-[#fbf2ff] text-[#8b21b7]", gold: "bg-[#fff9e9] text-[#bd8a00]" };
+  return <div className={`min-h-[70px] rounded-[10px] p-3 ${tones[tone]}`}><span className="text-[13px]">{icon}</span><strong className="mt-2 block text-[20px] font-black" style={{ fontFamily: "var(--font-manrope)" }}>{value}{tone === "blue" ? " sq ft" : ""}</strong><span className="block text-[14px] font-semibold text-[#697586]" style={{ fontFamily: "var(--font-manrope)" }}>{label}</span></div>;
+}
+
+function PurchaseCard() {
+  return <div className="flex items-center gap-3 rounded-[16px] bg-white p-3 shadow-[0_5px_18px_rgba(11,31,77,0.08)]"><Image src="/images/explore/phuket.jpg" alt="Seaview Ridge Plot" width={58} height={58} className="h-[58px] w-[58px] rounded-[10px] object-cover" /><div className="min-w-0 flex-1"><p className="text-[8px] text-[#c19a16]">ICON</p><h3 className="truncate text-[11px] font-medium">Seaview Ridge Plot</h3><p className="text-[8px] text-[#9aa3ad]">◉ Phuket City</p><p className="mt-1 text-[8px] text-brand-red">25 Rai <span className="text-[#9aa3ad]">· $0.10 / Rai</span></p></div><div className="text-right"><strong className="block text-[20px] font-semibold">$2.50</strong><Link href="/dashboard/explore" className="mt-2 block text-[8px]">View Map →</Link></div></div>;
 }
