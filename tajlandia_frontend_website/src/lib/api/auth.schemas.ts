@@ -69,3 +69,13 @@ export type VerifyOtpResponse = z.infer<typeof verifyOtpResponseSchema>;
 export const resendOtpResponseSchema = authResponseBaseSchema;
 
 export type ResendOtpResponse = z.infer<typeof resendOtpResponseSchema>;
+
+export const resetPasswordResponseSchema = authResponseBaseSchema.extend({
+  data: z
+    .object({
+      email: z.string(),
+    })
+    .optional(),
+});
+
+export type ResetPasswordResponse = z.infer<typeof resetPasswordResponseSchema>;
