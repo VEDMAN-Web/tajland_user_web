@@ -67,8 +67,8 @@ export function SettingsPage() {
                 <h3 className="text-[11px] font-medium text-[#242b32]">Email notifications</h3>
                 <p className="mt-1 text-[10px] text-[#8f99a4]">You&apos;ll receive important account and purchase updates by email.</p>
               </div>
-              <button type="button" role="switch" aria-checked={settings.emailNotifications} aria-label="Email notifications" onClick={() => updateSettings({ emailNotifications: !settings.emailNotifications })} className={`relative h-5 w-9 shrink-0 rounded-full transition-colors ${settings.emailNotifications ? "bg-navy" : "bg-[#c8d0d8]"}`}>
-                <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${settings.emailNotifications ? "translate-x-4" : "translate-x-0.5"}`} />
+              <button type="button" role="switch" aria-checked={settings.emailNotifications} aria-label="Email notifications" onClick={() => updateSettings({ emailNotifications: !settings.emailNotifications })} className={`relative h-6 w-12 shrink-0 rounded-full transition-colors ${settings.emailNotifications ? "bg-navy" : "bg-[#c8d0d8]"}`}>
+                <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${settings.emailNotifications ? "translate-x-6" : "translate-x-0.5"}`} />
               </button>
             </div>
           </div>
