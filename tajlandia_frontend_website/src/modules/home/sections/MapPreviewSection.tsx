@@ -1,7 +1,7 @@
 import Link from "next/link";
-import Image from "next/image";
 import { Container } from "@/components/ui/Container";
 import { ScrollAnimatedElement } from "@/components/animations/ScrollAnimatedElement";
+import { ThailandMap } from "../components/ThailandMap";
 import type { HomePageContent } from "../types/home.types";
 
 type MapPreviewSectionProps = {
@@ -10,6 +10,7 @@ type MapPreviewSectionProps = {
 
 export function MapPreviewSection({ content }: MapPreviewSectionProps) {
   const headingLead = content.headingBefore.replace(/\s+experience$/, "");
+  const map = <ThailandMap pins={content.pins} />;
 
   return (
     <section id="map" className="bg-white py-[60px]">
@@ -41,24 +42,10 @@ export function MapPreviewSection({ content }: MapPreviewSectionProps) {
                 className="block rounded-[1.5rem] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-navy"
                 aria-label={content.cta.label}
               >
-                <Image
-                  src="/images/home/map.png"
-                  alt="Thailand Map"
-                  width={800}
-                  height={580}
-                  className="h-auto w-full object-cover"
-                  priority
-                />
+                {map}
               </Link>
             ) : (
-              <Image
-                src="/images/home/map.png"
-                alt="Thailand Map"
-                width={800}
-                height={580}
-                className="h-auto w-full object-cover"
-                priority
-              />
+              map
             )}
           </div>
         </ScrollAnimatedElement>

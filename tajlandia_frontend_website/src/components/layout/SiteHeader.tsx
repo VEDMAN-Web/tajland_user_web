@@ -20,7 +20,7 @@ export function SiteHeader() {
           >
             Sign Up
           </Button>
-          <Button href={routes.login} size="sm" className="hidden lg:inline-flex">
+          <Button href={routes.login} variant="inverse" size="sm" className="hidden shadow-[0_8px_24px_rgba(11,31,77,0.12)] lg:inline-flex">
             Login
           </Button>
           <MobileNav />

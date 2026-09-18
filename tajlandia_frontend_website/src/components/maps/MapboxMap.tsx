@@ -25,6 +25,7 @@ export const MapboxMap = forwardRef<MapboxMapHandle, MapboxMapProps>(function Ma
 ) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
+  const initialViewRef = useRef({ center: initialCenter, zoom: initialZoom });
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
 
   useEffect(() => {
@@ -41,14 +42,16 @@ export const MapboxMap = forwardRef<MapboxMapHandle, MapboxMapProps>(function Ma
     const map = new mapboxgl.Map({
       container: containerRef.current,
       style: "mapbox://styles/mapbox/streets-v12",
-      center: initialCenter,
-      zoom: initialZoom,
+      center: initialViewRef.current.center,
+      zoom: initialViewRef.current.zoom,
       minZoom: 2,
       projection: { name: "mercator" },
-      attributionControl: true,
+      attributionControl: false,
     });
 
     mapRef.current = map;
+    // Keep the required Mapbox attribution compact and inside the map frame.
+    map.addControl(new mapboxgl.AttributionControl({ compact: true }), "bottom-right");
     const resizeObserver = new ResizeObserver(() => map.resize());
     resizeObserver.observe(containerRef.current);
     map.once("load", () => map.resize());

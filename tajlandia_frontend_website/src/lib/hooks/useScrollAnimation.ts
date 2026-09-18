@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 
-export type AnimationType = 'fade-in' | 'slide-in-up' | 'slide-in-left' | 'slide-in-right' | 'scale-in' | 'fade-in-scale';
+export type AnimationType = 'fade-in' | 'slide-in-up' | 'slide-in-left' | 'slide-in-right' | 'scale-in' | 'fade-in-scale' | 'slide-in-right-dark';
 
 export interface ScrollAnimationConfig {
   type: AnimationType;
@@ -17,6 +17,7 @@ const animationClasses: Record<AnimationType, string> = {
   'slide-in-right': 'animate-slide-in-right',
   'scale-in': 'animate-scale-in',
   'fade-in-scale': 'animate-fade-in-scale',
+  'slide-in-right-dark': 'animate-slide-in-right-dark',
 };
 
 export function useScrollAnimation(config: ScrollAnimationConfig) {
