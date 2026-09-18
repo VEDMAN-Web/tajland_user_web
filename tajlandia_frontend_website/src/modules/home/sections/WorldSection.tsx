@@ -1,5 +1,7 @@
 import { Container } from "@/components/ui/Container";
 import { HomeMedia } from "../components/HomeMedia";
+import { AnimatedVideoCard } from "@/components/cards/AnimatedVideoCard";
+import { ScrollAnimatedElement } from "@/components/animations/ScrollAnimatedElement";
 import type { HomePageContent } from "../types/home.types";
 
 type WorldSectionProps = {
@@ -16,7 +18,7 @@ export function WorldSection({ content }: WorldSectionProps) {
   return (
     <section className="bg-white pb-[60px]" aria-label={content.alt}>
       <Container>
-        <div className="overflow-hidden rounded-[1.75rem] bg-[#111318] shadow-[0_28px_80px_rgba(11,31,77,0.18)] ring-1 ring-black/10">
+        <ScrollAnimatedElement animation="scale-in" duration={700} className="overflow-hidden rounded-[1.75rem] bg-[#111318] shadow-[0_28px_80px_rgba(11,31,77,0.18)] ring-1 ring-black/10">
           <div className="relative flex h-11 items-center gap-3 border-b border-white/5 bg-[#1a1d24] px-4 sm:h-12 sm:px-5">
             <div className="flex shrink-0 items-center gap-1.5" aria-hidden="true">
               <span className="h-2.5 w-2.5 rounded-full bg-[#ff5f57] sm:h-3 sm:w-3" />
@@ -31,28 +33,14 @@ export function WorldSection({ content }: WorldSectionProps) {
           </div>
 
           <div className="relative aspect-[16/9] w-full overflow-hidden bg-black">
-            {content.video ? (
-              <video
-                className="absolute inset-0 h-full w-full object-cover"
-                autoPlay
-                muted
-                loop
-                playsInline
-                poster={poster?.src}
-                aria-label={content.alt}
-              >
-                <source src={content.video.src} type="video/mp4" />
-              </video>
-            ) : (
-              <HomeMedia
-                image={content.image}
-                fill
-                sizes="(max-width: 1280px) 100vw, 1280px"
-                className="object-cover object-center"
-              />
-            )}
+            <AnimatedVideoCard
+              videoSrc="/video/video_card.mp4"
+              posterSrc={poster?.src}
+              alt={content.alt}
+              className="w-full h-full"
+            />
           </div>
-        </div>
+        </ScrollAnimatedElement>
       </Container>
     </section>
   );

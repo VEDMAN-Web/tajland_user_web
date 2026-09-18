@@ -1,5 +1,6 @@
 import { Container } from "@/components/ui/Container";
 import { SectionHeading } from "@/components/ui/SectionHeading";
+import { ScrollAnimatedElement } from "@/components/animations/ScrollAnimatedElement";
 import { FeatureCard } from "../components/FeatureCard";
 import type { HomePageContent } from "../types/home.types";
 
@@ -15,10 +16,19 @@ export function FeatureSection({ content }: FeatureSectionProps) {
   return (
     <section className="bg-white py-[60px]">
       <Container>
-        <SectionHeading description={content.subtitle}>{content.heading}</SectionHeading>
+        <ScrollAnimatedElement animation="fade-in" duration={600}>
+          <SectionHeading description={content.subtitle}>{content.heading}</SectionHeading>
+        </ScrollAnimatedElement>
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {content.items.map((item) => (
-            <FeatureCard key={item.id} item={item} />
+          {content.items.map((item, index) => (
+            <ScrollAnimatedElement
+              key={item.id}
+              animation="fade-in-scale"
+              duration={600}
+              delay={index * 100}
+            >
+              <FeatureCard item={item} />
+            </ScrollAnimatedElement>
           ))}
         </div>
       </Container>

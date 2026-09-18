@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import React, { useState } from "react";
 import { routes } from "@/lib/constants/routes";
+import { ScrollAnimatedElement } from "@/components/animations/ScrollAnimatedElement";
 import {
   forgotPasswordSchema,
   type ForgotPasswordFormValues,
@@ -99,7 +100,7 @@ export function ForgotPasswordPage() {
         </div>
 
         <div className="flex flex-col px-4 py-12 sm:px-12 lg:px-[74px] lg:py-16">
-          <div className="w-full max-w-[380px] lg:mx-auto">
+          <ScrollAnimatedElement animation="slide-in-right" duration={600} className="w-full max-w-[380px] lg:mx-auto">
             <Link href={routes.login} className="text-[10px] text-foreground hover:underline">
               ← Back to Login
             </Link>
@@ -167,16 +168,16 @@ export function ForgotPasswordPage() {
                 Send Code
               </button>
             </form>
-          </div>
 
-          <div className="mt-auto pt-16 text-center text-[10px] text-[#8e8e91]">
-            <div className="flex justify-center gap-4">
-              <Link href={routes.privacy} className="hover:underline">Privacy Policy</Link>
-              <Link href={routes.terms} className="hover:underline">Terms of Service</Link>
-              <Link href={routes.contact} className="hover:underline">Contact Support</Link>
+            <div className="mt-auto pt-16 text-center text-[10px] text-[#8e8e91]">
+              <div className="flex justify-center gap-4">
+                <Link href={routes.privacy} className="hover:underline">Privacy Policy</Link>
+                <Link href={routes.terms} className="hover:underline">Terms of Service</Link>
+                <Link href={routes.contact} className="hover:underline">Contact Support</Link>
+              </div>
+              <p className="mt-4 text-[9px] text-foreground">© 2026 Tajlandia.pl. All rights reserved.</p>
             </div>
-            <p className="mt-4 text-[9px] text-foreground">© 2026 Tajlandia.pl. All rights reserved.</p>
-          </div>
+          </ScrollAnimatedElement>
         </div>
       </div>
     </section>
