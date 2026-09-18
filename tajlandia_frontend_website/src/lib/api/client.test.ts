@@ -7,7 +7,7 @@ const schema = z.object({ id: z.string() });
 
 afterEach(() => {
   resetServerEnvCache();
-  delete process.env.API_BASE_URL;
+  delete process.env.NEXT_PUBLIC_API_URL;
   delete process.env.API_SECRET;
 });
 
@@ -19,12 +19,12 @@ describe("apiGet", () => {
   });
 
   it("rejects absolute URLs", async () => {
-    process.env.API_BASE_URL = "https://api.tajlandia.test";
+    process.env.NEXT_PUBLIC_API_URL = "https://api.tajlandia.test";
     await expect(apiGet("https://evil.test/x", schema)).rejects.toBeInstanceOf(ApiError);
   });
 
   it("returns validated JSON on success", async () => {
-    process.env.API_BASE_URL = "https://api.tajlandia.test";
+    process.env.NEXT_PUBLIC_API_URL = "https://api.tajlandia.test";
     const fetchImpl = vi.fn().mockResolvedValue(
       new Response(JSON.stringify({ id: "home" }), {
         status: 200,
@@ -37,7 +37,7 @@ describe("apiGet", () => {
   });
 
   it("does not leak response bodies on failure", async () => {
-    process.env.API_BASE_URL = "https://api.tajlandia.test";
+    process.env.NEXT_PUBLIC_API_URL = "https://api.tajlandia.test";
     const fetchImpl = vi
       .fn()
       .mockResolvedValue(new Response("internal db password=secret", { status: 500 }));
@@ -49,7 +49,7 @@ describe("apiGet", () => {
   });
 
   it("rejects schema-invalid payloads", async () => {
-    process.env.API_BASE_URL = "https://api.tajlandia.test";
+    process.env.NEXT_PUBLIC_API_URL = "https://api.tajlandia.test";
     const fetchImpl = vi
       .fn()
       .mockResolvedValue(new Response(JSON.stringify({ nope: true }), { status: 200 }));
@@ -60,7 +60,7 @@ describe("apiGet", () => {
   });
 
   it("rejects oversized responses and identifies API errors", async () => {
-    process.env.API_BASE_URL = "https://api.tajlandia.test";
+    process.env.NEXT_PUBLIC_API_URL = "https://api.tajlandia.test";
     const fetchImpl = vi.fn().mockResolvedValue(
       new Response("{}", {
         status: 200,
@@ -75,7 +75,7 @@ describe("apiGet", () => {
   });
 
   it("sends the server secret and maps timeouts", async () => {
-    process.env.API_BASE_URL = "https://api.tajlandia.test";
+    process.env.NEXT_PUBLIC_API_URL = "https://api.tajlandia.test";
     process.env.API_SECRET = "super-secret-key-1";
 
     const fetchImpl = vi.fn().mockImplementation((_url, init: RequestInit) => {
@@ -99,7 +99,7 @@ describe("apiGet", () => {
   });
 
   it("maps network failures to a generic unavailable error", async () => {
-    process.env.API_BASE_URL = "https://api.tajlandia.test";
+    process.env.NEXT_PUBLIC_API_URL = "https://api.tajlandia.test";
     const fetchImpl = vi.fn().mockRejectedValue(new Error("ECONNRESET"));
 
     await expect(apiGet("/home", schema, { fetchImpl })).rejects.toMatchObject({

@@ -26,13 +26,19 @@ export function MainNav({ className }: MainNavProps) {
             href={item.href}
             aria-current={isActive ? "page" : undefined}
             className={cn(
-              "text-[15px] font-medium transition-colors hover:text-navy",
+              "relative inline-block text-[15px] font-medium transition-all duration-300 hover:text-navy hover:translate-x-1 group",
               isActive
-                ? "text-navy underline decoration-navy decoration-1 underline-offset-[10px]"
+                ? "text-navy"
                 : "text-[#5B6B86]",
             )}
           >
             {item.label}
+            <span className={cn(
+              "absolute bottom-[-5px] left-0 h-0.5 transition-all duration-300",
+              isActive
+                ? "w-full bg-navy"
+                : "w-0 bg-navy group-hover:w-full"
+            )} />
           </Link>
         );
       })}
