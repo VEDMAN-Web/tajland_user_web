@@ -4,6 +4,7 @@ export const routes = {
   profile: "/dashboard/profile",
   editProfile: "/dashboard/profile/edit",
   changePassword: "/dashboard/change-password",
+  settings: "/dashboard/settings",
   explore: "/explore",
   blog: "/blog",
   contact: "/contact",
