@@ -6,7 +6,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { routes } from "@/lib/constants/routes";
 import { useAuth } from "@/lib/hooks/useAuth";
 import { DashboardNavbar } from "@/modules/dashboard/DashboardNavbar";
-import { MapboxMap, type MapboxMapHandle } from "./MapboxMap";
+import { MapboxMap, type MapboxMapHandle } from "@/components/maps/MapboxMap";
 import { destinations } from "./ExploreMapPage";
 
 function SearchIcon() {
