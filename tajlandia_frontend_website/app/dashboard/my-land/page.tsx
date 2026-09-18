@@ -1,5 +1,5 @@
-import { DashboardPlaceholderPage } from "@/modules/dashboard/DashboardPlaceholderPage";
+import { MyLandPage } from "@/modules/dashboard";
 
 export default function DashboardMyLandPage() {
-  return <DashboardPlaceholderPage title="My Land" />;
+  return <MyLandPage />;
 }

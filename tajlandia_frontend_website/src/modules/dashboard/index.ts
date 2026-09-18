@@ -3,3 +3,8 @@ export { ProfilePage } from './ProfilePage';
 export { ChangePasswordPage } from './ChangePasswordPage';
 export { EditProfilePage } from './EditProfilePage';
 export { SettingsPage } from './SettingsPage';
+export { HelpSupportPage } from './HelpSupportPage';
+export { LegalDocumentPage } from './LegalDocumentPage';
+export { MyLandPage } from './MyPurchasesPage';
+export { MyPurchasesPage } from './MyPurchasesPage';
+export { MyCertificatesPage } from './MyCertificatesPage';

@@ -1,8 +1,12 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
+import { useRef } from "react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Container } from "@/components/ui/Container";
+import { MapboxMap, type MapboxMapHandle } from "@/components/maps/MapboxMap";
 import { routes } from "@/lib/constants/routes";
 
 export const destinations = [
@@ -65,6 +69,8 @@ function MapControlIcon({ type }: { type: "plus" | "minus" }) {
 }
 
 export function ExploreMapPage() {
+  const mapRef = useRef<MapboxMapHandle>(null);
+
   return (
     <div className="bg-[#fbfcfd] pb-16 md:pb-24">
       <section className="px-4 pb-12 pt-14 sm:px-8 md:pt-20">
@@ -87,19 +93,18 @@ export function ExploreMapPage() {
       <section className="px-4 sm:px-8">
         <Container>
           <div className="relative overflow-hidden rounded-[1.75rem] border border-[#dbe8ed] bg-white p-2 shadow-[0_15px_40px_rgba(11,31,77,0.1)] sm:p-3">
-            <Image
-              src="/images/home/map.png"
-              alt="Map of Thailand and surrounding destinations"
-              width={1217}
-              height={580}
-              priority
-              sizes="(max-width: 1280px) 100vw, 1217px"
-              className="h-auto w-full rounded-[1.35rem]"
-            />
+            <div className="aspect-[1217/580] w-full overflow-hidden rounded-[1.35rem]">
+              <MapboxMap ref={mapRef} className="h-full min-h-0" initialCenter={[100.5, 14]} initialZoom={5.5} />
+              <div className="pointer-events-none absolute right-5 top-5 z-20 flex items-center gap-4 rounded-full bg-white/95 px-4 py-2 text-[10px] text-[#171717] shadow-[0_4px_12px_rgba(11,31,77,0.12)] sm:right-7 sm:top-7">
+                <span className="flex items-center gap-1.5"><i className="h-2 w-2 rounded-full bg-[#e51d2a]" />Claimed</span>
+                <span className="flex items-center gap-1.5"><i className="h-2 w-2 rounded-full bg-[#0b1f4d]" />Available</span>
+                <span className="flex items-center gap-1.5"><i className="h-2 w-2 rounded-full bg-[#a9a9a9]" />Restricted</span>
+              </div>
+            </div>
             <div className="absolute bottom-7 right-7 flex flex-col overflow-hidden rounded-full border border-[#dfe7ef] bg-white text-navy shadow-[0_4px_12px_rgba(11,31,77,0.12)] sm:bottom-8 sm:right-8">
-              <button type="button" aria-label="Zoom in" className="flex h-8 w-8 items-center justify-center hover:bg-[#f4f7fa]"><MapControlIcon type="plus" /></button>
+              <button type="button" aria-label="Zoom in" onClick={() => mapRef.current?.zoomIn()} className="flex h-8 w-8 items-center justify-center hover:bg-[#f4f7fa]"><MapControlIcon type="plus" /></button>
               <span className="mx-auto h-px w-4 bg-line" />
-              <button type="button" aria-label="Zoom out" className="flex h-8 w-8 items-center justify-center hover:bg-[#f4f7fa]"><MapControlIcon type="minus" /></button>
+              <button type="button" aria-label="Zoom out" onClick={() => mapRef.current?.zoomOut()} className="flex h-8 w-8 items-center justify-center hover:bg-[#f4f7fa]"><MapControlIcon type="minus" /></button>
             </div>
           </div>
         </Container>
