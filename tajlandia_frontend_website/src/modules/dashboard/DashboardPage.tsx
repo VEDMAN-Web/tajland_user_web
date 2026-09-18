@@ -27,7 +27,7 @@ export function DashboardPage() {
     <div className="min-h-[100svh] bg-white text-navy">
       <DashboardNavbar active="home" />
 
-      <main className="mx-auto w-full max-w-[1180px] px-5 py-8 sm:px-8 sm:py-10">
+      <main className="mx-auto w-[92%] max-w-none px-5 py-8 sm:px-8 sm:py-10">
         <section className="flex items-end justify-between gap-6">
           <div><p className="font-manrope text-[14px] font-bold uppercase tracking-[0.08em] text-navy">Your Tajlandia Home</p><h1 className="font-manrope mt-2 text-[36px] font-semibold leading-none tracking-[-0.04em] text-[#171717] sm:text-[48px]">Welcome back, {firstName} <span className="text-brand-red">✦</span></h1><p className="font-manrope mt-2 text-[16px] font-normal text-[#9aa3ad]">Here’s everything you own in Thailand.</p></div>
           <Link href="/dashboard/explore" className="font-manrope hidden rounded-full bg-navy px-5 py-3 text-[16px] font-medium text-white sm:inline-flex">Explore Thailand →</Link>

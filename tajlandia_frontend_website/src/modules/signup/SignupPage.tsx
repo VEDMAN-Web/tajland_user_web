@@ -217,7 +217,7 @@ export function SignupPage() {
                     aria-describedby={errors.newPassword ? "signup-new-password-error" : undefined}
                     className={`${fieldClass(Boolean(errors.newPassword))} pr-10`}
                   />
-                  <button type="button" aria-label={showNewPassword ? "Hide new password" : "Show new password"} onClick={() => setShowNewPassword((current) => !current)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#b7b8bb] focus-visible:rounded focus-visible:outline-2 focus-visible:outline-navy">
+                  <button type="button" aria-label={showNewPassword ? "Hide new password" : "Show new password"} onMouseDown={(event) => event.preventDefault()} onClick={() => setShowNewPassword((current) => !current)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#b7b8bb] focus-visible:rounded focus-visible:outline-2 focus-visible:outline-navy">
                     <EyeIcon hidden={!showNewPassword} />
                   </button>
                 </div>
@@ -239,7 +239,7 @@ export function SignupPage() {
                     aria-describedby={errors.confirmPassword ? "signup-confirm-password-error" : undefined}
                     className={`${fieldClass(Boolean(errors.confirmPassword))} pr-10`}
                   />
-                  <button type="button" aria-label={showConfirmPassword ? "Hide confirm password" : "Show confirm password"} onClick={() => setShowConfirmPassword((current) => !current)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#b7b8bb] focus-visible:rounded focus-visible:outline-2 focus-visible:outline-navy">
+                  <button type="button" aria-label={showConfirmPassword ? "Hide confirm password" : "Show confirm password"} onMouseDown={(event) => event.preventDefault()} onClick={() => setShowConfirmPassword((current) => !current)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#b7b8bb] focus-visible:rounded focus-visible:outline-2 focus-visible:outline-navy">
                     <EyeIcon hidden={!showConfirmPassword} />
                   </button>
                 </div>
