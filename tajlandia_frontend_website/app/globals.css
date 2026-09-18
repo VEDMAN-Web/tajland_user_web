@@ -1,27 +1,79 @@
 @import "tailwindcss";
 
+/* ─── Design tokens — extracted from Figma (TajLandia Dashboard) ─── */
 :root {
-  --background: #f7f8fc;
-  --foreground: #12203a;
-  --navy: #0b1f4d;
-  --navy-deep: #071536;
-  --brand-red: #c81e1e;
-  --muted: #5b6578;
+  /* Backgrounds */
+  --background: #f7f9fc;
   --card: #ffffff;
-  --line: #e6e8ef;
+
+  /* Brand / primary */
+  --navy: #001f54;
+  --navy-mid: #0a3161;
+  --navy-bright: #003b9f;
+  --navy-deep: #071536;
+
+  /* Accent */
+  --brand-red: #e00c1b;
+  --brand-red-dark: #b31942;
+  --success: #00a63d;
+  --teal: #16807f;
+  --purple: #6e0499;
+  --gold: #c9a227;
+  --gold-bright: #d89c05;
+
+  /* Foreground / text */
+  --foreground: #111111;
+  --muted: #818d97;
+  --muted-mid: #718096;
+
+  /* Borders */
+  --line: #e9ecef;
+  --line-soft: #e8ecf1;
+
+  /* Tinted backgrounds */
+  --bg-red-tint: #fff7f7;
+  --bg-blue-tint: #eaf3ff;
+  --bg-teal-tint: #d8efee;
+  --bg-yellow-tint: #f7e8b5;
+  --bg-gray-tint: #f7f9fc;
+
+  /* Shadows (raw values reused in utilities) */
+  --shadow-card: 0 5px 18px rgba(0, 31, 84, 0.08);
+  --shadow-card-hover: 0 8px 28px rgba(0, 31, 84, 0.13);
+  --shadow-nav: 0 5px 20px rgba(0, 31, 84, 0.10);
+  --shadow-dropdown: 0 8px 24px rgba(0, 31, 84, 0.14);
+  --shadow-icon-btn: 0 5px 20px rgba(0, 31, 84, 0.08);
 }
 
 @theme inline {
+  /* Colors */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-navy: var(--navy);
+  --color-navy-mid: var(--navy-mid);
+  --color-navy-bright: var(--navy-bright);
   --color-navy-deep: var(--navy-deep);
   --color-brand-red: var(--brand-red);
+  --color-brand-red-dark: var(--brand-red-dark);
+  --color-success: var(--success);
+  --color-teal: var(--teal);
+  --color-purple: var(--purple);
+  --color-gold: var(--gold);
+  --color-gold-bright: var(--gold-bright);
   --color-muted: var(--muted);
+  --color-muted-mid: var(--muted-mid);
   --color-card: var(--card);
   --color-line: var(--line);
-  --font-sans: var(--font-plus-jakarta);
+  --color-line-soft: var(--line-soft);
+  --color-bg-red-tint: var(--bg-red-tint);
+  --color-bg-blue-tint: var(--bg-blue-tint);
+  --color-bg-teal-tint: var(--bg-teal-tint);
+  --color-bg-yellow-tint: var(--bg-yellow-tint);
+
+  /* Fonts */
+  --font-sans: var(--font-manrope);
   --font-display: var(--font-cormorant);
+  --font-rethink: 'Rethink Sans', sans-serif;
 }
 
 html,
@@ -31,8 +83,15 @@ body {
 }
 
 body {
-  font-family: var(--font-plus-jakarta), Arial, Helvetica, sans-serif;
+  font-family: var(--font-manrope), Arial, Helvetica, sans-serif;
 }
+
+/* Dashboard shadow utilities */
+.shadow-card      { box-shadow: var(--shadow-card); }
+.shadow-card-hover{ box-shadow: var(--shadow-card-hover); }
+.shadow-nav       { box-shadow: var(--shadow-nav); }
+.shadow-dropdown  { box-shadow: var(--shadow-dropdown); }
+.shadow-icon-btn  { box-shadow: var(--shadow-icon-btn); }
 
 /* Keep the development overlay from covering the application preview. */
 nextjs-portal {

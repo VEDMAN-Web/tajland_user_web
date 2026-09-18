@@ -1,6 +1,8 @@
 export const routes = {
   home: "/",
   dashboard: "/dashboard",
+  dashboardExplore: "/dashboard/explore",
+  dashboardMyLand: "/dashboard/my-land",
   explore: "/explore",
   blog: "/blog",
   contact: "/contact",
