@@ -9,7 +9,7 @@ const variantClasses: Record<Variant, string> = {
   primary: "bg-navy text-white hover:bg-navy-deep focus-visible:outline-white",
   secondary: "bg-white text-navy border border-navy/15 hover:bg-navy/5",
   ghost: "bg-transparent text-navy hover:bg-navy/5",
-  inverse: "bg-white text-navy hover:bg-white/90",
+  inverse: "bg-white text-navy hover:bg-navy hover:text-white focus-visible:outline-white",
 };
 
 const sizeClasses: Record<Size, string> = {
@@ -40,16 +40,35 @@ export function Button({
   ...props
 }: ButtonProps) {
   const classes = cn(
-    "inline-flex items-center justify-center rounded-full font-medium transition-colors disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy",
+    "button-animate relative inline-flex items-center justify-center rounded-full font-medium transition-colors disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy overflow-hidden",
     variantClasses[variant],
     sizeClasses[size],
     className,
   );
 
+  const shimmer = (
+    <span className="button-shimmer absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-0 group-hover:opacity-20" />
+  );
+
   if ("href" in props && props.href) {
-    const { href, ...linkProps } = props;
-    return <Link href={href} className={classes} {...linkProps} />;
+    const { href, children, ...linkProps } = props;
+    return (
+      <span className="group relative inline-block">
+        <Link href={href} className={classes} {...linkProps}>
+          {children}
+          {shimmer}
+        </Link>
+      </span>
+    );
   }
 
-  return <button className={classes} {...(props as ButtonAsButton)} />;
+  const { children, ...buttonProps } = props as ButtonAsButton;
+  return (
+    <span className="group relative inline-block">
+      <button className={classes} {...buttonProps}>
+        {children}
+        {shimmer}
+      </button>
+    </span>
+  );
 }

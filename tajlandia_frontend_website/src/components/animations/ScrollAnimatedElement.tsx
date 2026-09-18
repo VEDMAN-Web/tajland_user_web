@@ -19,6 +19,7 @@ const animationKeyframes: Record<AnimationType, string> = {
   'slide-in-right': 'slide-in-right',
   'scale-in': 'scale-in',
   'fade-in-scale': 'fade-in-scale',
+  'slide-in-right-dark': 'slide-in-right-dark',
 };
 
 export function ScrollAnimatedElement({

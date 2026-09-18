@@ -43,11 +43,11 @@ export async function apiGet<T>(
 ): Promise<T> {
   const env = getServerEnv();
 
-  if (!env.API_BASE_URL) {
+  if (!env.NEXT_PUBLIC_API_URL) {
     throw new ApiError("API is not configured", 500, "API_NOT_CONFIGURED");
   }
 
-  const url = resolveApiUrl(env.API_BASE_URL, path);
+  const url = resolveApiUrl(env.NEXT_PUBLIC_API_URL, path);
   const headers = new Headers({ Accept: "application/json" });
 
   if (env.API_SECRET) {
@@ -106,11 +106,11 @@ export async function apiPost<T>(
 ): Promise<T> {
   const env = getServerEnv();
 
-  if (!env.API_BASE_URL) {
+  if (!env.NEXT_PUBLIC_API_URL) {
     throw new ApiError("API is not configured", 500, "API_NOT_CONFIGURED");
   }
 
-  const url = resolveApiUrl(env.API_BASE_URL, path);
+  const url = resolveApiUrl(env.NEXT_PUBLIC_API_URL, path);
   const headers = new Headers({
     Accept: "application/json",
     "Content-Type": "application/json",
