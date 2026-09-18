@@ -21,7 +21,8 @@ export function DashboardNavbar({ active, overlay = false }: DashboardNavbarProp
   const [language, setLanguage] = useState<"EN" | "PL">("EN");
   const [isLanguageOpen, setIsLanguageOpen] = useState(false);
   const [isCartActive, setIsCartActive] = useState(false);
-  const isProfileActive = pathname === routes.profile || pathname === routes.editProfile;
+  const accountMenuRoutes = [routes.profile, routes.editProfile, routes.changePassword, routes.purchases, routes.certificates, routes.settings, routes.helpSupport, routes.terms, routes.privacy];
+  const isProfileActive = accountMenuRoutes.some((route) => pathname === route);
   const isHomeActive = active === "home" && pathname === routes.dashboard;
   const activeClass = "bg-navy text-white";
   const navClass = overlay ? "absolute inset-x-0 top-0 z-20" : "sticky top-0 z-50";
