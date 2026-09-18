@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import React, { useState } from "react";
 import { routes } from "@/lib/constants/routes";
+import { ScrollAnimatedElement } from "@/components/animations/ScrollAnimatedElement";
 import { resetPasswordSchema, type ResetPasswordFormValues } from "./schemas/reset-password.schema";
 import { resetPasswordAction } from "./services/reset-password.service";
 
@@ -139,12 +140,12 @@ export function ResetPasswordForm() {
   }
 
   function inputClass(hasError: boolean) {
-    return `mt-2 h-10 w-full rounded-[9px] border px-3 pr-10 text-[12px] text-foreground outline-none transition placeholder:text-[#c6c7ca] focus:border-navy focus:ring-2 focus:ring-navy/10 ${hasError ? "border-[#d52b35]" : "border-[#e5e7eb]"}`;
+    return `mt-2 h-10 w-full rounded-[9px] border px-3 pr-10 text-[12px] text-foreground outline-none focus:outline-none focus-visible:outline-none transition placeholder:text-[#c6c7ca] focus:border-navy focus:ring-2 focus:ring-navy/10 ${hasError ? "border-[#d52b35]" : "border-[#e5e7eb]"}`;
   }
 
   return (
     <div className="flex flex-col px-4 py-12 sm:px-12 lg:px-[74px] lg:py-16">
-      <div className="w-full max-w-[365px] lg:mx-auto">
+      <ScrollAnimatedElement animation="slide-in-right" duration={600} className="w-full max-w-[365px] lg:mx-auto">
         <Link href={routes.login} className="text-[10px] text-foreground hover:underline">← Back to Login</Link>
         <h2 className="mt-9 text-[24px] font-semibold tracking-[-0.03em] text-navy">Reset your password</h2>
         <p className="mt-2 text-[11px] leading-5 text-muted">Create a new password for your account.</p>
@@ -154,7 +155,7 @@ export function ResetPasswordForm() {
             <label htmlFor="reset-new-password" className="text-[12px] font-medium text-foreground">New password</label>
             <div className="relative mt-2">
               <input id="reset-new-password" name="newPassword" type={showNewPassword ? "text" : "password"} autoComplete="new-password" placeholder="hello@example.com" value={values.newPassword} onChange={(event) => updateField("newPassword", event.target.value)} aria-invalid={Boolean(errors.newPassword)} aria-describedby={errors.newPassword ? "reset-new-password-error" : "reset-password-strength"} className={inputClass(Boolean(errors.newPassword))} />
-              <button type="button" aria-label={showNewPassword ? "Hide new password" : "Show new password"} onClick={() => setShowNewPassword((current) => !current)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#b7b8bb] focus-visible:rounded focus-visible:outline-2 focus-visible:outline-navy"><EyeIcon hidden={!showNewPassword} /></button>
+              <button type="button" aria-label={showNewPassword ? "Hide new password" : "Show new password"} onMouseDown={(event) => event.preventDefault()} onClick={() => setShowNewPassword((current) => !current)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#b7b8bb] focus-visible:rounded focus-visible:outline-2 focus-visible:outline-navy"><EyeIcon hidden={!showNewPassword} /></button>
             </div>
             <div id="reset-password-strength" className="mt-4 flex items-center gap-1" aria-live="polite" style={{ "--strength-width": strength.width, "--strength-color": strength.color } as React.CSSProperties}>
               <div className="h-[3px] flex-1 overflow-hidden bg-[#e5e7eb]"><div className="strength-bar h-full transition-all" /></div>
@@ -167,7 +168,7 @@ export function ResetPasswordForm() {
             <label htmlFor="reset-confirm-password" className="text-[12px] font-medium text-foreground">Confirm password</label>
             <div className="relative mt-2">
               <input id="reset-confirm-password" name="confirmPassword" type={showConfirmPassword ? "text" : "password"} autoComplete="new-password" placeholder="hello@example.com" value={values.confirmPassword} onChange={(event) => updateField("confirmPassword", event.target.value)} aria-invalid={Boolean(errors.confirmPassword)} aria-describedby={errors.confirmPassword ? "reset-confirm-password-error" : undefined} className={inputClass(Boolean(errors.confirmPassword))} />
-              <button type="button" aria-label={showConfirmPassword ? "Hide confirm password" : "Show confirm password"} onClick={() => setShowConfirmPassword((current) => !current)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#b7b8bb] focus-visible:rounded focus-visible:outline-2 focus-visible:outline-navy"><EyeIcon hidden={!showConfirmPassword} /></button>
+              <button type="button" aria-label={showConfirmPassword ? "Hide confirm password" : "Show confirm password"} onMouseDown={(event) => event.preventDefault()} onClick={() => setShowConfirmPassword((current) => !current)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#b7b8bb] focus-visible:rounded focus-visible:outline-2 focus-visible:outline-navy"><EyeIcon hidden={!showConfirmPassword} /></button>
             </div>
             {errors.confirmPassword ? <p id="reset-confirm-password-error" className="mt-1.5 text-[11px] text-[#d52b35]">{errors.confirmPassword}</p> : null}
           </div>
@@ -187,12 +188,12 @@ export function ResetPasswordForm() {
             {isSubmitting ? "Resetting Password..." : "Reset Password"}
           </button>
         </form>
-      </div>
 
-      <div className="mt-auto pt-16 text-center text-[10px] text-[#8e8e91]">
-        <div className="flex justify-center gap-4"><Link href={routes.privacy} className="hover:underline">Privacy Policy</Link><Link href={routes.terms} className="hover:underline">Terms of Service</Link><Link href={routes.contact} className="hover:underline">Contact Support</Link></div>
-        <p className="mt-4 text-[9px] text-foreground">© 2026 Tajlandia.pl. All rights reserved.</p>
-      </div>
+        <div className="mt-auto pt-16 text-center text-[10px] text-[#8e8e91]">
+          <div className="flex justify-center gap-4"><Link href={routes.privacy} className="hover:underline">Privacy Policy</Link><Link href={routes.terms} className="hover:underline">Terms of Service</Link><Link href={routes.contact} className="hover:underline">Contact Support</Link></div>
+          <p className="mt-4 text-[9px] text-foreground">© 2026 Tajlandia.pl. All rights reserved.</p>
+        </div>
+      </ScrollAnimatedElement>
     </div>
   );
 }

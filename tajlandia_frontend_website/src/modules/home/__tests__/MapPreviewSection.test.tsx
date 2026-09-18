@@ -10,7 +10,7 @@ describe("MapPreviewSection", () => {
     expect(
       screen.getByRole("heading", { name: /a new way to experience thailand/i }),
     ).toBeInTheDocument();
-    expect(screen.getByRole("img", { name: /map of thailand/i })).toBeInTheDocument();
+    expect(screen.getByLabelText(/interactive thailand map/i)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /explore map/i })).toHaveAttribute(
       "href",
       "/explore",

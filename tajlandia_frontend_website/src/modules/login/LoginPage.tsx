@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import React, { useState } from "react";
 import Link from "next/link";
 import { routes } from "@/lib/constants/routes";
+import { ScrollAnimatedElement } from "@/components/animations/ScrollAnimatedElement";
 import { setAuthToken, setAuthUser } from "@/lib/api/auth.utils";
 import { loginSchema, type LoginFormValues } from "./schemas/login.schema";
 import { loginAction } from "./services/login.service";
@@ -134,7 +135,7 @@ export function LoginPage() {
         </div>
 
         <div className="flex items-center px-4 py-12 sm:px-12 lg:px-[76px] lg:py-16">
-          <div className="w-full max-w-[410px] lg:mx-auto">
+          <ScrollAnimatedElement animation="slide-in-right" duration={600} className="w-full max-w-[410px] lg:mx-auto">
             <Link href="/" className="mb-4 inline-flex text-[12px] font-medium text-muted transition hover:text-navy">
               ← Back to Home
             </Link>
@@ -172,13 +173,14 @@ export function LoginPage() {
                     onChange={(event) => updateField("password", event.target.value)}
                     aria-invalid={Boolean(errors.password)}
                     aria-describedby={errors.password ? "login-password-error" : undefined}
-                    className="h-10 w-full rounded-[9px] border border-[#e5e7eb] px-3 pr-10 text-[12px] text-foreground outline-none transition placeholder:text-[#c6c7ca] focus:border-navy focus:ring-2 focus:ring-navy/10 aria-[invalid=true]:border-[#d52b35]"
+                    className="h-10 w-full rounded-[9px] border border-[#e5e7eb] px-3 pr-10 text-[12px] text-foreground outline-none focus:outline-none focus-visible:outline-none transition placeholder:text-[#c6c7ca] focus:border-navy focus:ring-2 focus:ring-navy/10 aria-[invalid=true]:border-[#d52b35]"
                   />
                   <button
                     type="button"
                     aria-label={showPassword ? "Hide password" : "Show password"}
+                    onMouseDown={(event) => event.preventDefault()}
                     onClick={() => setShowPassword((current) => !current)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#b7b8bb] focus-visible:rounded focus-visible:outline-2 focus-visible:outline-navy"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 rounded-sm text-[#b7b8bb] outline-none focus:outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9aaabd] focus-visible:ring-offset-1"
                   >
                     <EyeIcon hidden={!showPassword} />
                   </button>
@@ -222,7 +224,7 @@ export function LoginPage() {
             <p className="mt-8 text-center text-[11px] text-foreground">
               Don&apos;t have an account? <a href="/signup" className="font-medium text-[#d9272e] hover:underline">Create Account</a>
             </p>
-          </div>
+          </ScrollAnimatedElement>
         </div>
       </div>
     </section>

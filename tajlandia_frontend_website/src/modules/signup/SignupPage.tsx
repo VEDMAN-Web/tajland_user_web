@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import React, { useState } from "react";
 import { routes } from "@/lib/constants/routes";
+import { ScrollAnimatedElement } from "@/components/animations/ScrollAnimatedElement";
 import { signupSchema, type SignupFormValues } from "./schemas/signup.schema";
 import { requestSignupOtpAction } from "./services/signup.service";
 
@@ -142,7 +143,7 @@ export function SignupPage() {
         </div>
 
         <div className="flex items-center px-4 py-12 sm:px-12 lg:px-[80px] lg:py-16">
-          <div className="w-full max-w-[422px] lg:mx-auto">
+          <ScrollAnimatedElement animation="slide-in-right" duration={600} className="w-full max-w-[422px] lg:mx-auto">
             <Link href="/" className="mb-4 inline-flex text-[12px] font-medium text-muted transition hover:text-navy">
               ← Back to Home
             </Link>
@@ -217,7 +218,7 @@ export function SignupPage() {
                     aria-describedby={errors.newPassword ? "signup-new-password-error" : undefined}
                     className={`${fieldClass(Boolean(errors.newPassword))} pr-10`}
                   />
-                  <button type="button" aria-label={showNewPassword ? "Hide new password" : "Show new password"} onClick={() => setShowNewPassword((current) => !current)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#b7b8bb] focus-visible:rounded focus-visible:outline-2 focus-visible:outline-navy">
+                  <button type="button" aria-label={showNewPassword ? "Hide new password" : "Show new password"} onMouseDown={(event) => event.preventDefault()} onClick={() => setShowNewPassword((current) => !current)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#b7b8bb] focus-visible:rounded focus-visible:outline-2 focus-visible:outline-navy">
                     <EyeIcon hidden={!showNewPassword} />
                   </button>
                 </div>
@@ -239,7 +240,7 @@ export function SignupPage() {
                     aria-describedby={errors.confirmPassword ? "signup-confirm-password-error" : undefined}
                     className={`${fieldClass(Boolean(errors.confirmPassword))} pr-10`}
                   />
-                  <button type="button" aria-label={showConfirmPassword ? "Hide confirm password" : "Show confirm password"} onClick={() => setShowConfirmPassword((current) => !current)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#b7b8bb] focus-visible:rounded focus-visible:outline-2 focus-visible:outline-navy">
+                  <button type="button" aria-label={showConfirmPassword ? "Hide confirm password" : "Show confirm password"} onMouseDown={(event) => event.preventDefault()} onClick={() => setShowConfirmPassword((current) => !current)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#b7b8bb] focus-visible:rounded focus-visible:outline-2 focus-visible:outline-navy">
                     <EyeIcon hidden={!showConfirmPassword} />
                   </button>
                 </div>
@@ -282,7 +283,7 @@ export function SignupPage() {
             <p className="mt-8 text-center text-[11px] text-foreground">
               Already have an account? <Link href={routes.login} className="font-medium text-[#d9272e] hover:underline">Log in</Link>
             </p>
-          </div>
+          </ScrollAnimatedElement>
         </div>
       </div>
     </section>
