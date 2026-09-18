@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import React, { useState } from "react";
 import Link from "next/link";
 import { routes } from "@/lib/constants/routes";
+import { ScrollAnimatedElement } from "@/components/animations/ScrollAnimatedElement";
 import { setAuthToken, setAuthUser } from "@/lib/api/auth.utils";
 import { loginSchema, type LoginFormValues } from "./schemas/login.schema";
 import { loginAction } from "./services/login.service";
@@ -134,7 +135,7 @@ export function LoginPage() {
         </div>
 
         <div className="flex items-center px-4 py-12 sm:px-12 lg:px-[76px] lg:py-16">
-          <div className="w-full max-w-[410px] lg:mx-auto">
+          <ScrollAnimatedElement animation="slide-in-right" duration={600} className="w-full max-w-[410px] lg:mx-auto">
             <Link href="/" className="mb-4 inline-flex text-[12px] font-medium text-muted transition hover:text-navy">
               ← Back to Home
             </Link>
@@ -222,7 +223,7 @@ export function LoginPage() {
             <p className="mt-8 text-center text-[11px] text-foreground">
               Don&apos;t have an account? <a href="/signup" className="font-medium text-[#d9272e] hover:underline">Create Account</a>
             </p>
-          </div>
+          </ScrollAnimatedElement>
         </div>
       </div>
     </section>

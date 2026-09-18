@@ -1,6 +1,7 @@
 import { HomeMedia } from "../components/HomeMedia";
 import { Button } from "@/components/ui/Button";
 import { GetInTouchLauncher } from "../components/GetInTouchLauncher";
+import { ScrollAnimatedElement } from "@/components/animations/ScrollAnimatedElement";
 import type { HomePageContent } from "../types/home.types";
 
 type HeroSectionProps = {
@@ -38,7 +39,7 @@ export function HeroSection({ content }: HeroSectionProps) {
       </div>
       <div className="absolute inset-0 z-10 bg-gradient-to-b from-white/35 via-white/5 to-transparent" />
       <div className="relative z-20 flex min-h-[100svh] w-full justify-center px-5 pb-16 pt-[14vh] text-center sm:px-8 sm:pt-[16vh] md:pt-[18vh]">
-        <div className="w-full max-w-[760px] text-navy">
+        <ScrollAnimatedElement animation="slide-in-up" duration={800} className="w-full max-w-[760px] text-navy">
           <h1 className="font-[family-name:var(--font-playfair-display)] text-[68px] font-semibold leading-[1.04] tracking-[-0.055em] max-[767px]:text-[48px]">
             <span className="block">{content.title}</span>
             <span className="block">
@@ -56,7 +57,7 @@ export function HeroSection({ content }: HeroSectionProps) {
               {content.cta.label}
             </Button>
           ) : null}
-        </div>
+        </ScrollAnimatedElement>
       </div>
       <GetInTouchLauncher />
     </section>

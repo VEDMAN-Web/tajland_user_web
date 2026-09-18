@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useState, type FormEvent } from "react";
 import { Container } from "@/components/ui/Container";
+import { ScrollAnimatedElement } from "@/components/animations/ScrollAnimatedElement";
 import { routes } from "@/lib/constants/routes";
 
 type FormValues = {
@@ -57,14 +58,16 @@ export function ContactPage({ inquiryOpen: initialInquiryOpen = false }: { inqui
     <main className="relative bg-white pt-12 sm:pt-14">
       <section>
         <Container>
-          <div className="mx-auto max-w-[760px] text-center">
-            <h1 className="font-display text-[56px] font-semibold italic leading-none tracking-[-0.04em] text-navy">
-              Get in <span className="italic text-brand-red">Touch</span>
-            </h1>
-            <p className="mt-3 text-[24px] text-[#9aa3ad]">Choose the way that works best for you.</p>
-          </div>
+          <ScrollAnimatedElement animation="fade-in" duration={600}>
+            <div className="mx-auto max-w-[760px] text-center">
+              <h1 className="font-display text-[56px] font-semibold italic leading-none tracking-[-0.04em] text-navy">
+                Get in <span className="italic text-brand-red">Touch</span>
+              </h1>
+              <p className="mt-3 text-[24px] text-[#9aa3ad]">Choose the way that works best for you.</p>
+            </div>
+          </ScrollAnimatedElement>
 
-          <div className="mx-auto mt-10 grid w-full gap-8 rounded-[10px] bg-white p-2 shadow-[0_12px_45px_rgba(11,31,77,0.08)] sm:mt-11 sm:min-h-[667px] sm:grid-cols-[491px_1fr] sm:gap-10 sm:p-[9px]">
+          <ScrollAnimatedElement animation="scale-in" duration={700} className="mx-auto mt-10 grid w-full gap-8 rounded-[10px] bg-white p-2 shadow-[0_12px_45px_rgba(11,31,77,0.08)] sm:mt-11 sm:min-h-[667px] sm:grid-cols-[491px_1fr] sm:gap-10 sm:p-[9px]">
             <aside className="flex min-h-[420px] flex-col rounded-[15px] bg-[radial-gradient(ellipse_at_50%_100%,rgba(255,177,177,0.9),transparent_30%),linear-gradient(180deg,#061b4d_0%,#0b3478_42%,#467fc4_72%,#e8b7c6_100%)] px-6 py-7 text-white sm:h-[647px] sm:min-h-0 sm:w-[491px] sm:px-7 sm:py-9">
               <p className="text-[12px] font-medium uppercase tracking-[0.12em] text-white/75">Send a message</p>
               <h2 className="mt-2 font-display text-[36px] font-medium leading-none">How can we help?</h2>
@@ -92,7 +95,7 @@ export function ContactPage({ inquiryOpen: initialInquiryOpen = false }: { inqui
               {submitted ? <p role="status" className="mt-3 text-[10px] text-green-600">Thanks. We&apos;ll get back to you soon.</p> : null}
               <p className="mt-5 max-w-[360px] text-[8px] leading-[1.45] text-[#9da2a8]">By submitting this form, you agree to our <span className="underline">Privacy Policy</span> and consent to having our team contact you regarding your request.</p>
             </form>
-          </div>
+          </ScrollAnimatedElement>
         </Container>
       </section>
 

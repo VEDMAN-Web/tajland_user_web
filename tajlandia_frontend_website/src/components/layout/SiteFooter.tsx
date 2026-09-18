@@ -1,6 +1,9 @@
+'use client';
+
 import Link from "next/link";
 import { BrandLogo } from "@/components/ui/BrandLogo";
 import { Container } from "@/components/ui/Container";
+import { ScrollAnimatedElement } from "@/components/animations/ScrollAnimatedElement";
 import { brand } from "@/lib/constants/brand";
 
 function MailIcon() {
@@ -24,48 +27,58 @@ export function SiteFooter() {
     <footer className="relative overflow-hidden bg-[#fbfcfd] text-[#74777d]">
       <div className="pointer-events-none absolute inset-0 opacity-60 gradient-footer-bg" aria-hidden="true" />
       <Container className="relative grid gap-12 py-14 md:grid-cols-[1.55fr_0.72fr_0.72fr_1fr] md:gap-10 md:py-20">
-        <div className="max-w-[330px]">
-          <BrandLogo compact />
-          <p className="mt-6 text-[15px] leading-6">A symbolic map of Thailand. Choose a fragment, claim your certificate, make it a part of your story.</p>
-        </div>
+        <ScrollAnimatedElement animation="fade-in" duration={600}>
+          <div className="max-w-[330px]">
+            <BrandLogo compact />
+            <p className="mt-6 text-[15px] leading-6">A symbolic map of Thailand. Choose a fragment, claim your certificate, make it a part of your story.</p>
+          </div>
+        </ScrollAnimatedElement>
 
-        <div>
-          <p className="mb-6 text-[17px] font-semibold text-navy">Company</p>
-          <ul className="space-y-3 text-[15px]">
-            <li><FooterLink href="/#how-it-works">Journal</FooterLink></li>
-            <li><FooterLink href="/#map">Map</FooterLink></li>
-            <li><FooterLink href="/#certificate">Certificate</FooterLink></li>
-            <li>FAQ</li>
-            <li><FooterLink href="/contact">Contact</FooterLink></li>
-          </ul>
-        </div>
+        <ScrollAnimatedElement animation="slide-in-up" duration={600} delay={100}>
+          <div>
+            <p className="mb-6 text-[17px] font-semibold text-navy">Company</p>
+            <ul className="space-y-3 text-[15px]">
+              <li><FooterLink href="/#how-it-works">Journal</FooterLink></li>
+              <li><FooterLink href="/#map">Map</FooterLink></li>
+              <li><FooterLink href="/#certificate">Certificate</FooterLink></li>
+              <li>FAQ</li>
+              <li><FooterLink href="/contact">Contact</FooterLink></li>
+            </ul>
+          </div>
+        </ScrollAnimatedElement>
 
-        <div>
-          <p className="mb-6 text-[17px] font-semibold text-navy">Legal</p>
-          <ul className="space-y-3 text-[15px]">
-            <li>Privacy Policy</li>
-            <li>Terms of Service</li>
-            <li>Risk Disclosure</li>
-            <li>Cookie Policy</li>
-          </ul>
-        </div>
+        <ScrollAnimatedElement animation="slide-in-up" duration={600} delay={200}>
+          <div>
+            <p className="mb-6 text-[17px] font-semibold text-navy">Legal</p>
+            <ul className="space-y-3 text-[15px]">
+              <li>Privacy Policy</li>
+              <li>Terms of Service</li>
+              <li>Risk Disclosure</li>
+              <li>Cookie Policy</li>
+            </ul>
+          </div>
+        </ScrollAnimatedElement>
 
-        <div>
-          <p className="mb-6 text-[17px] font-semibold text-navy">Contacts us</p>
-          <ul className="space-y-4 text-[15px]">
-            <li className="flex items-start gap-3"><MailIcon /><span>contact@company.com</span></li>
-            <li className="flex items-start gap-3"><PhoneIcon /><span>(414) 687 - 5892</span></li>
-            <li className="flex items-start gap-3"><LocationIcon /><span>794 Mcallister St<br />San Francisco, 94102</span></li>
-          </ul>
-        </div>
+        <ScrollAnimatedElement animation="slide-in-up" duration={600} delay={300}>
+          <div>
+            <p className="mb-6 text-[17px] font-semibold text-navy">Contacts us</p>
+            <ul className="space-y-4 text-[15px]">
+              <li className="flex items-start gap-3"><MailIcon /><span>contact@company.com</span></li>
+              <li className="flex items-start gap-3"><PhoneIcon /><span>(414) 687 - 5892</span></li>
+              <li className="flex items-start gap-3"><LocationIcon /><span>794 Mcallister St<br />San Francisco, 94102</span></li>
+            </ul>
+          </div>
+        </ScrollAnimatedElement>
       </Container>
 
-      <div className="relative border-t border-line/80">
-        <Container className="flex flex-col gap-3 py-5 text-[14px] sm:flex-row sm:items-center sm:justify-between">
-          <p>© 2026 {brand.name}.pl — Symbolic ownership only. Not real estate, not an investment, not cryptocurrency.</p>
-          <p>Made with care, from Thailand.</p>
-        </Container>
-      </div>
+      <ScrollAnimatedElement animation="fade-in" duration={600}>
+        <div className="relative border-t border-line/80">
+          <Container className="flex flex-col gap-3 py-5 text-[14px] sm:flex-row sm:items-center sm:justify-between">
+            <p>© 2026 {brand.name}.pl — Symbolic ownership only. Not real estate, not an investment, not cryptocurrency.</p>
+            <p>Made with care, from Thailand.</p>
+          </Container>
+        </div>
+      </ScrollAnimatedElement>
     </footer>
   );
 }

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import React, { useState } from "react";
 import { routes } from "@/lib/constants/routes";
+import { ScrollAnimatedElement } from "@/components/animations/ScrollAnimatedElement";
 import { signupSchema, type SignupFormValues } from "./schemas/signup.schema";
 import { requestSignupOtpAction } from "./services/signup.service";
 
@@ -142,7 +143,7 @@ export function SignupPage() {
         </div>
 
         <div className="flex items-center px-4 py-12 sm:px-12 lg:px-[80px] lg:py-16">
-          <div className="w-full max-w-[422px] lg:mx-auto">
+          <ScrollAnimatedElement animation="slide-in-right" duration={600} className="w-full max-w-[422px] lg:mx-auto">
             <Link href="/" className="mb-4 inline-flex text-[12px] font-medium text-muted transition hover:text-navy">
               ← Back to Home
             </Link>
@@ -282,7 +283,7 @@ export function SignupPage() {
             <p className="mt-8 text-center text-[11px] text-foreground">
               Already have an account? <Link href={routes.login} className="font-medium text-[#d9272e] hover:underline">Log in</Link>
             </p>
-          </div>
+          </ScrollAnimatedElement>
         </div>
       </div>
     </section>

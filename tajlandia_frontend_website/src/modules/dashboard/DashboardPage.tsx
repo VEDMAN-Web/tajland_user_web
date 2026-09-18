@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { routes } from "@/lib/constants/routes";
+import { ScrollAnimatedElement } from "@/components/animations/ScrollAnimatedElement";
 import { useAuth } from "@/lib/hooks/useAuth";
 import { DashboardNavbar } from "./DashboardNavbar";
 
@@ -28,15 +29,17 @@ export function DashboardPage() {
       <DashboardNavbar active="home" />
 
       <main className="mx-auto w-full max-w-[1180px] px-5 py-8 sm:px-8 sm:py-10">
-        <section className="flex items-end justify-between gap-6">
-          <div><p className="font-manrope text-[14px] font-bold uppercase tracking-[0.08em] text-navy">Your Tajlandia Home</p><h1 className="font-manrope mt-2 text-[36px] font-semibold leading-none tracking-[-0.04em] text-[#171717] sm:text-[48px]">Welcome back, {firstName} <span className="text-brand-red">✦</span></h1><p className="font-manrope mt-2 text-[16px] font-normal text-[#9aa3ad]">Here’s everything you own in Thailand.</p></div>
-          <Link href="/dashboard/explore" className="font-manrope hidden rounded-full bg-navy px-5 py-3 text-[16px] font-medium text-white sm:inline-flex">Explore Thailand →</Link>
-        </section>
+        <ScrollAnimatedElement animation="fade-in" duration={600}>
+          <section className="flex items-end justify-between gap-6">
+            <div><p className="font-manrope text-[14px] font-bold uppercase tracking-[0.08em] text-navy">Your Tajlandia Home</p><h1 className="font-manrope mt-2 text-[36px] font-semibold leading-none tracking-[-0.04em] text-[#171717] sm:text-[48px]">Welcome back, {firstName} <span className="text-brand-red">✦</span></h1><p className="font-manrope mt-2 text-[16px] font-normal text-[#9aa3ad]">Here’s everything you own in Thailand.</p></div>
+            <Link href="/dashboard/explore" className="font-manrope hidden rounded-full bg-navy px-5 py-3 text-[16px] font-medium text-white sm:inline-flex">Explore Thailand →</Link>
+          </section>
+        </ScrollAnimatedElement>
 
-        <section className="mt-7 rounded-[18px] border border-[#e6eaf0] px-4 py-5 sm:px-6">
+        <ScrollAnimatedElement animation="fade-in-scale" duration={600} className="mt-7 rounded-[18px] border border-[#e6eaf0] px-4 py-5 sm:px-6">
           <div className="flex items-center justify-between gap-4"><div><p className="font-manrope text-[12px] font-bold uppercase tracking-[0.08em] text-navy">Ownership Overview</p><h2 className="font-manrope mt-1 text-[24px] font-semibold text-[#171717]">Your Collection</h2></div><p className="font-manrope hidden text-[14px] font-bold text-navy sm:block">● All holdings verified across Thailand</p></div>
           <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3"><Stat icon="⌖" value="8000" label="Total Land (Sq Rai)" tone="blue" /><Stat icon="◉" value="12" label="Plots Claimed" tone="green" /><Stat icon="▥" value="05" label="Regions" tone="purple" /><Stat icon="◉" value="48,500" label="Total Spent" tone="gold" /></div>
-        </section>
+        </ScrollAnimatedElement>
 
         <section className="mt-5 grid gap-4 lg:grid-cols-[0.92fr_1.08fr]">
           <div className="rounded-[18px] border border-brand-red bg-[#fff8f8] p-5 sm:p-6"><div className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-red text-sm text-white">♔</div><p className="mt-5 text-[8px] font-semibold uppercase tracking-[0.08em] text-brand-red">Give a Little Piece</p><h2 className="mt-2 max-w-[320px] text-[20px] font-medium leading-tight text-[#171717]">Give a Little Piece of Thailand</h2><p className="mt-2 max-w-[330px] text-[10px] leading-4 text-[#9aa3ad]">Share a place worth remembering. Gift a Tajlandia plot to someone special and let them build their own collection.</p><button type="button" className="mt-5 rounded-full bg-brand-red px-5 py-2.5 text-[10px] text-white">Gift a plot →</button><div className="mt-5 border-t border-brand-red/15 pt-3 text-[8px] text-[#9aa3ad]">✓ Instant Digital Certificate &nbsp;&nbsp; ✓ Official Cadastre Deed</div></div>

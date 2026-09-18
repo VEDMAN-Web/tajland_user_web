@@ -1,6 +1,7 @@
 import Link from "next/link";
+import Image from "next/image";
 import { Container } from "@/components/ui/Container";
-import { ThailandMap } from "../components/ThailandMap";
+import { ScrollAnimatedElement } from "@/components/animations/ScrollAnimatedElement";
 import type { HomePageContent } from "../types/home.types";
 
 type MapPreviewSectionProps = {
@@ -8,14 +9,13 @@ type MapPreviewSectionProps = {
 };
 
 export function MapPreviewSection({ content }: MapPreviewSectionProps) {
-  const map = <ThailandMap pins={content.pins} />;
   const headingLead = content.headingBefore.replace(/\s+experience$/, "");
 
   return (
     <section id="map" className="bg-white py-[60px]">
       <Container>
         <div className="mb-[60px] grid items-end gap-8 lg:mb-[60px] lg:grid-cols-[1fr_0.72fr] lg:gap-12">
-          <div>
+          <ScrollAnimatedElement animation="slide-in-left" duration={700}>
             <p className="mb-4 font-display text-[18px] text-navy">
               What you <span className="italic text-brand-red">Receive</span>
             </p>
@@ -25,13 +25,15 @@ export function MapPreviewSection({ content }: MapPreviewSectionProps) {
               experience <span className="italic text-brand-red">{content.headingAccent}.</span>
               {content.headingAfter ? ` ${content.headingAfter}` : null}
             </h2>
-          </div>
-          <p className="max-w-[560px] justify-self-start text-[22px] leading-7 text-muted lg:justify-self-end lg:pb-1 lg:text-right">
-            {content.description ?? "Explore the map, discover a place that resonates with you, and claim its story as your own."}
-          </p>
+          </ScrollAnimatedElement>
+          <ScrollAnimatedElement animation="slide-in-right" duration={700}>
+            <p className="max-w-[560px] justify-self-start text-[22px] leading-7 text-muted lg:justify-self-end lg:pb-1 lg:text-right">
+              {content.description ?? "Explore the map, discover a place that resonates with you, and claim its story as your own."}
+            </p>
+          </ScrollAnimatedElement>
         </div>
 
-        <div className="relative overflow-hidden rounded-[2rem] bg-[#eaf8f8] p-2 shadow-[0_16px_50px_rgba(11,31,77,0.08)] sm:p-3">
+        <ScrollAnimatedElement animation="scale-in" duration={800} className="relative overflow-hidden rounded-[2rem] bg-[#eaf8f8] p-2 shadow-[0_16px_50px_rgba(11,31,77,0.08)] sm:p-3">
           <div className="overflow-hidden rounded-[1.5rem]">
             {content.cta ? (
               <Link
@@ -39,13 +41,27 @@ export function MapPreviewSection({ content }: MapPreviewSectionProps) {
                 className="block rounded-[1.5rem] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-navy"
                 aria-label={content.cta.label}
               >
-                {map}
+                <Image
+                  src="/images/home/map.png"
+                  alt="Thailand Map"
+                  width={800}
+                  height={580}
+                  className="h-auto w-full object-cover"
+                  priority
+                />
               </Link>
             ) : (
-              map
+              <Image
+                src="/images/home/map.png"
+                alt="Thailand Map"
+                width={800}
+                height={580}
+                className="h-auto w-full object-cover"
+                priority
+              />
             )}
           </div>
-        </div>
+        </ScrollAnimatedElement>
       </Container>
     </section>
   );
