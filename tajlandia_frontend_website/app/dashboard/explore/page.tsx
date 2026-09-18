@@ -1,5 +1,5 @@
-import { DashboardPlaceholderPage } from "@/modules/dashboard/DashboardPlaceholderPage";
+import { AuthenticatedExploreMapPage } from "@/modules/explore-map/AuthenticatedExploreMapPage";
 
 export default function DashboardExplorePage() {
-  return <DashboardPlaceholderPage title="Explore Map" />;
+  return <AuthenticatedExploreMapPage />;
 }

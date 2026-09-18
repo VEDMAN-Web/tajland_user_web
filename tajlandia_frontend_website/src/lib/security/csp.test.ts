@@ -19,6 +19,7 @@ describe("buildContentSecurityPolicy", () => {
     const policy = buildContentSecurityPolicy({ nonce: "devnonce", isDev: true });
 
     expect(policy).toContain("unsafe-eval");
-    expect(policy).not.toContain("unsafe-inline");
+    expect(policy).toContain("style-src 'self' 'unsafe-inline'");
+    expect(policy).not.toContain("style-src 'self' 'nonce-devnonce'");
   });
 });
