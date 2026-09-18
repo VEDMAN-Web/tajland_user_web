@@ -9,14 +9,14 @@ function MenuIcon({ children }: { children: React.ReactNode }) {
   return <span aria-hidden="true" className="flex h-5 w-5 items-center justify-center text-[15px]">{children}</span>;
 }
 
-export function AccountMenu({ active }: { active: "profile" | "password" }) {
+export function AccountMenu({ active }: { active: "profile" | "password" | "settings" }) {
   const router = useRouter();
   const items = [
     { label: "Profile", icon: "●", href: routes.profile, key: "profile" as const },
     { label: "Change Password", icon: "▣", href: routes.changePassword, key: "password" as const },
     { label: "My Purchases", icon: "♙", href: "/dashboard/my-land" },
     { label: "My Certificates", icon: "▤", href: "/dashboard/my-land" },
-    { label: "Settings", icon: "⚙" },
+    { label: "Settings", icon: "⚙", href: routes.settings, key: "settings" as const },
     { label: "Help & Support", icon: "♧", href: routes.contact },
     { label: "Term & Condition", icon: "▧", href: routes.terms },
     { label: "Privacy Policy", icon: "◈", href: routes.privacy },
