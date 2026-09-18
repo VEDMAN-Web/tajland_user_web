@@ -10,6 +10,8 @@ export interface AuthUser {
   role?: string;
   isActive?: boolean;
   isEmailVerified?: boolean;
+  phone?: string;
+  avatarUrl?: string;
 }
 
 export interface AuthState {

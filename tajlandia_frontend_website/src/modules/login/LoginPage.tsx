@@ -172,13 +172,14 @@ export function LoginPage() {
                     onChange={(event) => updateField("password", event.target.value)}
                     aria-invalid={Boolean(errors.password)}
                     aria-describedby={errors.password ? "login-password-error" : undefined}
-                    className="h-10 w-full rounded-[9px] border border-[#e5e7eb] px-3 pr-10 text-[12px] text-foreground outline-none transition placeholder:text-[#c6c7ca] focus:border-navy focus:ring-2 focus:ring-navy/10 aria-[invalid=true]:border-[#d52b35]"
+                    className="h-10 w-full rounded-[9px] border border-[#e5e7eb] px-3 pr-10 text-[12px] text-foreground outline-none focus:outline-none focus-visible:outline-none transition placeholder:text-[#c6c7ca] focus:border-navy focus:ring-2 focus:ring-navy/10 aria-[invalid=true]:border-[#d52b35]"
                   />
                   <button
                     type="button"
                     aria-label={showPassword ? "Hide password" : "Show password"}
+                    onMouseDown={(event) => event.preventDefault()}
                     onClick={() => setShowPassword((current) => !current)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#b7b8bb] focus-visible:rounded focus-visible:outline-2 focus-visible:outline-navy"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 rounded-sm text-[#b7b8bb] outline-none focus:outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9aaabd] focus-visible:ring-offset-1"
                   >
                     <EyeIcon hidden={!showPassword} />
                   </button>

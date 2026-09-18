@@ -11,6 +11,14 @@
   --line: #e6e8ef;
 }
 
+/* Keep browser focus styling from drawing a second outline inside form fields. */
+input:focus,
+input:focus-visible,
+textarea:focus,
+textarea:focus-visible {
+  outline: none;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);

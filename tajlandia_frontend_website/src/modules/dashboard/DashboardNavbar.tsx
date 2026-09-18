@@ -2,10 +2,8 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { BrandLogo } from "@/components/ui/BrandLogo";
-import { clearAuth } from "@/lib/api/auth.utils";
 import { routes } from "@/lib/constants/routes";
 
 type DashboardNavbarProps = {
@@ -18,21 +16,14 @@ function Icon({ children }: { children: React.ReactNode }) {
 }
 
 export function DashboardNavbar({ active, overlay = false }: DashboardNavbarProps) {
-  const router = useRouter();
   const [language, setLanguage] = useState<"EN" | "PL">("EN");
   const [isLanguageOpen, setIsLanguageOpen] = useState(false);
-  const [isProfileOpen, setIsProfileOpen] = useState(false);
   const activeClass = "bg-navy text-white";
   const navClass = overlay ? "absolute inset-x-0 top-0 z-20" : "sticky top-0 z-50";
 
-  function logout() {
-    clearAuth();
-    router.replace(routes.home);
-  }
-
   return (
     <header className={`${navClass} bg-transparent pt-6`}>
-      <div className="mx-auto flex h-[54px] w-full max-w-[1280px] items-center justify-between px-5 sm:px-8 lg:px-16">
+      <div className="mx-auto flex h-[54px] w-[92%] max-w-none items-center justify-between px-5 sm:px-8">
         <BrandLogo compact href={routes.dashboard} />
         <div className="flex items-center gap-3">
           <nav className="hidden h-10 items-center gap-1 rounded-full bg-white p-1 shadow-[0_5px_20px_rgba(11,31,77,0.1)] sm:flex">
@@ -46,10 +37,7 @@ export function DashboardNavbar({ active, overlay = false }: DashboardNavbarProp
               {isLanguageOpen ? <div className="absolute right-0 top-10 z-20 w-36 rounded-xl bg-white p-1 text-[10px] shadow-[0_8px_24px_rgba(11,31,77,0.14)]"><button type="button" onClick={() => { setLanguage("EN"); setIsLanguageOpen(false); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left hover:bg-[#f5f7fa]"><Image src="/images/dashboard/en-flag.svg" alt="" width={20} height={14} /> EN — English</button><button type="button" onClick={() => { setLanguage("PL"); setIsLanguageOpen(false); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left hover:bg-[#f5f7fa]"><Image src="/images/dashboard/pl-flag.svg" alt="" width={20} height={14} /> PL — Polish</button></div> : null}
             </div>
             <button type="button" aria-label="Cart"><Icon><Image src="/images/dashboard/cart.png" alt="" width={28} height={24} /></Icon></button>
-            <div className="relative">
-              <button type="button" aria-label="Profile" aria-expanded={isProfileOpen} onClick={() => setIsProfileOpen((open) => !open)}><Icon><Image src="/images/dashboard/profile.png" alt="" width={22} height={22} /></Icon></button>
-              {isProfileOpen ? <div className="absolute right-0 top-10 z-20 rounded-xl bg-white p-1 shadow-[0_8px_24px_rgba(11,31,77,0.14)]"><button type="button" onClick={logout} className="whitespace-nowrap rounded-lg px-4 py-2 text-left text-[10px] hover:bg-[#f5f7fa]">Logout</button></div> : null}
-            </div>
+            <Link href={routes.profile} aria-label="Profile"><Icon><Image src="/images/dashboard/profile.png" alt="" width={22} height={22} /></Icon></Link>
           </div>
         </div>
       </div>
