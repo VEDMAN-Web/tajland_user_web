@@ -153,7 +153,7 @@ export function SiteFooter() {
               <li><FooterLink href="/#how-it-works">Journal</FooterLink></li>
               <li><FooterLink href="/#map">Map</FooterLink></li>
               <li><FooterLink href="/#certificate">Certificate</FooterLink></li>
-              <li><FooterText>FAQ</FooterText></li>
+              <li><FooterLink href="/faq">FAQ</FooterLink></li>
               <li><FooterLink href="/contact">Contact</FooterLink></li>
             </ul>
           </div>

@@ -1,5 +1,11 @@
 import type { Metadata } from "next";
-import { Cormorant_Garamond, Manrope, Playfair_Display, Plus_Jakarta_Sans } from "next/font/google";
+import {
+  Cormorant_Garamond,
+  Inter,
+  Manrope,
+  Playfair_Display,
+  Plus_Jakarta_Sans,
+} from "next/font/google";
 import { getPublicEnv } from "@/lib/config/public-env";
 import { brand } from "@/lib/constants/brand";
 import "./globals.css";
@@ -27,6 +33,12 @@ const manrope = Manrope({
   weight: ["400"],
 });
 
+const inter = Inter({
+  variable: "--font-inter",
+  subsets: ["latin"],
+  weight: ["400"],
+});
+
 const publicEnv = getPublicEnv();
 
 export const metadata: Metadata = {
@@ -49,7 +61,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${plusJakarta.variable} ${cormorant.variable} ${playfairDisplay.variable} ${manrope.variable} h-full antialiased`}
+      className={`${plusJakarta.variable} ${cormorant.variable} ${playfairDisplay.variable} ${manrope.variable} ${inter.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col font-sans">{children}</body>
     </html>
