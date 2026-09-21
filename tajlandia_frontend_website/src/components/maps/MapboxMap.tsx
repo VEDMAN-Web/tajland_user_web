@@ -9,7 +9,11 @@ export type MapboxMapHandle = {
   zoomIn: () => void;
   zoomOut: () => void;
   locate: () => void;
-  flyToCoordinates: (coordinates: [number, number]) => void;
+  flyToCoordinates: (
+    coordinates: [number, number],
+    zoom?: number,
+    label?: string,
+  ) => void;
   searchAndFlyTo: (query: string) => Promise<"success" | "not-found" | "error">;
 };
 
@@ -30,12 +34,54 @@ export const MapboxMap = forwardRef<MapboxMapHandle, MapboxMapProps>(function Ma
 ) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
+  const selectedMarkerRef = useRef<mapboxgl.Marker | null>(null);
   const initialViewRef = useRef({
     center:
       initialCenter ?? selectedLocation?.coordinates ?? ([100.5, 15] as [number, number]),
     zoom: initialZoom ?? selectedLocation?.zoom ?? 4.5,
   });
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
+
+  function focusLocation(coordinates: [number, number], zoom: number, label: string) {
+    const map = mapRef.current;
+    if (!map) return;
+
+    map.flyTo({ center: coordinates, zoom, essential: true });
+    selectedMarkerRef.current?.remove();
+
+    const markerElement = document.createElement("div");
+    markerElement.style.alignItems = "center";
+    markerElement.style.display = "flex";
+    markerElement.style.flexDirection = "column";
+    markerElement.style.gap = "5px";
+    markerElement.style.pointerEvents = "none";
+
+    const labelElement = document.createElement("span");
+    labelElement.textContent = label;
+    labelElement.style.background = "#082a68";
+    labelElement.style.borderRadius = "999px";
+    labelElement.style.boxShadow = "0 2px 8px rgba(8,42,104,.25)";
+    labelElement.style.color = "white";
+    labelElement.style.fontSize = "11px";
+    labelElement.style.fontWeight = "600";
+    labelElement.style.padding = "4px 9px";
+
+    const pin = document.createElement("span");
+    pin.style.background = "#082a68";
+    pin.style.border = "3px solid white";
+    pin.style.borderRadius = "50%";
+    pin.style.boxShadow = "0 0 0 6px rgba(8,42,104,.18)";
+    pin.style.height = "14px";
+    pin.style.width = "14px";
+    markerElement.append(labelElement, pin);
+
+    selectedMarkerRef.current = new mapboxgl.Marker({
+      element: markerElement,
+      anchor: "bottom",
+    })
+      .setLngLat(coordinates)
+      .addTo(map);
+  }
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
@@ -66,37 +112,11 @@ export const MapboxMap = forwardRef<MapboxMapHandle, MapboxMapProps>(function Ma
     map.once("load", () => map.resize());
     map.once("load", () => {
       if (!selectedLocation) return;
-      map.flyTo({
-        center: selectedLocation.coordinates,
-        zoom: selectedLocation.zoom ?? 16,
-        essential: true,
-      });
-      const markerElement = document.createElement("div");
-      markerElement.style.alignItems = "center";
-      markerElement.style.display = "flex";
-      markerElement.style.flexDirection = "column";
-      markerElement.style.gap = "5px";
-      markerElement.style.pointerEvents = "none";
-      const label = document.createElement("span");
-      label.textContent = selectedLocation.id;
-      label.style.background = "#082a68";
-      label.style.borderRadius = "999px";
-      label.style.boxShadow = "0 2px 8px rgba(8,42,104,.25)";
-      label.style.color = "white";
-      label.style.fontSize = "11px";
-      label.style.fontWeight = "600";
-      label.style.padding = "4px 9px";
-      const pin = document.createElement("span");
-      pin.style.background = "#082a68";
-      pin.style.border = "3px solid white";
-      pin.style.borderRadius = "50%";
-      pin.style.boxShadow = "0 0 0 6px rgba(8,42,104,.18)";
-      pin.style.height = "14px";
-      pin.style.width = "14px";
-      markerElement.append(label, pin);
-      new mapboxgl.Marker({ element: markerElement, anchor: "bottom" })
-        .setLngLat(selectedLocation.coordinates)
-        .addTo(map);
+      focusLocation(
+        selectedLocation.coordinates,
+        selectedLocation.zoom ?? 16,
+        selectedLocation.id,
+      );
     });
     map.once("idle", () => {
       if (!disposed) setStatus("ready");
@@ -119,8 +139,8 @@ export const MapboxMap = forwardRef<MapboxMapHandle, MapboxMapProps>(function Ma
     () => ({
       zoomIn: () => mapRef.current?.zoomIn(),
       zoomOut: () => mapRef.current?.zoomOut(),
-      flyToCoordinates: (coordinates) => {
-        mapRef.current?.flyTo({ center: coordinates, zoom: 9, essential: true });
+      flyToCoordinates: (coordinates, zoom = 13, label = "Selected location") => {
+        focusLocation(coordinates, zoom, label);
       },
       searchAndFlyTo: async (query) => {
         const map = mapRef.current;
@@ -130,12 +150,19 @@ export const MapboxMap = forwardRef<MapboxMapHandle, MapboxMapProps>(function Ma
         if (!map || !accessToken || !normalizedQuery) return "not-found";
 
         try {
+          if (!map.isStyleLoaded()) {
+            await new Promise<void>((resolve) => {
+              map.once("load", () => resolve());
+            });
+          }
+
           const params = new URLSearchParams({
             access_token: accessToken,
             country: "th",
             bbox: "97.3,5.6,105.7,20.5",
             limit: "1",
             language: "en",
+            types: "country,region,place,locality,poi,address",
           });
           const response = await fetch(
             `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(normalizedQuery)}.json?${params}`,
@@ -157,7 +184,7 @@ export const MapboxMap = forwardRef<MapboxMapHandle, MapboxMapProps>(function Ma
           const center = feature?.center;
 
           if (!center || countryCode?.toLowerCase() !== "th") return "not-found";
-          map.flyTo({ center, zoom: 9, essential: true });
+          focusLocation(center, 13, normalizedQuery);
           return "success";
         } catch {
           return "error";
