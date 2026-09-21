@@ -108,32 +108,34 @@ export function DashboardPage() {
         </ScrollAnimatedElement>
 
         <section className="mt-5">
-          <div className="relative overflow-hidden rounded-[18px] border border-brand-red bg-[#fff8f8] p-5 sm:p-6 lg:min-h-[170px]">
+          <div className="relative min-h-[228px] overflow-hidden rounded-[22px] border border-brand-red bg-[#fff8f8] px-5 py-6 sm:px-8 lg:px-[86px] lg:py-0">
             <Image
               src="/images/dashboard/gift-ribbon.png"
               alt=""
               width={150}
               height={110}
-              className="pointer-events-none absolute -left-3 -top-2 h-[110px] w-[150px] object-contain object-left-top"
+              className="pointer-events-none absolute -left-3 -top-2 h-[120px] w-[150px] object-contain object-left-top"
             />
-            <div className="relative z-10 pl-10 sm:pl-20">
-              <p className="text-[8px] font-semibold uppercase tracking-[0.08em] text-brand-red">
+            <div className="relative z-10 lg:absolute lg:left-[86px] lg:top-[91px]">
+              <p className="font-manrope text-[12px] font-bold uppercase tracking-[0.08em] text-brand-red">
                 Give a Little Piece
               </p>
-              <h2 className="mt-2 max-w-[420px] text-[20px] font-medium leading-tight text-[#171717]">
+              <h2 className="font-manrope mt-2 max-w-[520px] text-[30px] font-semibold leading-tight text-[#171717]">
                 Give a Little Piece of Thailand
               </h2>
-              <p className="mt-2 max-w-[430px] text-[10px] leading-4 text-[#9aa3ad]">
+              <p className="font-manrope mt-2 max-w-[430px] text-[14px] font-normal leading-5 text-[#9aa3ad]">
                 Share a place worth remembering. Gift a Tajlandia plot to someone special
                 and let them build their own collection.
               </p>
+            </div>
+            <div className="mt-5 flex flex-col gap-5 lg:absolute lg:right-[37px] lg:top-[93px] lg:mt-0 lg:w-[282px] lg:gap-6">
               <button
                 type="button"
-                className="mt-5 rounded-full bg-brand-red px-5 py-2.5 text-[10px] text-white lg:absolute lg:right-0 lg:top-8"
+                className="font-manrope self-start rounded-full bg-brand-red px-7 py-2.5 text-[16px] font-medium text-white lg:self-end"
               >
                 Gift a plot →
               </button>
-              <div className="mt-5 border-t border-brand-red/15 pt-3 text-[8px] text-[#9aa3ad] lg:absolute lg:bottom-0 lg:right-0 lg:mt-0 lg:border-t-0 lg:pt-0">
+              <div className="font-manrope border-t border-brand-red/15 pt-3 text-[11px] text-[#6f7780] lg:pt-4">
                 ✓ Instant Digital Certificate &nbsp;&nbsp; ✓ Official Cadastre Deed
               </div>
             </div>
