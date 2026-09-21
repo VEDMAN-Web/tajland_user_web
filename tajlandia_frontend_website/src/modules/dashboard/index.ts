@@ -9,4 +9,5 @@ export { MyLandPage } from "./MyPurchasesPage";
 export { MyPurchasesPage } from "./MyPurchasesPage";
 export { MyCertificatesPage } from "./MyCertificatesPage";
 export { CertificateDetailsPage } from "./CertificateDetailsPage";
+export { OrderDetailsPage } from "./OrderDetailsPage";
 export { CartPage } from "./CartPage";
