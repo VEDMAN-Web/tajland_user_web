@@ -3,12 +3,12 @@ import { createPageMetadata } from "@/lib/seo/metadata";
 import { LegalDocumentPage } from "@/modules/dashboard";
 
 export const metadata: Metadata = createPageMetadata({
-  title: "Terms & Condition",
-  description: "Tajlandia Terms and Conditions.",
-  path: "/terms",
+  title: "Privacy Policy",
+  description: "Tajlandia Privacy Policy.",
+  path: "/dashboard/privacy",
   index: false,
 });
 
-export default function TermsPage() {
-  return <LegalDocumentPage kind="terms" publicPage />;
+export default function DashboardPrivacyPage() {
+  return <LegalDocumentPage kind="privacy" />;
 }

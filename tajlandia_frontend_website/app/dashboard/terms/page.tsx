@@ -5,10 +5,10 @@ import { LegalDocumentPage } from "@/modules/dashboard";
 export const metadata: Metadata = createPageMetadata({
   title: "Terms & Condition",
   description: "Tajlandia Terms and Conditions.",
-  path: "/terms",
+  path: "/dashboard/terms",
   index: false,
 });
 
-export default function TermsPage() {
-  return <LegalDocumentPage kind="terms" publicPage />;
+export default function DashboardTermsPage() {
+  return <LegalDocumentPage kind="terms" />;
 }

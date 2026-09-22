@@ -7,8 +7,10 @@ export const routes = {
   settings: "/dashboard/settings",
   helpSupport: "/dashboard/help-support",
   land: "/dashboard/my-land",
+  dashboardExplore: "/dashboard/explore",
   purchases: "/dashboard/purchases",
   certificates: "/dashboard/certificates",
+  cart: "/dashboard/cart",
   explore: "/explore",
   blog: "/blog",
   contact: "/contact",
@@ -16,6 +18,8 @@ export const routes = {
   signup: "/signup",
   privacy: "/privacy",
   terms: "/terms",
+  dashboardPrivacy: "/dashboard/privacy",
+  dashboardTerms: "/dashboard/terms",
 } as const;
 
 export type AppRoute = (typeof routes)[keyof typeof routes];

@@ -1,4 +1,4 @@
-export type SettingsLanguage = "EN" | "PL";
+export type SettingsLanguage = "EN" | "PL" | "TH";
 
 export type DashboardSettings = {
   language: SettingsLanguage;
@@ -19,7 +19,7 @@ export function getDashboardSettings(): DashboardSettings {
 
     const parsed = JSON.parse(stored) as Partial<DashboardSettings>;
     return {
-      language: parsed.language === "PL" ? "PL" : "EN",
+      language: parsed.language === "PL" || parsed.language === "TH" ? parsed.language : "EN",
       emailNotifications: parsed.emailNotifications !== false,
     };
   } catch {

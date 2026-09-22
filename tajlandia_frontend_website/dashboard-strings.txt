@@ -1,0 +1,331 @@
+src/modules/dashboard\SettingsPage.tsx:14:  const [settings, setSettings] = useState<DashboardSettings>(() => getDashboardSettings());
+src/modules/dashboard\SettingsPage.tsx:17:  if (isLoading) return <main className="flex min-h-[100svh] items-center justify-center bg-[#f7fafc] text-sm text-muted">Loading settings...</main>;
+src/modules/dashboard\SettingsPage.tsx:46:            <h1 className="text-[30px] font-semibold tracking-[-0.04em] text-navy sm:text-[32px]">Settings</h1>
+src/modules/dashboard\SettingsPage.tsx:47:            <p className="mt-1 text-[12px] text-[#7b858f]">Update your account preferences and security details.</p>
+src/modules/dashboard\SettingsPage.tsx:52:              <h2 className="text-[11px] font-bold uppercase tracking-[0.08em] text-[#68727c]">Account Security</h2>
+src/modules/dashboard\SettingsPage.tsx:53:              <p className="mt-1 text-[10px] text-[#b0b7be]">Authentication &amp; Safeguards</p>
+src/modules/dashboard\SettingsPage.tsx:57:              <label htmlFor="settings-language" className="text-[10px] font-bold uppercase tracking-[0.04em] text-[#9aa3ad]">Interface &amp; Chatbot Language</label>
+src/modules/dashboard\SettingsPage.tsx:58:              <select id="settings-language" value={settings.language} onChange={(event) => updateSettings({ language: event.target.value as DashboardSettings["language"] })} className="mt-2 h-10 w-full rounded-[10px] border border-[#e3e8ed] bg-white px-3 text-[12px] text-[#242b32] outline-none transition focus:border-[#9aaabd] focus:ring-1 focus:ring-[#d9e1e8]">
+src/modules/dashboard\SettingsPage.tsx:59:                <option value="EN">English (Default - Global Cadastral)</option>
+src/modules/dashboard\SettingsPage.tsx:60:                <option value="PL">Polish</option>
+src/modules/dashboard\SettingsPage.tsx:62:              <p className="mt-2 text-[10px] text-[#b0b7be]">Language applies to land title dossiers, notifications, and cadastral maps.</p>
+src/modules/dashboard\SettingsPage.tsx:67:                <h3 className="text-[11px] font-medium text-[#242b32]">Email notifications</h3>
+src/modules/dashboard\SettingsPage.tsx:68:                <p className="mt-1 text-[10px] text-[#8f99a4]">You&apos;ll receive important account and purchase updates by email.</p>
+src/modules/dashboard\SettingsPage.tsx:70:              <button type="button" role="switch" aria-checked={settings.emailNotifications} aria-label="Email notifications" onClick={() => updateSettings({ emailNotifications: !settings.emailNotifications })} className={`relative h-6 w-12 shrink-0 rounded-full transition-colors ${settings.emailNotifications ? "bg-navy" : "bg-[#c8d0d8]"}`}>
+src/modules/dashboard\SettingsPage.tsx:79:              <button type="button" onClick={cancel} className="rounded-[9px] border border-[#e1e5e9] bg-white px-6 py-3 text-[12px] text-[#68727c]">Cancel</button>
+src/modules/dashboard\SettingsPage.tsx:80:              <button type="button" onClick={save} className="rounded-[9px] bg-navy px-7 py-3 text-[12px] font-medium text-white">Save</button>
+src/modules/dashboard\SettingsPage.tsx:83:          {saved ? <p role="status" className="mt-3 text-right text-[11px] text-[#198b55]">Settings saved.</p> : null}
+src/modules/dashboard\ProfilePage.tsx:15:  if (isLoading) return <main className="flex min-h-[100svh] items-center justify-center bg-[#f7fafc] text-sm text-muted">Loading profile...</main>;
+src/modules/dashboard\ProfilePage.tsx:32:          <div className="border-b border-[#e1e8ed] pb-4"><h1 className="text-[30px] font-semibold tracking-[-0.04em] text-navy sm:text-[32px]">Profile</h1><p className="mt-1 text-[12px] text-[#7b858f]">Manage your personal information and account.</p></div>
+src/modules/dashboard\ProfilePage.tsx:34:            <div className="flex items-center gap-4"><div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-full bg-[#e9eef2]">{user?.avatarUrl ? <img src={user.avatarUrl} alt="Profile" className="h-full w-full object-cover" /> : <Image src="/images/dashboard/profile.png" alt="" width={28} height={28} />}</div><div><h2 className="text-[19px] font-medium text-navy">{user?.name || "User"}</h2><p className="mt-1 text-[10px] text-[#9aa3ad]">Member since —</p></div></div>
+src/modules/dashboard\ProfilePage.tsx:35:            <Link href={routes.editProfile} className="rounded-[9px] bg-navy px-6 py-3 text-[12px] text-white">Edit Profile →</Link>
+src/modules/dashboard\ProfilePage.tsx:37:          <div className="mt-5 rounded-[15px] bg-white p-5 shadow-[0_5px_24px_rgba(11,31,77,0.08)] sm:p-6"><div className="border-b border-[#e8edf1] pb-3"><h2 className="text-[11px] font-bold uppercase tracking-[0.08em] text-[#68727c]">Personal Information</h2><p className="mt-1 text-[10px] text-[#b0b7be]">Official account information registered on file</p></div><div className="mt-4 grid gap-4 sm:grid-cols-2"><Field label="First name" value={firstName} /><Field label="Last name" value={lastName || "Not provided"} /><div className="sm:col-span-2"><Field label="Email" value={email} /></div><div className="sm:col-span-2"><Field label="Mobile Number" value={user?.phone || "Not provided"} /></div></div></div>
+src/modules/dashboard\ProfilePage.tsx:44:function Field({ label, value }: { label: string; value: string }) {
+src/modules/dashboard\OrderDetailsPage.tsx:45:              aria-label="Share order"
+src/modules/dashboard\OrderDetailsPage.tsx:77:  label: string;
+src/modules/dashboard\OrderDetailsPage.tsx:99:        alt="Seaview Ridge Plot"
+src/modules/dashboard\OrderDetailsPage.tsx:107:          <span className="text-[8px] text-[#aab2bd]">PH-1024</span>
+src/modules/dashboard\OrderDetailsPage.tsx:133:        <h2 className="text-[17px] font-semibold text-[#242b32]">Order Summary</h2>
+src/modules/dashboard\OrderDetailsPage.tsx:140:          <span>Plots</span>
+src/modules/dashboard\OrderDetailsPage.tsx:144:          <span>Total Rai</span>
+src/modules/dashboard\OrderDetailsPage.tsx:151:          <span>Icon Zone</span>
+src/modules/dashboard\OrderDetailsPage.tsx:155:          <span>Popular Zone</span>
+src/modules/dashboard\OrderDetailsPage.tsx:159:          <span>Standard Zone</span>
+src/modules/dashboard\OrderDetailsPage.tsx:165:        <span>Subtotal</span>
+src/modules/dashboard\OrderDetailsPage.tsx:169:        <span>Discount · TAJ10</span>
+src/modules/dashboard\OrderDetailsPage.tsx:173:        <span>Total</span>
+src/modules/dashboard\MyPurchasesPage.tsx:30:    name: "ORDER #1234",
+src/modules/dashboard\MyPurchasesPage.tsx:39:    name: "ORDER #1234",
+src/modules/dashboard\MyPurchasesPage.tsx:54:      ? parsed.filter((item): item is Purchase => item && typeof item === "object")
+src/modules/dashboard\MyPurchasesPage.tsx:121:        name: "Seaview Ridge Plot",
+src/modules/dashboard\MyPurchasesPage.tsx:216:                onChange={(event) => setQuery(event.target.value)}
+src/modules/dashboard\MyPurchasesPage.tsx:217:                placeholder="Search your plots, provinces, deeds..."
+src/modules/dashboard\MyPurchasesPage.tsx:272:          onClose={() => setDialog(null)}
+src/modules/dashboard\MyPurchasesPage.tsx:283:          onClose={() => setDialog(null)}
+src/modules/dashboard\MyPurchasesPage.tsx:309:        alt={purchase.name ?? "Seaview Ridge Plot"}
+src/modules/dashboard\MyPurchasesPage.tsx:314:          <span>PHUKET · {purchase.id ?? "PH-01234"}</span>
+src/modules/dashboard\MyPurchasesPage.tsx:315:          <span className="rounded bg-[#fff4c6] px-1.5 py-1 text-[#c19a16]">ICON</span>
+src/modules/dashboard\MyPurchasesPage.tsx:325:            <p className="text-[8px] uppercase text-[#a8b0b9]">Area</p>
+src/modules/dashboard\MyPurchasesPage.tsx:331:            <p className="text-[8px] uppercase text-[#a8b0b9]">Rate</p>
+src/modules/dashboard\MyPurchasesPage.tsx:335:            <p className="text-[8px] uppercase text-[#a8b0b9]">Amt Paid</p>
+src/modules/dashboard\MyPurchasesPage.tsx:365:  onChange: (value: PurchaseSort) => void;
+src/modules/dashboard\MyPurchasesPage.tsx:366:  onClose: () => void;
+src/modules/dashboard\MyPurchasesPage.tsx:367:  onApply: () => void;
+src/modules/dashboard\MyPurchasesPage.tsx:381:        title="Sort by"
+src/modules/dashboard\MyPurchasesPage.tsx:382:        subtitle="Reorder active parcel markers"
+src/modules/dashboard\MyPurchasesPage.tsx:395:              onChange={() => onChange(option)}
+src/modules/dashboard\MyPurchasesPage.tsx:428:  onChange: (value: string) => void;
+src/modules/dashboard\MyPurchasesPage.tsx:429:  onClose: () => void;
+src/modules/dashboard\MyPurchasesPage.tsx:430:  onReset: () => void;
+src/modules/dashboard\MyPurchasesPage.tsx:431:  onApply: () => void;
+src/modules/dashboard\MyPurchasesPage.tsx:437:        title="Filter Plots"
+src/modules/dashboard\MyPurchasesPage.tsx:438:        subtitle="Narrow 1,168 parcels across Thailand"
+src/modules/dashboard\MyPurchasesPage.tsx:447:            <CheckBox label="My Plots" checked={false} onChange={() => undefined} />
+src/modules/dashboard\MyPurchasesPage.tsx:448:            <CheckBox label="Gifted Plots" checked={true} onChange={() => undefined} />
+src/modules/dashboard\MyPurchasesPage.tsx:459:              onChange={() => onChange("All Zones")}
+src/modules/dashboard\MyPurchasesPage.tsx:464:              onChange={() => onChange("Icon")}
+src/modules/dashboard\MyPurchasesPage.tsx:469:              onChange={() => onChange("Popular")}
+src/modules/dashboard\MyPurchasesPage.tsx:474:              onChange={() => onChange("Standard")}
+src/modules/dashboard\MyPurchasesPage.tsx:480:            <span>Land Area (Rai)</span>
+src/modules/dashboard\MyPurchasesPage.tsx:490:            <span>Price Range (USD)</span>
+src/modules/dashboard\MyPurchasesPage.tsx:540:  onClose: () => void;
+src/modules/dashboard\MyPurchasesPage.tsx:554:        aria-label="Close"
+src/modules/dashboard\MyPurchasesPage.tsx:566:  onReset: () => void;
+src/modules/dashboard\MyPurchasesPage.tsx:567:  onApply: () => void;
+src/modules/dashboard\MyPurchasesPage.tsx:589:  label: string;
+src/modules/dashboard\MyPurchasesPage.tsx:591:  onChange: (value: boolean) => void;
+src/modules/dashboard\MyPurchasesPage.tsx:598:        onChange={(event) => onChange(event.target.checked)}
+src/modules/dashboard\MyPurchasesPage.tsx:729:            <h2 className="text-[17px] font-semibold text-navy">All Purchases</h2>
+src/modules/dashboard\MyPurchasesPage.tsx:766:          onClose={() => setDialog(null)}
+src/modules/dashboard\MyPurchasesPage.tsx:789:                  ? current.filter((item) => item !== zone)
+src/modules/dashboard\MyPurchasesPage.tsx:797:          onClose={() => setDialog(null)}
+src/modules/dashboard\MyPurchasesPage.tsx:844:            alt=""
+src/modules/dashboard\MyPurchasesPage.tsx:852:            alt=""
+src/modules/dashboard\MyPurchasesPage.tsx:862:          <p className="text-[8px] uppercase text-[#9aa3ad]">Amount</p>
+src/modules/dashboard\MyPurchasesPage.tsx:885:  onChange: (value: PurchaseSort) => void;
+src/modules/dashboard\MyPurchasesPage.tsx:886:  onClose: () => void;
+src/modules/dashboard\MyPurchasesPage.tsx:887:  onApply: () => void;
+src/modules/dashboard\MyPurchasesPage.tsx:901:        title="Sort by"
+src/modules/dashboard\MyPurchasesPage.tsx:902:        subtitle="Reorder active parcel markers"
+src/modules/dashboard\MyPurchasesPage.tsx:915:              onChange={() => onChange(option)}
+src/modules/dashboard\MyPurchasesPage.tsx:966:  onMyPlotsChange: (value: boolean) => void;
+src/modules/dashboard\MyPurchasesPage.tsx:967:  onGiftedChange: (value: boolean) => void;
+src/modules/dashboard\MyPurchasesPage.tsx:968:  onZoneToggle: (zone: string) => void;
+src/modules/dashboard\MyPurchasesPage.tsx:969:  setMinRai: (value: string) => void;
+src/modules/dashboard\MyPurchasesPage.tsx:970:  setMaxRai: (value: string) => void;
+src/modules/dashboard\MyPurchasesPage.tsx:971:  setMinPrice: (value: string) => void;
+src/modules/dashboard\MyPurchasesPage.tsx:972:  setMaxPrice: (value: string) => void;
+src/modules/dashboard\MyPurchasesPage.tsx:973:  onClose: () => void;
+src/modules/dashboard\MyPurchasesPage.tsx:974:  onReset: () => void;
+src/modules/dashboard\MyPurchasesPage.tsx:975:  onApply: () => void;
+src/modules/dashboard\MyPurchasesPage.tsx:981:        title="Filter Plots"
+src/modules/dashboard\MyPurchasesPage.tsx:982:        subtitle="Narrow 1,168 parcels across Thailand"
+src/modules/dashboard\MyPurchasesPage.tsx:986:        <FilterGroup title="Plots">
+src/modules/dashboard\MyPurchasesPage.tsx:992:        <FilterGroup title="Zone Category">
+src/modules/dashboard\MyPurchasesPage.tsx:997:              onChange={() => onZoneToggle("all")}
+src/modules/dashboard\MyPurchasesPage.tsx:1002:              onChange={() => onZoneToggle("Icon")}
+src/modules/dashboard\MyPurchasesPage.tsx:1007:              onChange={() => onZoneToggle("Popular")}
+src/modules/dashboard\MyPurchasesPage.tsx:1012:              onChange={() => onZoneToggle("Standard")}
+src/modules/dashboard\MyPurchasesPage.tsx:1016:        <FilterGroup title="Land Area (Rai)" detail="1 Rai = 1,600 m²">
+src/modules/dashboard\MyPurchasesPage.tsx:1022:        <FilterGroup title="Price Range (USD)" detail="$100 – $2,500">
+src/modules/dashboard\MyPurchasesPage.tsx:1075:  onClose: () => void;
+src/modules/dashboard\MyPurchasesPage.tsx:1089:        aria-label="Close"
+src/modules/dashboard\MyPurchasesPage.tsx:1097:function PanelFooter({ onReset, onApply }: { onReset: () => void; onApply: () => void }) {
+src/modules/dashboard\MyPurchasesPage.tsx:1139:  label: string;
+src/modules/dashboard\MyPurchasesPage.tsx:1141:  onChange: (value: boolean) => void;
+src/modules/dashboard\MyPurchasesPage.tsx:1148:        onChange={(event) => onChange(event.target.checked)}
+src/modules/dashboard\MyPurchasesPage.tsx:1162:  onChange: (value: string) => void;
+src/modules/dashboard\MyPurchasesPage.tsx:1171:        onChange={(event) => onChange(event.target.value)}
+src/modules/dashboard\MyPurchasesPage.tsx:1181:function Stat({ icon, label, value }: { icon: string; label: string; value: string }) {
+src/modules/dashboard\MyPurchasesPage.tsx:1189:              alt=""
+src/modules/dashboard\MyCertificatesPage.tsx:47:      ? parsed.filter((item): item is Certificate => item && typeof item === "object")
+src/modules/dashboard\MyCertificatesPage.tsx:55:const sortLabels: Array<{ value: SortOption; label: string; detail: string }> = [
+src/modules/dashboard\MyCertificatesPage.tsx:56:  { value: "recommended", label: "Recommended", detail: "Curated by newly added" },
+src/modules/dashboard\MyCertificatesPage.tsx:57:  { value: "oldest", label: "Date: Old to New", detail: "" },
+src/modules/dashboard\MyCertificatesPage.tsx:58:  { value: "newest", label: "Date: New to Old", detail: "" },
+src/modules/dashboard\MyCertificatesPage.tsx:59:  { value: "id-asc", label: "Certificate ID (A-Z)", detail: "" },
+src/modules/dashboard\MyCertificatesPage.tsx:60:  { value: "id-desc", label: "Certificate ID (Z-A)", detail: "" },
+src/modules/dashboard\MyCertificatesPage.tsx:66:  const [certificates] = useState<Certificate[]>(() => readCertificates());
+src/modules/dashboard\MyCertificatesPage.tsx:125:            <h2 className="text-[17px] font-semibold text-navy">All Certificates</h2>
+src/modules/dashboard\MyCertificatesPage.tsx:169:        <PdfViewer src={selectedPdf} onClose={() => setSelectedPdf(null)} />
+src/modules/dashboard\MyCertificatesPage.tsx:175:          onClose={() => setDialog(null)}
+src/modules/dashboard\MyCertificatesPage.tsx:188:          onClose={() => setDialog(null)}
+src/modules/dashboard\MyCertificatesPage.tsx:216:  onChange: (value: SortOption) => void;
+src/modules/dashboard\MyCertificatesPage.tsx:217:  onClose: () => void;
+src/modules/dashboard\MyCertificatesPage.tsx:218:  onApply: () => void;
+src/modules/dashboard\MyCertificatesPage.tsx:227:          <h2 className="text-[17px] font-semibold text-navy">Sort by</h2>
+src/modules/dashboard\MyCertificatesPage.tsx:228:          <p className="text-[10px] text-[#8b949e]">Reorder active parcel markers</p>
+src/modules/dashboard\MyCertificatesPage.tsx:242:              onChange={() => onChange(option.value)}
+src/modules/dashboard\MyCertificatesPage.tsx:279:  onMyCertificatesChange: (value: boolean) => void;
+src/modules/dashboard\MyCertificatesPage.tsx:280:  onGiftedChange: (value: boolean) => void;
+src/modules/dashboard\MyCertificatesPage.tsx:281:  onClose: () => void;
+src/modules/dashboard\MyCertificatesPage.tsx:282:  onReset: () => void;
+src/modules/dashboard\MyCertificatesPage.tsx:283:  onApply: () => void;
+src/modules/dashboard\MyCertificatesPage.tsx:292:          <h2 className="text-[17px] font-semibold text-navy">Filter Plots</h2>
+src/modules/dashboard\MyCertificatesPage.tsx:338:  label: string;
+src/modules/dashboard\MyCertificatesPage.tsx:340:  onChange: (value: boolean) => void;
+src/modules/dashboard\MyCertificatesPage.tsx:347:        onChange={(event) => onChange(event.target.checked)}
+src/modules/dashboard\MyCertificatesPage.tsx:369:function CloseButton({ onClick }: { onClick: () => void }) {
+src/modules/dashboard\MyCertificatesPage.tsx:373:      aria-label="Close"
+src/modules/dashboard\MyCertificatesPage.tsx:387:  onClose: () => void;
+src/modules/dashboard\MyCertificatesPage.tsx:388:  onApply: () => void;
+src/modules/dashboard\MyCertificatesPage.tsx:407:function PdfViewer({ src, onClose }: { src: string; onClose: () => void }) {
+src/modules/dashboard\MyCertificatesPage.tsx:413:        aria-label="Certificate PDF viewer"
+src/modules/dashboard\MyCertificatesPage.tsx:417:          <h2 className="text-[13px] font-semibold text-navy">Certificate PDF</h2>
+src/modules/dashboard\MyCertificatesPage.tsx:420:        <iframe title="Certificate PDF" src={src} className="min-h-0 flex-1" />
+src/modules/dashboard\MyCertificatesPage.tsx:434:          alt="Certificate preview"
+src/modules/dashboard\LegalDocumentPage.tsx:281:            aria-label="Table of Contents"
+src/modules/dashboard\HelpSupportPage.tsx:43:  if (isLoading) return <main className="flex min-h-[100svh] items-center justify-center bg-[#f7fafc] text-sm text-muted">Loading support...</main>;
+src/modules/dashboard\HelpSupportPage.tsx:64:            <h1 className="text-[30px] font-semibold tracking-[-0.04em] text-navy sm:text-[32px]">Help &amp; Support</h1>
+src/modules/dashboard\HelpSupportPage.tsx:65:            <p className="mt-1 font-manrope text-[12px] font-normal text-[#7b858f]">Need help? We&apos;re here for you.</p>
+src/modules/dashboard\HelpSupportPage.tsx:73:                  <button type="button" aria-expanded={isOpen} onClick={() => setOpenFaq(isOpen ? -1 : index)} className="flex min-h-14 w-full items-center justify-between gap-4 px-3.5 py-3 text-left font-manrope text-[14px] font-bold text-navy sm:px-4">
+src/modules/dashboard\HelpSupportPage.tsx:84:            <label htmlFor="support-message" className="font-manrope text-[14px] font-bold text-navy">Other</label>
+src/modules/dashboard\HelpSupportPage.tsx:85:            <textarea id="support-message" value={message} onChange={(event) => { setMessage(event.target.value); setHasInteracted(true); setSent(false); }} placeholder="Send your Queries..." className="mt-1.5 h-[76px] w-full resize-none rounded-[10px] border border-[#e3e8ed] bg-white px-3 py-3 text-[10px] text-[#242b32] outline-none placeholder:text-[#c6cbd0] focus:border-[#9aaabd] focus:ring-1 focus:ring-[#d9e1e8]" aria-describedby="support-message-help" />
+src/modules/dashboard\HelpSupportPage.tsx:90:              {sent ? <p role="status" className="text-[10px] text-[#198b55]">Message sent successfully.</p> : null}
+src/modules/dashboard\HelpSupportPage.tsx:95:                <button type="button" onClick={() => router.back()} className="rounded-[9px] border border-[#e1e5e9] bg-white px-6 py-3 text-[12px] text-[#68727c]">Cancel</button>
+src/modules/dashboard\HelpSupportPage.tsx:96:                <button type="submit" disabled={!hasEnoughWords} className="rounded-[9px] bg-navy px-6 py-3 text-[12px] font-medium text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-45">Send Message →</button>
+src/modules/dashboard\HelpSupportPage.tsx:102:            <div><h2 className="font-manrope text-[14px] font-bold text-[#242b32]">Still need help? <span className="ml-1 rounded-full bg-[#edf3ff] px-2 py-1 text-[9px] font-medium text-navy">● Within 24 hours</span></h2><p className="mt-1 max-w-[300px] font-manrope text-[12px] font-normal leading-4 text-[#8f99a4]">Our cadastral survey and registry team is standing by to resolve custom requests.</p></div>
+src/modules/dashboard\HelpSupportPage.tsx:103:            <div className="flex items-center gap-3"><span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#edf3ff] text-navy">✉</span><div><p className="font-manrope text-[12px] font-normal uppercase tracking-[0.08em] text-[#8f99a4]">Direct mail</p><p className="font-manrope text-[12px] font-normal text-[#242b32]">support@tajlandia.com</p></div></div>
+src/modules/dashboard\EditProfilePage.tsx:33:  if (isLoading) return <main className="flex min-h-[100svh] items-center justify-center bg-[#f7fafc] text-sm text-muted">Loading profile...</main>;
+src/modules/dashboard\EditProfilePage.tsx:46:    reader.onload = () => setAvatarUrl(typeof reader.result === "string" ? reader.result : undefined);
+src/modules/dashboard\EditProfilePage.tsx:64:    setAuthUser({ ...(user ?? {}), name: `${values.firstName.trim()} ${values.lastName.trim()}`, email: values.email.trim(), phone: values.phone.trim(), ...(avatarUrl ? { avatarUrl } : {}) });
+src/modules/dashboard\EditProfilePage.tsx:68:  return <div className="min-h-[100svh] bg-[#f7fafc] text-navy"><DashboardNavbar active="none" /><main className="mx-auto grid w-[92%] max-w-none gap-8 px-5 pb-12 pt-10 sm:px-8 lg:grid-cols-[256px_minmax(0,1fr)] lg:gap-7 lg:pt-14"><AccountMenu active="profile" /><section className="min-w-0"><div className="border-b border-[#e1e8ed] pb-4"><h1 className="text-[30px] font-semibold tracking-[-0.04em] text-navy sm:text-[32px]">Edit Profile</h1><p className="mt-1 text-[12px] text-[#7b858f]">Manage your personal information and account.</p></div><div className="mt-5 flex flex-col items-start justify-between gap-4 rounded-[15px] bg-white p-5 shadow-[0_5px_24px_rgba(11,31,77,0.08)] sm:flex-row sm:items-center sm:p-6"><div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-full bg-[#e9eef2]">{avatarUrl ? <img src={avatarUrl} alt="Profile" className="h-full w-full object-cover" /> : <img src="/images/dashboard/profile-placeholder.png" alt="Profile placeholder" className="h-10 w-10 object-contain" />}</div><div className="flex gap-3"><input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={(event) => changePhoto(event.target.files?.[0])} /><button type="button" onClick={() => fileRef.current?.click()} className="rounded-[9px] bg-navy px-6 py-3 text-[12px] text-white">{avatarUrl ? "Change Photo" : "Add Photo"}</button><button type="button" onClick={discard} className="rounded-[9px] border border-[#d2d7dc] bg-white px-5 py-3 text-[12px] text-[#68727c]">Discard</button></div></div><form onSubmit={save} className="mt-5 rounded-[15px] bg-white p-5 shadow-[0_5px_24px_rgba(11,31,77,0.08)] sm:p-6"><div className="border-b border-[#e8edf1] pb-3"><h2 className="text-[11px] font-bold uppercase tracking-[0.08em] text-[#68727c]">Personal Information</h2><p className="mt-1 text-[10px] text-[#b0b7be]">Official account information registered on file</p></div><div className="mt-4 grid gap-4 sm:grid-cols-2"><EditField label="First name" value={values.firstName} required onChange={(value) => update("firstName", value)} /><EditField label="Last name" value={values.lastName} required onChange={(value) => update("lastName", value)} /><div className="sm:col-span-2"><EditField label="Email" value={values.email} required type="email" onChange={(value) => update("email", value)} /></div><div className="sm:col-span-2"><EditField label="Mobile Number" value={values.phone} required onChange={(value) => update("phone", value)} /></div></div><label className="mt-4 flex items-start gap-2 text-[11px] text-[#9aa3ad]"><input type="checkbox" checked={agreed} onChange={(event) => { setAgreed(event.target.checked); setError(""); }} className="mt-0.5 accent-[#06245f]" required /> <span>I agree to the <Link href={routes.terms} className="text-brand-red">Terms of Service</Link> and <Link href={routes.privacy} className="text-brand-red">Privacy Policy</Link>.</span></label>{error ? <p role="alert" className="mt-4 text-[12px] text-[#b42318]">{error}</p> : null}<div className="mt-6 flex justify-end gap-3"><Link href={routes.profile} className="rounded-[9px] border border-[#e1e5e9] bg-white px-6 py-3 text-[12px] text-[#68727c]">Cancel</Link><button type="submit" className="rounded-[9px] bg-navy px-7 py-3 text-[12px] font-medium text-white">Save Changes</button></div></form></section></main>{showSuccess ? <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#071536]/35 px-4"><div role="dialog" aria-modal="true" aria-labelledby="profile-success-title" className="relative w-full max-w-[310px] rounded-[14px] bg-white px-6 py-7 text-center shadow-[0_18px_55px_rgba(11,31,77,0.2)]"><button type="button" aria-label="Close" onClick={() => setShowSuccess(false)} className="absolute right-4 top-3 text-[18px] text-[#b2b7bd]">×</button><div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[#eafaf2] text-[24px] text-[#008a5a]">♧</div><h2 id="profile-success-title" className="mt-4 text-[16px] font-semibold text-[#151515]">Profile updated successfully.</h2><p className="mt-1 text-[11px] text-[#7b858f]">Your profile has been saved successfully.</p><button type="button" onClick={() => setShowSuccess(false)} className="mt-5 h-10 w-full rounded-[8px] bg-navy text-[12px] font-medium text-white">Okay</button></div></div> : null}</div>;
+src/modules/dashboard\EditProfilePage.tsx:71:function EditField({ label, value, required, type = "text", onChange }: { label: string; value: string; required?: boolean; type?: string; onChange: (value: string) => void }) {
+src/modules/dashboard\EditProfilePage.tsx:72:  return <label className="block text-[11px] text-[#242b32]"><span>{label}{required ? <b className="text-brand-red">*</b> : null}</span><input type={type} value={value} onChange={(event) => onChange(event.target.value)} className="mt-1.5 flex h-10 w-full rounded-[10px] border border-[#e3e8ed] px-3 text-[12px] outline-none focus:border-navy" required={required} /></label>;
+src/modules/dashboard\DashboardPlaceholderPage.tsx:12:  if (isLoading) return <div className="flex min-h-[100svh] items-center justify-center text-sm text-muted">Loading...</div>;
+src/modules/dashboard\DashboardPlaceholderPage.tsx:14:  return <div className="min-h-[100svh] bg-white"><DashboardNavbar active={active} /><main className="flex min-h-[calc(100svh-54px)] flex-col items-center justify-center gap-4 px-6 text-center"><h1 className="text-3xl font-semibold text-navy">{title}</h1><p className="text-sm text-muted">This authenticated section is coming next.</p><button type="button" onClick={() => router.push(routes.dashboard)} className="rounded-full bg-navy px-5 py-3 text-sm text-white">Back to Dashboard</button></main></div>;
+src/modules/dashboard\DashboardPage.tsx:114:              alt=""
+src/modules/dashboard\DashboardPage.tsx:171:  label: string;
+src/modules/dashboard\DashboardPage.tsx:187:        alt=""
+src/modules/dashboard\DashboardPage.tsx:195:          alt=""
+src/modules/dashboard\DashboardPage.tsx:221:  name: string;
+src/modules/dashboard\DashboardPage.tsx:222:  description: string;
+src/modules/dashboard\DashboardPage.tsx:229:        alt={name}
+src/modules/dashboard\DashboardPage.tsx:258:      name: "Phuket",
+src/modules/dashboard\DashboardPage.tsx:259:      description: "Island life, reimagined.",
+src/modules/dashboard\DashboardPage.tsx:265:      name: "Krabi",
+src/modules/dashboard\DashboardPage.tsx:266:      description: "Where limestone meets the sea.",
+src/modules/dashboard\DashboardPage.tsx:272:      name: "Chiang Mai",
+src/modules/dashboard\DashboardPage.tsx:273:      description: "Mountains, culture and quiet.",
+src/modules/dashboard\DashboardPage.tsx:279:      name: "Bangkok",
+src/modules/dashboard\DashboardPage.tsx:280:      description: "Energy, culture and endless discovery.",
+src/modules/dashboard\DashboardPage.tsx:286:      name: "Pattaya",
+src/modules/dashboard\DashboardPage.tsx:287:      description: "Coastal escapes, just beyond the city.",
+src/modules/dashboard\DashboardPage.tsx:293:      name: "Koh Samui",
+src/modules/dashboard\DashboardPage.tsx:294:      description: "Island serenity, beautifully preserved.",
+src/modules/dashboard\DashboardPage.tsx:308:    return () => carousel.removeEventListener("scroll", updateActivePage);
+src/modules/dashboard\DashboardPage.tsx:334:        aria-label="Explore carousel position"
+src/modules/dashboard\DashboardNavbar.tsx:49:  const isProfileActive = accountMenuRoutes.some((route) => pathname === route);
+src/modules/dashboard\DashboardNavbar.tsx:86:            aria-label="Open dashboard menu"
+src/modules/dashboard\DashboardNavbar.tsx:88:            onClick={() => setIsMobileMenuOpen((open) => !open)}
+src/modules/dashboard\DashboardNavbar.tsx:100:                onClick={() => setIsLanguageOpen((open) => !open)}
+src/modules/dashboard\DashboardNavbar.tsx:111:                  alt=""
+src/modules/dashboard\DashboardNavbar.tsx:139:                      alt=""
+src/modules/dashboard\DashboardNavbar.tsx:155:                      alt=""
+src/modules/dashboard\DashboardNavbar.tsx:171:                      alt=""
+src/modules/dashboard\DashboardNavbar.tsx:181:            <Link href={routes.cart} aria-label="Cart">
+src/modules/dashboard\DashboardNavbar.tsx:189:                  alt=""
+src/modules/dashboard\DashboardNavbar.tsx:194:            <Link href={routes.profile} aria-label="Profile">
+src/modules/dashboard\DashboardNavbar.tsx:202:                  alt=""
+src/modules/dashboard\DashboardNavbar.tsx:215:              onClick={() => setIsMobileMenuOpen(false)}
+src/modules/dashboard\DashboardNavbar.tsx:222:              onClick={() => setIsMobileMenuOpen(false)}
+src/modules/dashboard\DashboardNavbar.tsx:229:              onClick={() => setIsMobileMenuOpen(false)}
+src/modules/dashboard\DashboardLanguageContext.tsx:86:  setLanguage: (language: DashboardLanguage) => void;
+src/modules/dashboard\DashboardLanguageContext.tsx:136:    return () => observer.disconnect();
+src/modules/dashboard\DashboardLanguageContext.tsx:142:      setLanguage: (nextLanguage: DashboardLanguage) => setLanguageState(nextLanguage),
+src/modules/dashboard\ChangePasswordPage.tsx:18:  if (score === checks.length) return { label: "Strong", color: "#08a878", level: 3 };
+src/modules/dashboard\ChangePasswordPage.tsx:19:  if (score >= 2) return { label: "Average", color: "#d39e00", level: 2 };
+src/modules/dashboard\ChangePasswordPage.tsx:20:  return { label: "Weak", color: "#dc3545", level: 1 };
+src/modules/dashboard\ChangePasswordPage.tsx:32:  if (isLoading) return <main className="flex min-h-[100svh] items-center justify-center bg-[#f7fafc] text-sm text-muted">Loading...</main>;
+src/modules/dashboard\ChangePasswordPage.tsx:51:        <div className="border-b border-[#e1e8ed] pb-4"><h1 className="text-[30px] font-semibold tracking-[-0.04em] text-navy sm:text-[32px]">Change Password</h1><p className="mt-1 text-[12px] text-[#7b858f]">Update your password to keep your account secure.</p></div>
+src/modules/dashboard\ChangePasswordPage.tsx:54:            <PasswordField label="Current Password" value={values.currentPassword} visible={visible.current} autoComplete="current-password" onToggle={() => setVisible((current) => ({ ...current, current: !current }))} onChange={(value) => setValues((current) => ({ ...current, currentPassword: value }))} />
+src/modules/dashboard\ChangePasswordPage.tsx:55:            <div><PasswordField label="New Password" value={values.newPassword} visible={visible.next} autoComplete="new-password" onToggle={() => setVisible((current) => ({ ...current, next: !current }))} onChange={(value) => { setMessage(""); setValues((current) => ({ ...current, newPassword: value })); }} />{values.newPassword ? <div className="mt-2 flex items-center gap-1" aria-live="polite"><div className="flex flex-1 gap-1">{[1, 2, 3].map((bar) => <span key={bar} className="h-[3px] flex-1 rounded-full transition-colors" style={{ backgroundColor: bar <= strength.level ? strength.color : "#dfe6eb" }} />)}</div><span className="ml-1 min-w-[42px] text-right text-[10px]" style={{ color: strength.color }}>{strength.label}</span></div> : null}</div>
+src/modules/dashboard\ChangePasswordPage.tsx:56:            <PasswordField label="Confirm Password" value={values.confirmPassword} visible={visible.confirm} autoComplete="new-password" onToggle={() => setVisible((current) => ({ ...current, confirm: !current }))} onChange={(value) => setValues((current) => ({ ...current, confirmPassword: value }))} />
+src/modules/dashboard\ChangePasswordPage.tsx:59:          <div className="mt-6 flex justify-end gap-3"><button type="button" onClick={() => router.replace(routes.editProfile)} className="rounded-[9px] border border-[#e1e5e9] bg-white px-6 py-3 text-[12px] text-[#68727c]">Cancel</button><button type="submit" className="rounded-[9px] bg-navy px-6 py-3 text-[12px] font-medium text-white">Change Password</button></div>
+src/modules/dashboard\ChangePasswordPage.tsx:63:    {showErrorPopup ? <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#071536]/35 px-4"><div role="dialog" aria-modal="true" aria-labelledby="password-error-title" className="relative w-full max-w-[350px] rounded-[14px] bg-white px-6 py-7 text-center shadow-[0_18px_55px_rgba(11,31,77,0.2)]"><button type="button" aria-label="Close" onClick={() => setShowErrorPopup(false)} className="absolute right-4 top-3 text-[18px] text-[#b2b7bd]">×</button><div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[#fff0f0] text-[25px] text-[#d7193f]">!</div><h2 id="password-error-title" className="mt-4 text-[18px] font-semibold text-[#151515]">Something went wrong.</h2><p className="mt-2 text-[11px] text-[#7b858f]">We couldn&apos;t update your password. Your credentials remain unchanged.</p><button type="button" onClick={() => setShowErrorPopup(false)} className="mt-5 h-10 w-full rounded-[8px] bg-navy text-[12px] font-medium text-white">Try again</button></div></div> : null}
+src/modules/dashboard\ChangePasswordPage.tsx:67:function PasswordField({ label, value, visible, autoComplete, onToggle, onChange }: { label: string; value: string; visible: boolean; autoComplete: string; onToggle: () => void; onChange: (value: string) => void }) {
+src/modules/dashboard\ChangePasswordPage.tsx:68:  return <label className="block text-[11px] text-[#242b32]"><span>{label}</span><span className="mt-1.5 flex h-10 items-center rounded-[10px] border border-[#e3e8ed] px-3 transition-colors focus-within:border-[#9aaabd] focus-within:ring-1 focus-within:ring-[#d9e1e8]"><input type={visible ? "text" : "password"} value={value} onChange={(event) => onChange(event.target.value)} className="min-w-0 flex-1 bg-transparent text-[12px] text-[#242b32] outline-none focus:outline-none focus-visible:outline-none" autoComplete={autoComplete} /><button type="button" aria-label={visible ? `Hide ${label.toLowerCase()}` : `Show ${label.toLowerCase()}`} onMouseDown={(event) => event.preventDefault()} onClick={onToggle} className="rounded-sm text-[11px] text-[#81909d] outline-none focus-visible:ring-2 focus-visible:ring-[#9aaabd] focus-visible:ring-offset-1">{visible ? "Hide" : "Show"}</button></span></label>;
+src/modules/dashboard\CertificateDetailsPage.tsx:40:    window.setTimeout(() => setCopied(false), 2200);
+src/modules/dashboard\CertificateDetailsPage.tsx:77:              aria-label="Share certificate"
+src/modules/dashboard\CertificateDetailsPage.tsx:78:              onClick={() => setDialog("share")}
+src/modules/dashboard\CertificateDetailsPage.tsx:83:                alt=""
+src/modules/dashboard\CertificateDetailsPage.tsx:93:              alt="Certificate of ownership"
+src/modules/dashboard\CertificateDetailsPage.tsx:144:          onClose={() => setDialog(null)}
+src/modules/dashboard\CertificateDetailsPage.tsx:145:          onView={() => window.open(pdfUrl, "_blank", "noopener,noreferrer")}
+src/modules/dashboard\CertificateDetailsPage.tsx:154:          onClose={() => setDialog(null)}
+src/modules/dashboard\CertificateDetailsPage.tsx:166:  label: string;
+src/modules/dashboard\CertificateDetailsPage.tsx:198:  onClose: () => void;
+src/modules/dashboard\CertificateDetailsPage.tsx:199:  onView: () => void;
+src/modules/dashboard\CertificateDetailsPage.tsx:235:  onCopy: () => void;
+src/modules/dashboard\CertificateDetailsPage.tsx:236:  onShare: () => void;
+src/modules/dashboard\CertificateDetailsPage.tsx:237:  onClose: () => void;
+src/modules/dashboard\CertificateDetailsPage.tsx:244:          aria-label="Close share dialog"
+src/modules/dashboard\CertificateDetailsPage.tsx:253:        alt="Tajlandia"
+src/modules/dashboard\CartPage.tsx:22:  name: "Seaview Ridge Plot",
+src/modules/dashboard\CartPage.tsx:44:      parsed.every((item) => item?.id?.startsWith("PH-"))
+src/modules/dashboard\CartPage.tsx:48:      ? parsed.filter((item): item is CartItem => item && typeof item === "object")
+src/modules/dashboard\CartPage.tsx:58:  const [cartItems, setCartItems] = useState<CartItem[]>(() => readCart());
+src/modules/dashboard\CartPage.tsx:62:    (total, item) => total + (typeof item.rai === "number" ? item.rai : 0),
+src/modules/dashboard\CartPage.tsx:66:    (sum, item) => sum + (typeof item.amount === "number" ? item.amount : 0),
+src/modules/dashboard\CartPage.tsx:80:      const next = current.filter((_, itemIndex) => itemIndex !== index);
+src/modules/dashboard\CartPage.tsx:135:          alt=""
+src/modules/dashboard\CartPage.tsx:181:  setCoupon: (value: string) => void;
+src/modules/dashboard\CartPage.tsx:182:  onClearAll: () => void;
+src/modules/dashboard\CartPage.tsx:183:  onRemove: (index: number) => void;
+src/modules/dashboard\CartPage.tsx:206:            <strong>Total: ${total.toFixed(2)}</strong>
+src/modules/dashboard\CartPage.tsx:218:            <strong className="text-navy">NEXT STEP:</strong> Select parcels from any
+src/modules/dashboard\CartPage.tsx:227:          <h2 className="text-[17px] font-semibold text-[#171717]">Selected Plots</h2>
+src/modules/dashboard\CartPage.tsx:242:                onRemove={() => onRemove(index)}
+src/modules/dashboard\CartPage.tsx:268:              onChange={(event) => setCoupon(event.target.value)}
+src/modules/dashboard\CartPage.tsx:269:              placeholder="Enter Code"
+src/modules/dashboard\CartPage.tsx:280:            <h2 className="text-[17px] font-semibold text-[#242b32]">Order Summary</h2>
+src/modules/dashboard\CartPage.tsx:283:                <span>Plots</span>
+src/modules/dashboard\CartPage.tsx:287:                <span>Total Rai</span>
+src/modules/dashboard\CartPage.tsx:293:              <span>Subtotal</span>
+src/modules/dashboard\CartPage.tsx:297:              <span>Total</span>
+src/modules/dashboard\CartPage.tsx:325:function CartItemCard({ item, onRemove }: { item: CartItem; onRemove: () => void }) {
+src/modules/dashboard\CartPage.tsx:330:          <img src={item.image} alt="" className="h-full w-full object-cover" />
+src/modules/explore-map\__tests__\ExploreMapPage.test.tsx:8:    expect(screen.getByRole("heading", { name: /discover thailand/i })).toBeInTheDocument();
+src/modules/dashboard\AccountMenu.tsx:15:        alt=""
+src/modules/dashboard\AccountMenu.tsx:41:      label: "Profile",
+src/modules/dashboard\AccountMenu.tsx:47:      label: "Change Password",
+src/modules/dashboard\AccountMenu.tsx:53:      label: "My Purchases",
+src/modules/dashboard\AccountMenu.tsx:59:      label: "My Certificates",
+src/modules/dashboard\AccountMenu.tsx:65:      label: "Settings",
+src/modules/dashboard\AccountMenu.tsx:71:      label: "Help & Support",
+src/modules/dashboard\AccountMenu.tsx:77:      label: "Term & Condition",
+src/modules/dashboard\AccountMenu.tsx:83:      label: "Privacy Policy",
+src/modules/dashboard\AccountMenu.tsx:116:          onClick={() => setIsLogoutOpen(true)}
+src/modules/dashboard\AccountMenu.tsx:136:              aria-label="Close logout confirmation"
+src/modules/dashboard\AccountMenu.tsx:137:              onClick={() => setIsLogoutOpen(false)}
+src/modules/dashboard\AccountMenu.tsx:166:                onClick={() => setIsLogoutOpen(false)}
+src/modules/explore-map\ExploreMapPage.tsx:14:    name: "Phuket",
+src/modules/explore-map\ExploreMapPage.tsx:22:    name: "Krabi",
+src/modules/explore-map\ExploreMapPage.tsx:30:    name: "Chiang Mai",
+src/modules/explore-map\ExploreMapPage.tsx:38:    name: "Bangkok",
+src/modules/explore-map\ExploreMapPage.tsx:46:    name: "Pattaya",
+src/modules/explore-map\ExploreMapPage.tsx:54:    name: "Ayutthaya",
+src/modules/explore-map\ExploreMapPage.tsx:80:              Discover <span className="italic text-brand-red">Thailand</span>
+src/modules/explore-map\ExploreMapPage.tsx:87:              <input type="search" placeholder="Search city, region, or destination..." className="min-w-0 flex-1 bg-transparent outline-none placeholder:text-[#aab2bd]" />
+src/modules/explore-map\ExploreMapPage.tsx:99:                <span className="flex items-center gap-1.5"><i className="h-2 w-2 rounded-full bg-[#e51d2a]" />Claimed</span>
+src/modules/explore-map\ExploreMapPage.tsx:100:                <span className="flex items-center gap-1.5"><i className="h-2 w-2 rounded-full bg-[#0b1f4d]" />Available</span>
+src/modules/explore-map\ExploreMapPage.tsx:101:                <span className="flex items-center gap-1.5"><i className="h-2 w-2 rounded-full bg-[#a9a9a9]" />Restricted</span>
+src/modules/explore-map\ExploreMapPage.tsx:105:              <button type="button" aria-label="Zoom in" onClick={() => mapRef.current?.zoomIn()} className="flex h-8 w-8 items-center justify-center hover:bg-[#f4f7fa]"><MapControlIcon type="plus" /></button>
+src/modules/explore-map\ExploreMapPage.tsx:107:              <button type="button" aria-label="Zoom out" onClick={() => mapRef.current?.zoomOut()} className="flex h-8 w-8 items-center justify-center hover:bg-[#f4f7fa]"><MapControlIcon type="minus" /></button>
+src/modules/explore-map\ExploreMapPage.tsx:117:              <h2 className="font-display text-[42px] leading-none tracking-[-0.04em] text-navy sm:text-[60px]">Explore by <span className="italic text-brand-red">Destination</span></h2>
+src/modules/explore-map\ExploreMapPage.tsx:119:            <Link href={routes.contact} className="hidden text-[10px] font-medium text-navy underline underline-offset-4 sm:block">Browse All 6 Provinces →</Link>
+src/modules/explore-map\ExploreMapPage.tsx:124:                <Image src={destination.image} alt={destination.name} fill sizes="(max-width: 768px) 100vw, 33vw" className="object-cover transition duration-500 group-hover:scale-105" />
+src/modules/explore-map\ExploreMapPage.tsx:132:                    <span>Discover Plots →</span>
+src/modules/explore-map\ExploreMapPage.tsx:145:              <Image src="/images/explore/featured-thailand.jpg" alt="Thailand destination coastline" fill sizes="(max-width: 1024px) 100vw, 45vw" className="h-full w-full object-cover" />
+src/modules/explore-map\ExploreMapPage.tsx:148:              <p className="text-[10px] font-medium uppercase tracking-[0.18em] text-navy"><span className="text-brand-red">•</span> Discover Thailand</p>
+src/modules/explore-map\ExploreMapPage.tsx:149:              <h2 className="mt-3 font-display text-4xl leading-tight text-navy sm:text-5xl">Thailand, One Place at a Time.</h2>
+src/modules/explore-map\ExploreMapPage.tsx:150:              <p className="mt-3 text-base leading-7 text-muted sm:text-lg">From island coastlines to mountain cities, discover the places, landscapes, and destinations that make Thailand unforgettable.</p>
+src/modules/explore-map\ExploreMapPage.tsx:152:                <span><strong className="block text-xl text-navy sm:text-2xl">03 Regions</strong>Destinations</span>
+src/modules/explore-map\ExploreMapPage.tsx:153:                <span><strong className="block text-xl text-navy sm:text-2xl">03 Zones</strong>Zones</span>
+src/modules/explore-map\ExploreMapPage.tsx:154:                <span><strong className="block text-base text-navy sm:text-lg">Available across Thailand</strong>Plots to explore</span>
+src/modules/explore-map\ExploreMapPage.tsx:155:                <span><strong className="block text-xl text-navy sm:text-2xl">100 Rai</strong>Minimum collection</span>
+src/modules/explore-map\ExploreMapPage.tsx:157:              <Button href={routes.explore} className="mt-5" size="sm">Explore the Map →</Button>
+src/modules/explore-map\AuthenticatedExploreMapPage.tsx:64:      return destinations.map((destination) => destination.name);
+src/modules/explore-map\AuthenticatedExploreMapPage.tsx:70:        ? stored.filter((name): name is string => typeof name === "string")
+src/modules/explore-map\AuthenticatedExploreMapPage.tsx:71:        : destinations.map((destination) => destination.name);
+src/modules/explore-map\AuthenticatedExploreMapPage.tsx:73:      return destinations.map((destination) => destination.name);
+src/modules/explore-map\AuthenticatedExploreMapPage.tsx:123:      .filter((destination) => filter === "all" || destination.badge === filter)
+src/modules/explore-map\AuthenticatedExploreMapPage.tsx:144:        .map((name) => available.get(name))
+src/modules/explore-map\AuthenticatedExploreMapPage.tsx:157:  function rememberLocation(name: string) {
+src/modules/explore-map\AuthenticatedExploreMapPage.tsx:159:      const next = [name, ...current.filter((item) => item !== name)];
+src/modules/explore-map\AuthenticatedExploreMapPage.tsx:216:        onMouseEnter={() => setIsSearchExpanded(true)}
+src/modules/explore-map\AuthenticatedExploreMapPage.tsx:221:          <span className="sr-only">Search Maps</span>
+src/modules/explore-map\AuthenticatedExploreMapPage.tsx:225:            onFocus={() => setIsSearchExpanded(true)}
+src/modules/explore-map\AuthenticatedExploreMapPage.tsx:236:            placeholder="Search Maps"
+src/modules/explore-map\AuthenticatedExploreMapPage.tsx:243:              aria-label="Clear search"
+src/modules/explore-map\AuthenticatedExploreMapPage.tsx:244:              onClick={() => setSearch("")}
+src/modules/explore-map\AuthenticatedExploreMapPage.tsx:336:                  onClick={() => void selectLocation(destination)}
+src/modules/explore-map\AuthenticatedExploreMapPage.tsx:341:                    alt=""
+src/modules/explore-map\AuthenticatedExploreMapPage.tsx:366:              onClick={() => setShowAllHistory((show) => !show)}
+src/modules/explore-map\AuthenticatedExploreMapPage.tsx:380:        <span className="font-medium uppercase tracking-wide">Plot Status</span>
+src/modules/explore-map\AuthenticatedExploreMapPage.tsx:402:          aria-label="Current location"
+src/modules/explore-map\AuthenticatedExploreMapPage.tsx:403:          onClick={() => mapRef.current?.locate()}
+src/modules/explore-map\AuthenticatedExploreMapPage.tsx:411:            aria-label="Zoom in"
+src/modules/explore-map\AuthenticatedExploreMapPage.tsx:412:            onClick={() => mapRef.current?.zoomIn()}
+src/modules/explore-map\AuthenticatedExploreMapPage.tsx:420:            aria-label="Zoom out"
+src/modules/explore-map\AuthenticatedExploreMapPage.tsx:421:            onClick={() => mapRef.current?.zoomOut()}

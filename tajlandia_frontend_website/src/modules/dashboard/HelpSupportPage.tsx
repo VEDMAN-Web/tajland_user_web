@@ -62,7 +62,7 @@ export function HelpSupportPage() {
         <section className="min-w-0">
           <div className="border-b border-[#e1e8ed] pb-4">
             <h1 className="text-[30px] font-semibold tracking-[-0.04em] text-navy sm:text-[32px]">Help &amp; Support</h1>
-            <p className="mt-1 text-[12px] text-[#7b858f]">Need help? We&apos;re here for you.</p>
+            <p className="mt-1 font-manrope text-[12px] font-normal text-[#7b858f]">Need help? We&apos;re here for you.</p>
           </div>
 
           <div className="mt-5 space-y-2">
@@ -70,18 +70,18 @@ export function HelpSupportPage() {
               const isOpen = openFaq === index;
               return (
                 <div key={faq.question + index} className={`overflow-hidden rounded-[10px] bg-white shadow-[0_5px_18px_rgba(11,31,77,0.07)] ${isOpen ? "border-l-2 border-brand-red" : "border-l-2 border-transparent"}`}>
-                  <button type="button" aria-expanded={isOpen} onClick={() => setOpenFaq(isOpen ? -1 : index)} className="flex min-h-14 w-full items-center justify-between gap-4 px-3.5 py-3 text-left text-[11px] font-semibold text-navy sm:px-4">
+                  <button type="button" aria-expanded={isOpen} onClick={() => setOpenFaq(isOpen ? -1 : index)} className="flex min-h-14 w-full items-center justify-between gap-4 px-3.5 py-3 text-left font-manrope text-[14px] font-bold text-navy sm:px-4">
                     <span>{faq.question}</span>
                     <span aria-hidden="true" className={`text-[16px] font-normal transition-transform ${isOpen ? "rotate-180" : ""}`}>⌄</span>
                   </button>
-                  {isOpen ? <p className="border-t border-[#edf0f3] px-3.5 py-2.5 text-[10px] leading-5 text-[#8b949e] sm:px-4">{faq.answer}</p> : null}
+                  {isOpen ? <p className="border-t border-[#edf0f3] px-3.5 py-2.5 font-manrope text-[12px] font-normal leading-5 text-[#8b949e] sm:px-4">{faq.answer}</p> : null}
                 </div>
               );
             })}
           </div>
 
           <form onSubmit={submit} className="mt-5">
-            <label htmlFor="support-message" className="text-[12px] font-medium text-navy">Other</label>
+            <label htmlFor="support-message" className="font-manrope text-[14px] font-bold text-navy">Other</label>
             <textarea id="support-message" value={message} onChange={(event) => { setMessage(event.target.value); setHasInteracted(true); setSent(false); }} placeholder="Send your Queries..." className="mt-1.5 h-[76px] w-full resize-none rounded-[10px] border border-[#e3e8ed] bg-white px-3 py-3 text-[10px] text-[#242b32] outline-none placeholder:text-[#c6cbd0] focus:border-[#9aaabd] focus:ring-1 focus:ring-[#d9e1e8]" aria-describedby="support-message-help" />
             <div className="mt-1.5 flex items-center justify-between gap-3">
               <p id="support-message-help" className={`text-[10px] ${hasInteracted && !hasEnoughWords ? "text-[#c81e1e]" : "text-[#9aa3ad]"}`}>
@@ -99,8 +99,8 @@ export function HelpSupportPage() {
           </form>
 
           <div className="mt-8 flex flex-col items-start justify-between gap-4 rounded-[15px] bg-white px-6 py-5 shadow-[0_5px_24px_rgba(11,31,77,0.06)] sm:flex-row sm:items-center">
-            <div><h2 className="text-[15px] font-semibold text-[#242b32]">Still need help? <span className="ml-1 rounded-full bg-[#edf3ff] px-2 py-1 text-[9px] font-medium text-navy">● Within 24 hours</span></h2><p className="mt-1 max-w-[300px] text-[10px] leading-4 text-[#8f99a4]">Our cadastral survey and registry team is standing by to resolve custom requests.</p></div>
-            <div className="flex items-center gap-3"><span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#edf3ff] text-navy">✉</span><div><p className="text-[8px] uppercase tracking-[0.08em] text-[#8f99a4]">Direct mail</p><p className="text-[11px] text-[#242b32]">support@tajlandia.com</p></div></div>
+            <div><h2 className="font-manrope text-[14px] font-bold text-[#242b32]">Still need help? <span className="ml-1 rounded-full bg-[#edf3ff] px-2 py-1 text-[9px] font-medium text-navy">● Within 24 hours</span></h2><p className="mt-1 max-w-[300px] font-manrope text-[12px] font-normal leading-4 text-[#8f99a4]">Our cadastral survey and registry team is standing by to resolve custom requests.</p></div>
+            <div className="flex items-center gap-3"><span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#edf3ff] text-navy">✉</span><div><p className="font-manrope text-[12px] font-normal uppercase tracking-[0.08em] text-[#8f99a4]">Direct mail</p><p className="font-manrope text-[12px] font-normal text-[#242b32]">support@tajlandia.com</p></div></div>
           </div>
         </section>
       </main>
