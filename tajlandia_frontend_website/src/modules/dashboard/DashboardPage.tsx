@@ -97,7 +97,6 @@ export function DashboardPage() {
               value="05"
               label={t("Regions")}
               tone="purple"
-              iconSize={72}
             />
             <Stat
               icon="/images/dashboard/stat-spent.png"
