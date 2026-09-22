@@ -31,7 +31,7 @@ function Icon({
 
 export function DashboardNavbar({ active, overlay = false }: DashboardNavbarProps) {
   const pathname = usePathname();
-  const { language, setLanguage } = useDashboardLanguage();
+  const { language, setLanguage, t } = useDashboardLanguage();
   const [isLanguageOpen, setIsLanguageOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const isCartActive = pathname === routes.cart;
@@ -64,21 +64,21 @@ export function DashboardNavbar({ active, overlay = false }: DashboardNavbarProp
               className={`inline-flex h-8 items-center rounded-full px-4 text-[14px] font-medium ${isHomeActive ? activeClass : "hover:bg-[#f5f7fa]"}`}
               style={{ fontFamily: "var(--font-manrope)" }}
             >
-              Home
+              {t("Home")}
             </Link>
             <Link
               href="/dashboard/explore"
               className={`inline-flex h-8 items-center rounded-full px-4 text-[14px] font-medium ${active === "explore" ? activeClass : "hover:bg-[#f5f7fa]"}`}
               style={{ fontFamily: "var(--font-manrope)" }}
             >
-              Explore Map
+              {t("Explore Map")}
             </Link>
             <Link
               href={routes.land}
               className={`inline-flex h-8 items-center rounded-full px-4 text-[14px] font-medium ${active === "my-land" ? activeClass : "hover:bg-[#f5f7fa]"}`}
               style={{ fontFamily: "var(--font-manrope)" }}
             >
-              My Land
+              {t("My Land")}
             </Link>
           </nav>
           <button
@@ -215,26 +215,26 @@ export function DashboardNavbar({ active, overlay = false }: DashboardNavbarProp
               onClick={() => setIsMobileMenuOpen(false)}
               className={`rounded-[9px] px-3 py-3 text-[13px] ${isHomeActive ? "bg-navy text-white" : "text-navy hover:bg-[#f5f7fa]"}`}
             >
-              Home
+              {t("Home")}
             </Link>
             <Link
               href={routes.dashboardExplore}
               onClick={() => setIsMobileMenuOpen(false)}
               className={`rounded-[9px] px-3 py-3 text-[13px] ${active === "explore" ? "bg-navy text-white" : "text-navy hover:bg-[#f5f7fa]"}`}
             >
-              Explore Map
+              {t("Explore Map")}
             </Link>
             <Link
               href={routes.land}
               onClick={() => setIsMobileMenuOpen(false)}
               className={`rounded-[9px] px-3 py-3 text-[13px] ${active === "my-land" ? "bg-navy text-white" : "text-navy hover:bg-[#f5f7fa]"}`}
             >
-              My Land
+              {t("My Land")}
             </Link>
           </nav>
           <div className="mt-3 border-t border-[#edf0f3] pt-3" data-language-selector="true">
             <p className="px-3 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#8b949e]">
-              Language
+              {t("Language")}
             </p>
             <div className="mt-2 grid grid-cols-3 gap-2">
               {(["EN", "PL", "TH"] as const).map((option) => (

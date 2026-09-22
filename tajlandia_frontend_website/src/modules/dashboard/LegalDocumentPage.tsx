@@ -8,6 +8,7 @@ import { DashboardNavbar } from "./DashboardNavbar";
 import { SiteFooter } from "@/components/layout/SiteFooter";
 import { SiteHeader } from "@/components/layout/SiteHeader";
 import { routes } from "@/lib/constants/routes";
+import { useOptionalDashboardLanguage } from "./DashboardLanguageContext";
 
 type LegalSection = {
   title: string;
@@ -231,11 +232,12 @@ export function LegalDocumentPage({
   kind: "privacy" | "terms";
   publicPage?: boolean;
 }) {
+  const { t } = useOptionalDashboardLanguage();
   const router = useRouter();
   const { isAuthenticated, isLoading } = useAuth();
   const isPrivacy = kind === "privacy";
   const sections = isPrivacy ? privacySections : termsSections;
-  const title = isPrivacy ? "Privacy Policy" : "Terms & Condition";
+  const title = isPrivacy ? t("Privacy Policy") : t("Terms & Condition");
   const subtitle = isPrivacy
     ? "Learn how we protect and use your information."
     : "Know the rules and terms of using Tajlandia.";

@@ -8,6 +8,7 @@ import { AccountMenu } from "./AccountMenu";
 import { DashboardNavbar } from "./DashboardNavbar";
 import { useAuth } from "@/lib/hooks/useAuth";
 import { routes } from "@/lib/constants/routes";
+import { useDashboardLanguage } from "./DashboardLanguageContext";
 
 type Purchase = {
   id?: string;
@@ -112,6 +113,7 @@ function SortIcon() {
 export function MyLandPage() {
   const router = useRouter();
   const { isAuthenticated, isLoading } = useAuth();
+  const { t } = useDashboardLanguage();
   const [query, setQuery] = useState("");
   const storedPurchases = getPurchases();
   const purchases = storedPurchases.length
@@ -162,7 +164,7 @@ export function MyLandPage() {
   if (isLoading)
     return (
       <main className="flex min-h-[100svh] items-center justify-center bg-[#f7fafc] text-sm text-muted">
-        Loading land...
+        {t("Loading land...")}
       </main>
     );
   if (!isAuthenticated) {
@@ -185,25 +187,25 @@ export function MyLandPage() {
       <main className="mx-auto w-[92%] max-w-none px-5 pb-16 pt-10 sm:px-8 sm:pt-14">
         <section>
           <h1 className="text-[27px] font-semibold tracking-[-0.04em] text-[#171717] sm:text-[30px]">
-            My Land
+            {t("My Land")}
           </h1>
           <p className="mt-1 text-[12px] text-[#7b858f]">
-            Your collection of places across Thailand., all in one place.
+            {t("Your collection of places across Thailand., all in one place.")}
           </p>
           <div className="mt-5 grid gap-3 md:grid-cols-3">
             <Stat
               icon="/images/dashboard/purchase-map.png"
-              label="Total Owned"
+              label={t("Total Owned")}
               value={`${totalRai} Rai`}
             />
             <Stat
               icon="/images/dashboard/purchase-location.png"
-              label="Total Lands"
+              label={t("Total Lands")}
               value={`${regions} Location`}
             />
             <Stat
               icon="/images/dashboard/purchase-spent.png"
-              label="Total Spent"
+              label={t("Total Spent")}
               value={`$${totalSpent.toLocaleString()}`}
             />
           </div>
@@ -214,7 +216,7 @@ export function MyLandPage() {
                 type="search"
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
-                placeholder="Search your plots, provinces, deeds..."
+                placeholder={t("Search your plots, provinces, deeds...")}
                 className="min-w-0 flex-1 bg-transparent outline-none placeholder:text-[#aab2bd]"
               />
             </label>
@@ -225,7 +227,7 @@ export function MyLandPage() {
                 className="inline-flex h-9 items-center gap-1.5 rounded-[9px] border border-[#e1e7ec] bg-white px-3 text-[10px] text-[#8d98a3]"
               >
                 <FilterIcon />
-                Filter
+                {t("Filter")}
               </button>
               <button
                 type="button"
@@ -233,7 +235,7 @@ export function MyLandPage() {
                 className="inline-flex h-9 items-center gap-1.5 rounded-[9px] border border-[#e1e7ec] bg-white px-3 text-[10px] text-[#8d98a3]"
               >
                 <SortIcon />
-                Sort
+                {t("Sort")}
               </button>
             </div>
           </div>

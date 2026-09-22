@@ -8,6 +8,7 @@ import { useAuth } from "@/lib/hooks/useAuth";
 import { DashboardNavbar } from "@/modules/dashboard/DashboardNavbar";
 import { MapboxMap, type MapboxMapHandle } from "@/components/maps/MapboxMap";
 import { destinations } from "./ExploreMapPage";
+import { useDashboardLanguage } from "@/modules/dashboard/DashboardLanguageContext";
 
 function SearchIcon() {
   return (
@@ -52,6 +53,7 @@ export function AuthenticatedExploreMapPage() {
   const mapRef = useRef<MapboxMapHandle>(null);
   const searchAreaRef = useRef<HTMLDivElement>(null);
   const { isAuthenticated, isLoading } = useAuth();
+  const { t } = useDashboardLanguage();
   const [search, setSearch] = useState("");
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
@@ -192,7 +194,7 @@ export function AuthenticatedExploreMapPage() {
   if (isLoading)
     return (
       <main className="flex min-h-[100svh] items-center justify-center bg-white text-sm text-muted">
-        Loading map...
+        {t("Loading map...")}
       </main>
     );
   if (!isAuthenticated) {

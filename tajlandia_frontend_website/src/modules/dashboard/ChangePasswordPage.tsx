@@ -7,6 +7,7 @@ import { AccountMenu } from "./AccountMenu";
 import { DashboardNavbar } from "./DashboardNavbar";
 import { useAuth } from "@/lib/hooks/useAuth";
 import { routes } from "@/lib/constants/routes";
+import { useDashboardLanguage } from "./DashboardLanguageContext";
 import { strongPasswordSchema } from "@/lib/validation/password";
 
 type PasswordValues = { currentPassword: string; newPassword: string; confirmPassword: string };
@@ -23,13 +24,14 @@ function getPasswordStrength(password: string) {
 export function ChangePasswordPage() {
   const router = useRouter();
   const { isAuthenticated, isLoading } = useAuth();
+  const { t } = useDashboardLanguage();
   const [values, setValues] = useState<PasswordValues>({ currentPassword: "", newPassword: "", confirmPassword: "" });
   const [visible, setVisible] = useState({ current: false, next: false, confirm: false });
   const [message, setMessage] = useState("");
   const [showErrorPopup, setShowErrorPopup] = useState(false);
   const strength = getPasswordStrength(values.newPassword);
 
-  if (isLoading) return <main className="flex min-h-[100svh] items-center justify-center bg-[#f7fafc] text-sm text-muted">Loading...</main>;
+  if (isLoading) return <main className="flex min-h-[100svh] items-center justify-center bg-[#f7fafc] text-sm text-muted">{t("Loading...")}</main>;
   if (!isAuthenticated) { router.replace(routes.login); return null; }
 
   function submit(event: React.FormEvent<HTMLFormElement>) {
