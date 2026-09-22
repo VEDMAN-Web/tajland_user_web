@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/lib/hooks/useAuth";
 import { AccountMenu } from "./AccountMenu";
 import { DashboardNavbar } from "./DashboardNavbar";
 import { SiteFooter } from "@/components/layout/SiteFooter";
@@ -229,12 +231,26 @@ export function LegalDocumentPage({
   kind: "privacy" | "terms";
   publicPage?: boolean;
 }) {
+  const router = useRouter();
+  const { isAuthenticated, isLoading } = useAuth();
   const isPrivacy = kind === "privacy";
   const sections = isPrivacy ? privacySections : termsSections;
   const title = isPrivacy ? "Privacy Policy" : "Terms & Condition";
   const subtitle = isPrivacy
     ? "Learn how we protect and use your information."
     : "Know the rules and terms of using Tajlandia.";
+
+  if (!publicPage && isLoading) {
+    return (
+      <main className="flex min-h-[100svh] items-center justify-center bg-[#f7fafc] text-sm text-muted">
+        Loading document...
+      </main>
+    );
+  }
+  if (!publicPage && !isAuthenticated) {
+    router.replace(routes.login);
+    return null;
+  }
 
   return (
     <div className="min-h-[100svh] bg-[#f7fafc] text-navy">

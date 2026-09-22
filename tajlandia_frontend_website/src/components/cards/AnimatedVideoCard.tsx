@@ -177,6 +177,15 @@ export function AnimatedVideoCard({
           autoPlay
           muted
           loop
+          onClick={() => {
+            const video = videoRef.current;
+            if (!video) return;
+            if (video.paused) {
+              void video.play();
+            } else {
+              video.pause();
+            }
+          }}
           onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
           onLoadedMetadata={(e) => setDuration(e.currentTarget.duration)}
           onPlay={() => setIsPlaying(true)}

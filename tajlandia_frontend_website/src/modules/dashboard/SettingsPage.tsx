@@ -7,10 +7,12 @@ import { DashboardNavbar } from "./DashboardNavbar";
 import { useAuth } from "@/lib/hooks/useAuth";
 import { routes } from "@/lib/constants/routes";
 import { getDashboardSettings, saveDashboardSettings, type DashboardSettings } from "@/lib/settings/settings";
+import { useDashboardLanguage } from "./DashboardLanguageContext";
 
 export function SettingsPage() {
   const router = useRouter();
   const { isAuthenticated, isLoading } = useAuth();
+  const { language, setLanguage } = useDashboardLanguage();
   const [settings, setSettings] = useState<DashboardSettings>(() => getDashboardSettings());
   const [saved, setSaved] = useState(false);
 
@@ -55,9 +57,10 @@ export function SettingsPage() {
 
             <div className="mt-4">
               <label htmlFor="settings-language" className="text-[10px] font-bold uppercase tracking-[0.04em] text-[#9aa3ad]">Interface &amp; Chatbot Language</label>
-              <select id="settings-language" value={settings.language} onChange={(event) => updateSettings({ language: event.target.value as DashboardSettings["language"] })} className="mt-2 h-10 w-full rounded-[10px] border border-[#e3e8ed] bg-white px-3 text-[12px] text-[#242b32] outline-none transition focus:border-[#9aaabd] focus:ring-1 focus:ring-[#d9e1e8]">
+              <select id="settings-language" value={language} onChange={(event) => { const nextLanguage = event.target.value as DashboardSettings["language"]; setLanguage(nextLanguage); updateSettings({ language: nextLanguage }); }} className="mt-2 h-10 w-full rounded-[10px] border border-[#e3e8ed] bg-white px-3 text-[12px] text-[#242b32] outline-none transition focus:border-[#9aaabd] focus:ring-1 focus:ring-[#d9e1e8]">
                 <option value="EN">English (Default - Global Cadastral)</option>
                 <option value="PL">Polish</option>
+                <option value="TH">Thai</option>
               </select>
               <p className="mt-2 text-[10px] text-[#b0b7be]">Language applies to land title dossiers, notifications, and cadastral maps.</p>
             </div>
