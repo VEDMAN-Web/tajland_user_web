@@ -6,6 +6,7 @@ import { useState } from "react";
 import { DashboardNavbar } from "./DashboardNavbar";
 import { useAuth } from "@/lib/hooks/useAuth";
 import { routes } from "@/lib/constants/routes";
+import { useDashboardLanguage } from "./DashboardLanguageContext";
 
 type CartItem = {
   id?: string;
@@ -55,6 +56,7 @@ function readCart(): CartItem[] {
 export function CartPage() {
   const router = useRouter();
   const { isAuthenticated, isLoading } = useAuth();
+  const { t } = useDashboardLanguage();
   const [cartItems, setCartItems] = useState<CartItem[]>(() => readCart());
   const [coupon, setCoupon] = useState("");
   const [showSelectionProgress, setShowSelectionProgress] = useState(true);
@@ -86,7 +88,7 @@ export function CartPage() {
   if (isLoading)
     return (
       <main className="flex min-h-[100svh] items-center justify-center bg-[#f7fafc] text-sm text-muted">
-        Loading cart...
+        {t("Loading cart...")}
       </main>
     );
   if (!isAuthenticated) {
@@ -100,10 +102,10 @@ export function CartPage() {
       <main className="mx-auto w-[92%] max-w-none px-5 pb-16 pt-12 sm:px-8 sm:pt-14">
         <section>
           <h1 className="text-[24px] font-semibold tracking-[-0.04em] text-[#171717] sm:text-[26px]">
-            Your Cart
+            {t("Your Cart")}
           </h1>
           <p className="mt-1 text-[12px] text-[#7b858f]">
-            Review your selected plots before checkout.
+            {t("Review your selected plots before checkout.")}
           </p>
           {cartItems.length ? (
             <FilledCart

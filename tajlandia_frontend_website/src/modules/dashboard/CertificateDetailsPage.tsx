@@ -5,11 +5,13 @@ import { useState } from "react";
 import { DashboardNavbar } from "./DashboardNavbar";
 import { useAuth } from "@/lib/hooks/useAuth";
 import { routes } from "@/lib/constants/routes";
+import { useDashboardLanguage } from "./DashboardLanguageContext";
 
 type Dialog = "download" | "share" | null;
 
 export function CertificateDetailsPage({ certificateId }: { certificateId: string }) {
   const { isAuthenticated, isLoading } = useAuth();
+  const { t } = useDashboardLanguage();
   const [dialog, setDialog] = useState<Dialog>(null);
   const [copied, setCopied] = useState(false);
   const certificateUrl =
@@ -21,7 +23,7 @@ export function CertificateDetailsPage({ certificateId }: { certificateId: strin
   if (isLoading)
     return (
       <main className="flex min-h-[100svh] items-center justify-center bg-[#f5f9fc] text-sm text-muted">
-        Loading certificate...
+        {t("Loading certificate...")}
       </main>
     );
   if (!isAuthenticated) return null;

@@ -1,7 +1,6 @@
 "use client";
 
-import { Fragment, createContext, useContext, useEffect, useMemo, useState } from "react";
-import { usePathname } from "next/navigation";
+import { createContext, useContext, useEffect, useMemo, useState } from "react";
 
 export type DashboardLanguage = "EN" | "PL" | "TH";
 
@@ -115,7 +114,11 @@ const translations: Record<string, Record<Exclude<DashboardLanguage, "EN">, stri
   "Email notifications": { PL: "Powiadomienia e-mail", TH: "การแจ้งเตือนทางอีเมล" },
   "You'll receive important account and purchase updates by email.": { PL: "Otrzymasz ważne aktualizacje konta i zakupów e-mailem.", TH: "คุณจะได้รับการอัปเดตบัญชีและการซื้อที่สำคัญทางอีเมล" },
   "Settings saved.": { PL: "Ustawienia zapisane.", TH: "บันทึกการตั้งค่าแล้ว" },
+  "Update your account preferences and security details.": { PL: "Zaktualizuj preferencje konta i dane bezpieczeństwa.", TH: "อัปเดตการตั้งค่าบัญชีและรายละเอียดความปลอดภัย" },
   "Manage your personal information and account.": { PL: "Zarządzaj danymi osobowymi i kontem.", TH: "จัดการข้อมูลส่วนตัวและบัญชีของคุณ" },
+  User: { PL: "Użytkownik", TH: "ผู้ใช้" },
+  "Member since —": { PL: "Członek od —", TH: "สมาชิกตั้งแต่ —" },
+  Email: { PL: "E-mail", TH: "อีเมล" },
   "Personal Information": { PL: "Dane osobowe", TH: "ข้อมูลส่วนบุคคล" },
   "Official account information registered on file": { PL: "Oficjalne informacje zapisane na koncie", TH: "ข้อมูลบัญชีอย่างเป็นทางการที่ลงทะเบียนไว้" },
   "First name": { PL: "Imię", TH: "ชื่อ" },
@@ -243,99 +246,40 @@ const translations: Record<string, Record<Exclude<DashboardLanguage, "EN">, stri
 type DashboardLanguageContextValue = {
   language: DashboardLanguage;
   setLanguage: (language: DashboardLanguage) => void;
+  t: (source: string) => string;
 };
 
 const DashboardLanguageContext = createContext<DashboardLanguageContextValue | null>(
   null,
 );
 
-const originalTextByNode = new WeakMap<Text, string>();
-const originalAttributeByElement = new WeakMap<HTMLElement, Map<string, string>>();
-
-function translateDashboardText(language: DashboardLanguage) {
-  if (typeof document === "undefined") return;
-  const reverse = Object.fromEntries(
-    Object.entries(translations).flatMap(([source, values]) =>
-      Object.entries(values).map(([target, translated]) => [translated, source]),
-    ),
-  );
-  const sourceKeys = Object.keys(translations).sort((a, b) => b.length - a.length);
-  const targetKeys = Object.keys(reverse).sort((a, b) => b.length - a.length);
-  const translateValue = (value: string) => {
-    // Repair legacy DOM text that was corrupted by the previous cumulative translator.
-    let next = value.replace(/profilee+/gi, "Profile");
-    if (language === "EN") {
-      for (const target of targetKeys) next = next.split(target).join(reverse[target]);
-      return next;
-    }
-    for (const source of sourceKeys) {
-      const translated = translations[source]?.[language];
-      if (!translated) continue;
-      next = next.split(source).join(translated);
-    }
-    return next;
-  };
-  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
-  const nodes: Text[] = [];
-  let node: Node | null;
-  while ((node = walker.nextNode())) nodes.push(node as Text);
-  for (const textNode of nodes) {
-    if ((textNode.parentElement as HTMLElement | null)?.closest("[data-language-selector]")
-      || (textNode.parentElement as HTMLElement | null)?.closest("[data-no-translate]")) continue;
-    const value = textNode.nodeValue ?? "";
-    const trimmed = value.trim();
-    if (!trimmed) continue;
-    const originalValue = originalTextByNode.get(textNode) ?? value;
-    originalTextByNode.set(textNode, originalValue);
-    const translated = translateValue(originalValue);
-    if (translated !== value) textNode.nodeValue = translated;
-  }
-
-  const translatableAttributes = ["aria-label", "aria-description", "placeholder", "title", "alt"];
-  for (const element of Array.from(document.querySelectorAll<HTMLElement>("*"))) {
-    if (element.closest("[data-language-selector], [data-no-translate]")) continue;
-    const originalAttributes = originalAttributeByElement.get(element) ?? new Map<string, string>();
-    originalAttributeByElement.set(element, originalAttributes);
-    for (const attribute of translatableAttributes) {
-      const value = element.getAttribute(attribute);
-      if (!value) continue;
-      const originalValue = originalAttributes.get(attribute) ?? value;
-      originalAttributes.set(attribute, originalValue);
-      const translated = translateValue(originalValue);
-      if (translated !== value) element.setAttribute(attribute, translated);
-    }
-  }
-}
-
 export function DashboardLanguageProvider({ children }: { children: React.ReactNode }) {
   const [language, setLanguageState] = useState<DashboardLanguage>("EN");
-  const pathname = usePathname();
+  const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
     const stored = window.localStorage.getItem("tajlandia_dashboard_language");
     if (stored === "EN" || stored === "PL" || stored === "TH") setLanguageState(stored);
+    setHydrated(true);
   }, []);
 
   useEffect(() => {
+    if (!hydrated) return;
     window.localStorage.setItem("tajlandia_dashboard_language", language);
-    document.documentElement.lang =
-      language === "TH" ? "th" : language === "PL" ? "pl" : "en";
-    const frame = window.requestAnimationFrame(() => translateDashboardText(language));
-    return () => window.cancelAnimationFrame(frame);
-  }, [language, pathname]);
+    document.documentElement.lang = language === "TH" ? "th" : language === "PL" ? "pl" : "en";
+  }, [hydrated, language]);
 
   const value = useMemo(
     () => ({
       language,
       setLanguage: (nextLanguage: DashboardLanguage) => setLanguageState(nextLanguage),
+      t: (source: string) => language === "EN" ? source : translations[source]?.[language] ?? source,
     }),
     [language],
   );
 
   return (
-    <DashboardLanguageContext.Provider value={value}>
-      <Fragment key={language}>{children}</Fragment>
-    </DashboardLanguageContext.Provider>
+    <DashboardLanguageContext.Provider value={value}>{children}</DashboardLanguageContext.Provider>
   );
 }
 
@@ -344,4 +288,13 @@ export function useDashboardLanguage() {
   if (!context)
     throw new Error("useDashboardLanguage must be used within DashboardLanguageProvider");
   return context;
+}
+
+export function useOptionalDashboardLanguage() {
+  const context = useContext(DashboardLanguageContext);
+  return context ?? {
+    language: "EN" as const,
+    setLanguage: () => undefined,
+    t: (source: string) => source,
+  };
 }

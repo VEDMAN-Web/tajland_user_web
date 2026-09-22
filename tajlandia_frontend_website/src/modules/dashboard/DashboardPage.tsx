@@ -8,6 +8,7 @@ import { routes } from "@/lib/constants/routes";
 import { ScrollAnimatedElement } from "@/components/animations/ScrollAnimatedElement";
 import { useAuth } from "@/lib/hooks/useAuth";
 import { DashboardNavbar } from "./DashboardNavbar";
+import { useDashboardLanguage } from "./DashboardLanguageContext";
 
 function LoadingSpinner() {
   return (
@@ -20,6 +21,7 @@ function LoadingSpinner() {
 export function DashboardPage() {
   const router = useRouter();
   const { isAuthenticated, user, isLoading } = useAuth();
+  const { t } = useDashboardLanguage();
 
   if (!isLoading && !isAuthenticated) {
     router.replace(routes.login);
@@ -37,21 +39,21 @@ export function DashboardPage() {
         <ScrollAnimatedElement animation="fade-in" duration={600}>
           <section className="flex items-end justify-between gap-6">
             <div>
-              <p className="font-manrope text-[14px] font-bold uppercase tracking-[0.08em] text-navy">
-                Your Tajlandia Home
+      <p className="font-manrope text-[14px] font-bold uppercase tracking-[0.08em] text-navy">
+                {t("Your Tajlandia Home")}
               </p>
               <h1 className="font-manrope mt-2 text-[36px] font-semibold leading-none tracking-[-0.04em] text-[#171717] sm:text-[48px]">
-                Welcome back, {firstName} <span className="text-brand-red">✦</span>
+                {t("Welcome back,")} {firstName} <span className="text-brand-red">✦</span>
               </h1>
               <p className="font-manrope mt-2 text-[16px] font-normal text-[#9aa3ad]">
-                Here’s everything you own in Thailand.
+                {t("Here’s everything you own in Thailand.")}
               </p>
             </div>
             <Link
               href="/dashboard/explore"
               className="font-manrope hidden rounded-full bg-navy px-5 py-3 text-[16px] font-medium text-white sm:inline-flex"
             >
-              Explore Thailand →
+              {t("Explore Thailand →")}
             </Link>
           </section>
         </ScrollAnimatedElement>
@@ -64,14 +66,14 @@ export function DashboardPage() {
           <div className="flex items-center justify-between gap-4">
             <div>
               <p className="font-manrope text-[12px] font-bold uppercase tracking-[0.08em] text-navy">
-                Ownership Overview
+                {t("Ownership Overview")}
               </p>
               <h2 className="font-manrope mt-1 text-[24px] font-semibold text-[#171717]">
-                Your Collection
+                {t("Your Collection")}
               </h2>
             </div>
             <p className="font-manrope hidden text-[14px] font-bold text-navy sm:block">
-              ● All holdings verified across Thailand
+              ● {t("All holdings verified across Thailand")}
             </p>
           </div>
           <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
@@ -79,21 +81,21 @@ export function DashboardPage() {
               icon="/images/dashboard/stat-land.png"
               background="/images/dashboard/stat-land-bg.png"
               value="8000"
-              label="Total Land (Sq Rai)"
+              label={t("Total Land (Sq Rai)")}
               tone="blue"
             />
             <Stat
               icon="/images/dashboard/stat-plots.png"
               background="/images/dashboard/stat-plots-bg.png"
               value="12"
-              label="Plots Claimed"
+              label={t("Plots Claimed")}
               tone="green"
             />
             <Stat
               icon="/images/dashboard/stat-regions.png"
               background="/images/dashboard/regions-bg.png"
               value="05"
-              label="Regions"
+              label={t("Regions")}
               tone="purple"
               iconSize={72}
             />
@@ -101,7 +103,7 @@ export function DashboardPage() {
               icon="/images/dashboard/stat-spent.png"
               background="/images/dashboard/stat-spent-bg.png"
               value="48,500"
-              label="Total Spent"
+              label={t("Total Spent")}
               tone="gold"
             />
           </div>
@@ -118,14 +120,13 @@ export function DashboardPage() {
             />
             <div className="relative z-10 lg:absolute lg:left-[86px] lg:top-[91px]">
               <p className="font-manrope text-[12px] font-bold uppercase tracking-[0.08em] text-brand-red">
-                Give a Little Piece
+                {t("Give a Little Piece")}
               </p>
               <h2 className="font-manrope mt-2 max-w-[520px] text-[30px] font-semibold leading-tight text-[#171717]">
-                Give a Little Piece of Thailand
+                {t("Give a Little Piece of Thailand")}
               </h2>
               <p className="font-manrope mt-2 max-w-[430px] text-[14px] font-normal leading-5 text-[#9aa3ad]">
-                Share a place worth remembering. Gift a Tajlandia plot to someone special
-                and let them build their own collection.
+                {t("Share a place worth remembering. Gift a Tajlandia plot to someone special and let them build their own collection.")}
               </p>
             </div>
             <div className="mt-5 flex flex-col gap-5 lg:absolute lg:right-[37px] lg:top-[93px] lg:mt-0 lg:w-[282px] lg:gap-6">
@@ -133,20 +134,20 @@ export function DashboardPage() {
                 type="button"
                 className="font-manrope self-start rounded-full bg-brand-red px-7 py-2.5 text-[16px] font-medium text-white lg:self-end"
               >
-                Gift a plot →
+                {t("Gift a plot")} →
               </button>
               <div className="font-manrope border-t border-brand-red/15 pt-3 text-[11px] text-[#6f7780] lg:pt-4">
-                ✓ Instant Digital Certificate &nbsp;&nbsp; ✓ Official Cadastre Deed
+                ✓ {t("Instant Digital Certificate")} &nbsp;&nbsp; ✓ {t("Official Cadastre Deed")}
               </div>
             </div>
           </div>
           <div className="mt-6 flex items-end justify-between">
             <div>
               <p className="text-[8px] font-semibold uppercase tracking-[0.08em] text-brand-red">
-                Your Land Archive
+                {t("Your Land Archive")}
               </p>
               <h2 className="mt-1 text-[16px] font-semibold text-navy">
-                Explore Thailand
+                {t("Explore Thailand")}
               </h2>
             </div>
           </div>
@@ -222,6 +223,7 @@ function ExploreCard({
   description: string;
   locations: string;
 }) {
+  const { t } = useDashboardLanguage();
   return (
     <article className="min-w-0 snap-start flex-[0_0_86%] rounded-[18px] bg-white p-3 shadow-[0_5px_18px_rgba(11,31,77,0.08)] sm:flex-[0_0_48%] lg:flex-[0_0_32%]">
       <Image
@@ -233,15 +235,15 @@ function ExploreCard({
       />
       <div className="px-1 pt-2">
         <span className="rounded bg-[#fff4c6] px-1.5 py-0.5 text-[7px] text-[#c19a16]">
-          {badge}
+          {t(badge)}
         </span>
         <h3 className="mt-2 text-[16px] font-semibold text-navy">{name}</h3>
-        <p className="mt-1 text-[10px] text-[#9aa3ad]">{description}</p>
+        <p className="mt-1 text-[10px] text-[#9aa3ad]">{t(description)}</p>
       </div>
       <div className="mt-3 flex items-center justify-between border-t border-[#edf0f2] px-1 pt-2 text-[8px] text-navy">
-        <span>{locations}</span>
+        <span>{t(locations)}</span>
         <Link href="/dashboard/explore" className="font-semibold">
-          Discover Plots →
+          {t("Discover Plots →")}
         </Link>
       </div>
     </article>

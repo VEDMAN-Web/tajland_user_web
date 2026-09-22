@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { clearAuth } from "@/lib/api/auth.utils";
 import { routes } from "@/lib/constants/routes";
+import { useDashboardLanguage } from "./DashboardLanguageContext";
 
 function MenuIcon({ src, active = false }: { src: string; active?: boolean }) {
   return (
@@ -35,52 +36,53 @@ export function AccountMenu({
     | "privacy";
 }) {
   const router = useRouter();
+  const { t } = useDashboardLanguage();
   const [isLogoutOpen, setIsLogoutOpen] = useState(false);
   const items = [
     {
-      label: "Profile",
+      label: t("Profile"),
       icon: "/images/dashboard/account-menu/profile.png",
       href: routes.profile,
       key: "profile" as const,
     },
     {
-      label: "Change Password",
+      label: t("Change Password"),
       icon: "/images/dashboard/account-menu/change-password.png",
       href: routes.changePassword,
       key: "password" as const,
     },
     {
-      label: "My Purchases",
+      label: t("My Purchases"),
       icon: "/images/dashboard/account-menu/purchases.png",
       href: routes.purchases,
       key: "purchases" as const,
     },
     {
-      label: "My Certificates",
+      label: t("My Certificates"),
       icon: "/images/dashboard/account-menu/certificates.png",
       href: routes.certificates,
       key: "certificates" as const,
     },
     {
-      label: "Settings",
+      label: t("Settings"),
       icon: "/images/dashboard/account-menu/settings.png",
       href: routes.settings,
       key: "settings" as const,
     },
     {
-      label: "Help & Support",
+      label: t("Help & Support"),
       icon: "/images/dashboard/account-menu/help-support.png",
       href: routes.helpSupport,
       key: "help" as const,
     },
     {
-      label: "Term & Condition",
+      label: t("Term & Condition"),
       icon: "/images/dashboard/account-menu/terms.png",
       href: routes.dashboardTerms,
       key: "terms" as const,
     },
     {
-      label: "Privacy Policy",
+      label: t("Privacy Policy"),
       icon: "/images/dashboard/account-menu/privacy.png",
       href: routes.dashboardPrivacy,
       key: "privacy" as const,
@@ -96,7 +98,7 @@ export function AccountMenu({
     <>
       <aside className="h-fit rounded-[15px] bg-white p-5 shadow-[0_5px_24px_rgba(11,31,77,0.08)]">
         <p className="px-1 text-[10px] font-medium uppercase tracking-[0.08em] text-[#7b858f]">
-          Account Menu
+          {t("Account Menu")}
         </p>
         <nav className="mt-4 space-y-1">
           {items.map((item) => {
