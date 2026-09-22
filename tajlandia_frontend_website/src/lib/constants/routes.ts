@@ -18,6 +18,8 @@ export const routes = {
   signup: "/signup",
   privacy: "/privacy",
   terms: "/terms",
+  dashboardPrivacy: "/dashboard/privacy",
+  dashboardTerms: "/dashboard/terms",
 } as const;
 
 export type AppRoute = (typeof routes)[keyof typeof routes];

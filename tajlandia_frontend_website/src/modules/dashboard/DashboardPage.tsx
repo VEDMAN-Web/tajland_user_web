@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { routes } from "@/lib/constants/routes";
 import { ScrollAnimatedElement } from "@/components/animations/ScrollAnimatedElement";
 import { useAuth } from "@/lib/hooks/useAuth";
@@ -250,6 +250,7 @@ function ExploreCard({
 
 function ExploreCarousel() {
   const carouselRef = useRef<HTMLDivElement>(null);
+  const [activePage, setActivePage] = useState(0);
   const destinations = [
     {
       image: "/images/explore/phuket.jpg",
@@ -295,6 +296,18 @@ function ExploreCarousel() {
     },
   ];
 
+  useEffect(() => {
+    const carousel = carouselRef.current;
+    if (!carousel) return;
+
+    const updateActivePage = () => {
+      setActivePage(carousel.scrollLeft > 24 ? 1 : 0);
+    };
+
+    carousel.addEventListener("scroll", updateActivePage, { passive: true });
+    return () => carousel.removeEventListener("scroll", updateActivePage);
+  }, []);
+
   function moveCarousel(event: React.WheelEvent<HTMLDivElement>) {
     const carousel = carouselRef.current;
     if (!carousel || Math.abs(event.deltaY) < Math.abs(event.deltaX)) return;
@@ -316,9 +329,16 @@ function ExploreCarousel() {
           <ExploreCard key={destination.name} {...destination} />
         ))}
       </div>
-      <div className="mt-3 flex items-center justify-center gap-1.5" aria-hidden="true">
-        <span className="h-1 w-4 rounded-full bg-navy" />
-        <span className="h-1 w-1 rounded-full bg-[#c7cbd1]" />
+      <div
+        className="mt-3 flex items-center justify-center gap-1.5"
+        aria-label="Explore carousel position"
+      >
+        <span
+          className={`h-1 rounded-full transition-all ${activePage === 0 ? "w-4 bg-navy" : "w-1 bg-[#c7cbd1]"}`}
+        />
+        <span
+          className={`h-1 rounded-full transition-all ${activePage === 1 ? "w-4 bg-navy" : "w-1 bg-[#c7cbd1]"}`}
+        />
       </div>
     </>
   );

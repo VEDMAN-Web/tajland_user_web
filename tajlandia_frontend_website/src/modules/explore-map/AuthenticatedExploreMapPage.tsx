@@ -173,7 +173,7 @@ export function AuthenticatedExploreMapPage() {
       rememberLocation(destination.name);
       return;
     }
-    mapRef.current?.flyToCoordinates(destination.coordinates);
+    mapRef.current?.flyToCoordinates(destination.coordinates, 13, destination.name);
     rememberLocation(destination.name);
   }
 

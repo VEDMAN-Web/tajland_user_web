@@ -1,11 +1,15 @@
-'use client';
+"use client";
 
 import Link from "next/link";
 import { BrandLogo } from "@/components/ui/BrandLogo";
 import { Container } from "@/components/ui/Container";
 import { ScrollAnimatedElement } from "@/components/animations/ScrollAnimatedElement";
+import { routes } from "@/lib/constants/routes";
 
-function generateStarField(width: number = 1200, height: number = 600): React.ReactNode[] {
+function generateStarField(
+  width: number = 1200,
+  height: number = 600,
+): React.ReactNode[] {
   const stars = [];
   const starCount = 180;
 
@@ -16,14 +20,7 @@ function generateStarField(width: number = 1200, height: number = 600): React.Re
     const opacity = Math.random() * 0.6 + 0.4;
 
     stars.push(
-      <circle
-        key={i}
-        cx={x}
-        cy={y}
-        r={radius}
-        fill="black"
-        opacity={opacity}
-      />
+      <circle key={i} cx={x} cy={y} r={radius} fill="black" opacity={opacity} />,
     );
   }
 
@@ -68,9 +65,9 @@ function FooterLink({ href, children }: { href: string; children: React.ReactNod
 
 function FooterText({ children }: { children: React.ReactNode }) {
   return (
-    <span className="inline-block relative transition-all duration-300 hover:text-navy hover:translate-x-1 cursor-default group text-[#5B6B86]">
+    <span className="group relative inline-block cursor-default text-[#5B6B86] transition-all duration-300 hover:translate-x-1 hover:text-navy">
       {children}
-      <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-navy transition-all duration-300 group-hover:w-full" />
+      <span className="absolute bottom-0 left-0 h-0.5 w-0 bg-navy transition-all duration-300 group-hover:w-full" />
     </span>
   );
 }
@@ -105,10 +102,10 @@ export function SiteFooter() {
             radial-gradient(1.5px 1.5px at 95% 58%, black, rgba(0,0,0,0)),
             radial-gradient(1px 1px at 98% 22%, black, rgba(0,0,0,0))
           `,
-          backgroundSize: '200% 100%',
-          backgroundPosition: '-100% 0',
+          backgroundSize: "200% 100%",
+          backgroundPosition: "-100% 0",
           opacity: 0.35,
-          animation: 'scrollStars 25s linear infinite',
+          animation: "scrollStars 25s linear infinite",
         }}
         aria-hidden="true"
       >
@@ -130,8 +127,8 @@ export function SiteFooter() {
         preserveAspectRatio="xMidYMid slice"
         aria-hidden="true"
         style={{
-          width: '100%',
-          height: '100%',
+          width: "100%",
+          height: "100%",
           top: 0,
           left: 0,
         }}
@@ -142,7 +139,10 @@ export function SiteFooter() {
         <ScrollAnimatedElement animation="fade-in" duration={600}>
           <div className="max-w-[330px]">
             <BrandLogo compact />
-            <p className="mt-6 text-[15px] leading-6 text-[#5B6B86]">A symbolic map of Thailand. Choose a fragment, claim your certificate, make it a part of your story.</p>
+            <p className="mt-6 text-[15px] leading-6 text-[#5B6B86]">
+              A symbolic map of Thailand. Choose a fragment, claim your certificate, make
+              it a part of your story.
+            </p>
           </div>
         </ScrollAnimatedElement>
 
@@ -150,11 +150,21 @@ export function SiteFooter() {
           <div>
             <p className="mb-6 text-[17px] font-semibold text-navy">Company</p>
             <ul className="space-y-3 text-[15px] text-[#5B6B86]">
-              <li><FooterLink href="/#how-it-works">Journal</FooterLink></li>
-              <li><FooterLink href="/#map">Map</FooterLink></li>
-              <li><FooterLink href="/#certificate">Certificate</FooterLink></li>
-              <li><FooterLink href="/faq">FAQ</FooterLink></li>
-              <li><FooterLink href="/contact">Contact</FooterLink></li>
+              <li>
+                <FooterLink href="/#how-it-works">Journal</FooterLink>
+              </li>
+              <li>
+                <FooterLink href="/#map">Map</FooterLink>
+              </li>
+              <li>
+                <FooterLink href="/#certificate">Certificate</FooterLink>
+              </li>
+              <li>
+                <FooterLink href="/faq">FAQ</FooterLink>
+              </li>
+              <li>
+                <FooterLink href="/contact">Contact</FooterLink>
+              </li>
             </ul>
           </div>
         </ScrollAnimatedElement>
@@ -163,10 +173,18 @@ export function SiteFooter() {
           <div>
             <p className="mb-6 text-[17px] font-semibold text-navy">Legal</p>
             <ul className="space-y-3 text-[15px] text-[#5B6B86]">
-              <li><FooterText>Privacy Policy</FooterText></li>
-              <li><FooterText>Terms and Conditions</FooterText></li>
-              <li><FooterText>Risk Disclosure</FooterText></li>
-              <li><FooterText>Cookie Policy</FooterText></li>
+              <li>
+                <FooterLink href={routes.privacy}>Privacy Policy</FooterLink>
+              </li>
+              <li>
+                <FooterLink href={routes.terms}>Terms and Conditions</FooterLink>
+              </li>
+              <li>
+                <FooterText>Risk Disclosure</FooterText>
+              </li>
+              <li>
+                <FooterText>Cookie Policy</FooterText>
+              </li>
             </ul>
           </div>
         </ScrollAnimatedElement>
@@ -175,9 +193,22 @@ export function SiteFooter() {
           <div>
             <p className="mb-6 text-[17px] font-semibold text-navy">Contact us</p>
             <ul className="space-y-4 text-[15px] text-[#5B6B86]">
-              <li className="flex items-start gap-3"><MailIcon /><span>contact@company.com</span></li>
-              <li className="flex items-start gap-3"><PhoneIcon /><span>(414) 687 - 5892</span></li>
-              <li className="flex items-start gap-3"><LocationIcon /><span>794 Mcallister St<br />San Francisco, 94102</span></li>
+              <li className="flex items-start gap-3">
+                <MailIcon />
+                <span>contact@company.com</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <PhoneIcon />
+                <span>(414) 687 - 5892</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <LocationIcon />
+                <span>
+                  794 Mcallister St
+                  <br />
+                  San Francisco, 94102
+                </span>
+              </li>
             </ul>
           </div>
         </ScrollAnimatedElement>

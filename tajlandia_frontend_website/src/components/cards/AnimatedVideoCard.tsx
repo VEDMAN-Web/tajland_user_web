@@ -1,15 +1,22 @@
-'use client';
+"use client";
 
-import { useRef, useState, useEffect } from 'react';
+import { useRef, useState, useEffect } from "react";
 
 interface AnimatedVideoCardProps {
   videoSrc: string;
   posterSrc?: string;
   alt: string;
   className?: string;
+  interactionTargetRef?: React.RefObject<HTMLElement | null>;
 }
 
-export function AnimatedVideoCard({ videoSrc, posterSrc, alt, className = '' }: AnimatedVideoCardProps) {
+export function AnimatedVideoCard({
+  videoSrc,
+  posterSrc,
+  alt,
+  className = "",
+  interactionTargetRef,
+}: AnimatedVideoCardProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const [rotation, setRotation] = useState({ x: 0, y: 0 });
@@ -19,15 +26,16 @@ export function AnimatedVideoCard({ videoSrc, posterSrc, alt, className = '' }: 
   const [duration, setDuration] = useState(0);
   const [volume, setVolume] = useState(0.7);
   const [showControls, setShowControls] = useState(false);
-  const [isMuted, setIsMuted] = useState(false);
+  const [isMuted, setIsMuted] = useState(true);
 
   useEffect(() => {
-    const container = containerRef.current;
+    const container = interactionTargetRef?.current ?? containerRef.current;
     const video = videoRef.current;
     if (!container || !video) return;
 
     // Initialize video volume
     video.volume = 0.7;
+    video.muted = true;
 
     const handleMouseMove = (e: MouseEvent) => {
       const rect = container.getBoundingClientRect();
@@ -71,18 +79,35 @@ export function AnimatedVideoCard({ videoSrc, posterSrc, alt, className = '' }: 
       }
     };
 
-    container.addEventListener('mousemove', handleMouseMove);
-    container.addEventListener('mouseleave', handleMouseLeave);
-    container.addEventListener('mouseenter', handleMouseEnter);
-    container.addEventListener('touchstart', handleTouchStart, { passive: true });
+    container.addEventListener("mousemove", handleMouseMove);
+    container.addEventListener("mouseleave", handleMouseLeave);
+    container.addEventListener("mouseenter", handleMouseEnter);
+    container.addEventListener("touchstart", handleTouchStart, { passive: true });
 
     return () => {
-      container.removeEventListener('mousemove', handleMouseMove);
-      container.removeEventListener('mouseleave', handleMouseLeave);
-      container.removeEventListener('mouseenter', handleMouseEnter);
-      container.removeEventListener('touchstart', handleTouchStart);
+      container.removeEventListener("mousemove", handleMouseMove);
+      container.removeEventListener("mouseleave", handleMouseLeave);
+      container.removeEventListener("mouseenter", handleMouseEnter);
+      container.removeEventListener("touchstart", handleTouchStart);
     };
-  }, [isPlaying]);
+  }, [interactionTargetRef, isPlaying]);
+
+  useEffect(() => {
+    const animationTarget = interactionTargetRef?.current ?? containerRef.current;
+    if (!animationTarget) return;
+
+    animationTarget.style.transform = `rotateX(${rotation.x}deg) rotateY(${rotation.y}deg) scale(${scale})`;
+    animationTarget.style.transformOrigin = "center center";
+    animationTarget.style.transformStyle = "preserve-3d";
+    animationTarget.style.transition = "transform 0.1s ease-out";
+
+    return () => {
+      animationTarget.style.transform = "";
+      animationTarget.style.transformOrigin = "";
+      animationTarget.style.transformStyle = "";
+      animationTarget.style.transition = "";
+    };
+  }, [interactionTargetRef, rotation, scale]);
 
   const handlePlayPause = () => {
     if (videoRef.current) {
@@ -107,10 +132,12 @@ export function AnimatedVideoCard({ videoSrc, posterSrc, alt, className = '' }: 
     if (videoRef.current) {
       if (isMuted) {
         videoRef.current.volume = 0.7;
+        videoRef.current.muted = false;
         setVolume(0.7);
         setIsMuted(false);
       } else {
         videoRef.current.volume = 0;
+        videoRef.current.muted = true;
         setIsMuted(true);
       }
     }
@@ -125,10 +152,10 @@ export function AnimatedVideoCard({ videoSrc, posterSrc, alt, className = '' }: 
   };
 
   const formatTime = (time: number) => {
-    if (!time) return '0:00';
+    if (!time) return "0:00";
     const minutes = Math.floor(time / 60);
     const seconds = Math.floor(time % 60);
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    return `${minutes}:${seconds.toString().padStart(2, "0")}`;
   };
 
   const progressPercent = duration ? (currentTime / duration) * 100 : 0;
@@ -136,24 +163,29 @@ export function AnimatedVideoCard({ videoSrc, posterSrc, alt, className = '' }: 
   return (
     <div
       ref={containerRef}
-      className={`relative w-full overflow-hidden rounded-[2rem] bg-black group ${className}`}
+      className={`group relative w-full overflow-hidden rounded-[1.25rem] bg-black ${className}`}
       style={{
-        perspective: '1200px',
+        perspective: "1200px",
       }}
     >
-      <div
-        style={{
-          transform: `rotateX(${rotation.x}deg) rotateY(${rotation.y}deg) scale(${scale})`,
-          transition: 'transform 0.1s ease-out',
-          transformStyle: 'preserve-3d',
-        }}
-      >
+      <div className="h-full w-full">
         <video
           ref={videoRef}
           className="w-full h-full object-cover"
           src={videoSrc}
           poster={posterSrc}
+          autoPlay
+          muted
           loop
+          onClick={() => {
+            const video = videoRef.current;
+            if (!video) return;
+            if (video.paused) {
+              void video.play();
+            } else {
+              video.pause();
+            }
+          }}
           onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
           onLoadedMetadata={(e) => setDuration(e.currentTarget.duration)}
           onPlay={() => setIsPlaying(true)}
@@ -168,16 +200,16 @@ export function AnimatedVideoCard({ videoSrc, posterSrc, alt, className = '' }: 
         className="absolute inset-0 pointer-events-none"
         style={{
           background:
-            'radial-gradient(circle at 50% 50%, rgba(255,255,255,0.1) 0%, transparent 70%)',
+            "radial-gradient(circle at 50% 50%, rgba(255,255,255,0.1) 0%, transparent 70%)",
           opacity: Math.sqrt(Math.abs(rotation.x) + Math.abs(rotation.y)) / 30,
-          transition: 'opacity 0.1s ease-out',
+          transition: "opacity 0.1s ease-out",
         }}
       />
 
       {/* Video Controls */}
       <div
         className={`absolute bottom-0 left-0 right-0 px-4 py-3 transition-opacity duration-300 ${
-          showControls ? 'opacity-100' : 'opacity-0'
+          showControls ? "opacity-100" : "opacity-0"
         }`}
       >
         {/* Control Buttons Row */}
@@ -188,10 +220,16 @@ export function AnimatedVideoCard({ videoSrc, posterSrc, alt, className = '' }: 
             <button
               onClick={handlePlayPause}
               className="text-white hover:text-brand-red transition-colors p-1 rounded-full hover:bg-white/10"
-              title={isPlaying ? 'Pause' : 'Play'}
+              title={isPlaying ? "Pause" : "Play"}
             >
               {isPlaying ? (
-                <svg className="w-5 h-5" fill="white" stroke="white" strokeWidth="2" viewBox="0 0 24 24">
+                <svg
+                  className="w-5 h-5"
+                  fill="white"
+                  stroke="white"
+                  strokeWidth="2"
+                  viewBox="0 0 24 24"
+                >
                   <rect x="6" y="4" width="3" height="16" fill="white" />
                   <rect x="15" y="4" width="3" height="16" fill="white" />
                 </svg>
@@ -206,7 +244,10 @@ export function AnimatedVideoCard({ videoSrc, posterSrc, alt, className = '' }: 
             <button
               onClick={() => {
                 if (videoRef.current) {
-                  videoRef.current.currentTime = Math.max(0, videoRef.current.currentTime - 10);
+                  videoRef.current.currentTime = Math.max(
+                    0,
+                    videoRef.current.currentTime - 10,
+                  );
                 }
               }}
               className="text-white hover:text-brand-red transition-colors p-1 rounded-full hover:bg-white/10"
@@ -235,7 +276,10 @@ export function AnimatedVideoCard({ videoSrc, posterSrc, alt, className = '' }: 
             <button
               onClick={() => {
                 if (videoRef.current) {
-                  videoRef.current.currentTime = Math.min(duration, videoRef.current.currentTime + 10);
+                  videoRef.current.currentTime = Math.min(
+                    duration,
+                    videoRef.current.currentTime + 10,
+                  );
                 }
               }}
               className="text-white hover:text-brand-red transition-colors p-1 rounded-full hover:bg-white/10"
@@ -253,8 +297,17 @@ export function AnimatedVideoCard({ videoSrc, posterSrc, alt, className = '' }: 
               className="text-white hover:text-brand-red transition-colors p-1 rounded-full hover:bg-white/10"
               title="Fullscreen"
             >
-              <svg className="w-5 h-5" fill="none" stroke="white" strokeWidth="1.5" viewBox="0 0 24 24">
-                <path d="M7 7v10h10M7 7H5v2M7 7v-2h2M17 7v-2h2v2M17 17h2v-2M17 17v2h-2M7 17v2h2v-2" stroke="white" />
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="white"
+                strokeWidth="1.5"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  d="M7 7v10h10M7 7H5v2M7 7v-2h2M17 7v-2h2v2M17 17h2v-2M17 17v2h-2M7 17v2h2v-2"
+                  stroke="white"
+                />
               </svg>
             </button>
 
@@ -262,16 +315,25 @@ export function AnimatedVideoCard({ videoSrc, posterSrc, alt, className = '' }: 
             <button
               onClick={handleMuteToggle}
               className="text-white hover:text-brand-red transition-colors p-1 rounded-full hover:bg-white/10"
-              title={isMuted ? 'Unmute' : 'Mute'}
+              title={isMuted ? "Unmute" : "Mute"}
             >
               {isMuted ? (
-                <svg className="w-5 h-5" fill="none" stroke="white" strokeWidth="2" viewBox="0 0 24 24">
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="white"
+                  strokeWidth="2"
+                  viewBox="0 0 24 24"
+                >
                   <path d="M3 4l18 18M3 9v6h4l5 5V4L7 9H3z" stroke="white" />
                   <path d="M23 9v6" opacity="0.3" stroke="white" />
                 </svg>
               ) : (
                 <svg className="w-5 h-5" fill="white" viewBox="0 0 24 24">
-                  <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.26 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z" fill="white" />
+                  <path
+                    d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.26 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"
+                    fill="white"
+                  />
                 </svg>
               )}
             </button>
