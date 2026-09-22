@@ -7,6 +7,7 @@ import { AccountMenu } from "./AccountMenu";
 import { DashboardNavbar } from "./DashboardNavbar";
 import { useAuth } from "@/lib/hooks/useAuth";
 import { routes } from "@/lib/constants/routes";
+import { useDashboardLanguage } from "./DashboardLanguageContext";
 
 type Certificate = {
   id?: string;
@@ -63,6 +64,7 @@ const sortLabels: Array<{ value: SortOption; label: string; detail: string }> = 
 export function MyCertificatesPage() {
   const router = useRouter();
   const { isAuthenticated, isLoading } = useAuth();
+  const { t } = useDashboardLanguage();
   const [certificates] = useState<Certificate[]>(() => readCertificates());
   const [selectedPdf, setSelectedPdf] = useState<string | null>(null);
   const [dialog, setDialog] = useState<"sort" | "filter" | null>(null);
@@ -89,7 +91,7 @@ export function MyCertificatesPage() {
   if (isLoading)
     return (
       <main className="flex min-h-[100svh] items-center justify-center bg-white text-sm text-muted">
-        Loading certificates...
+        {t("Loading certificates...")}
       </main>
     );
   if (!isAuthenticated) {
@@ -115,14 +117,14 @@ export function MyCertificatesPage() {
         <section className="min-w-0">
           <div className="border-b border-[#e1e8ed] pb-4">
             <h1 className="text-[30px] font-semibold tracking-[-0.04em] text-[#171717] sm:text-[32px]">
-              My Certificates
+              {t("My Certificates")}
             </h1>
             <p className="mt-1 text-[12px] text-[#7b858f]">
-              View and download your land ownership certificates.
+              {t("View and download your land ownership certificates.")}
             </p>
           </div>
           <div className="mt-5 flex items-center justify-between gap-3">
-            <h2 className="text-[17px] font-semibold text-navy">All Certificates</h2>
+            <h2 className="text-[17px] font-semibold text-navy">{t("All Certificates")}</h2>
             <div className="flex gap-2">
               <button
                 type="button"

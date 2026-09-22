@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { setAuthUser } from "@/lib/api/auth.utils";
 import { routes } from "@/lib/constants/routes";
+import { useDashboardLanguage } from "./DashboardLanguageContext";
 import { useAuth } from "@/lib/hooks/useAuth";
 import { AccountMenu } from "./AccountMenu";
 import { DashboardNavbar } from "./DashboardNavbar";
@@ -14,6 +15,7 @@ type FormValues = { firstName: string; lastName: string; email: string; phone: s
 export function EditProfilePage() {
   const router = useRouter();
   const { isAuthenticated, user, isLoading } = useAuth();
+  const { t } = useDashboardLanguage();
   const fileRef = useRef<HTMLInputElement>(null);
   const [values, setValues] = useState<FormValues>({ firstName: "", lastName: "", email: "", phone: "" });
   const [avatarUrl, setAvatarUrl] = useState<string | undefined>();
@@ -30,7 +32,7 @@ export function EditProfilePage() {
     setAvatarUrl(user.avatarUrl);
   }, [user]);
 
-  if (isLoading) return <main className="flex min-h-[100svh] items-center justify-center bg-[#f7fafc] text-sm text-muted">Loading profile...</main>;
+  if (isLoading) return <main className="flex min-h-[100svh] items-center justify-center bg-[#f7fafc] text-sm text-muted">{t("Loading profile...")}</main>;
   if (!isAuthenticated) { router.replace(routes.login); return null; }
 
   function update(field: keyof FormValues, value: string) {

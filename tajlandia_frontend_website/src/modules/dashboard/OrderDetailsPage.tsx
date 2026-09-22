@@ -6,16 +6,18 @@ import { AccountMenu } from "./AccountMenu";
 import { DashboardNavbar } from "./DashboardNavbar";
 import { useAuth } from "@/lib/hooks/useAuth";
 import { routes } from "@/lib/constants/routes";
+import { useDashboardLanguage } from "./DashboardLanguageContext";
 
 const plots = ["ICON", "ICON", "POPULAR", "STANDARD"];
 
 export function OrderDetailsPage({ orderId }: { orderId: string }) {
   const router = useRouter();
   const { isAuthenticated, isLoading } = useAuth();
+  const { t } = useDashboardLanguage();
   if (isLoading)
     return (
       <main className="flex min-h-[100svh] items-center justify-center bg-[#f7fafc] text-sm text-muted">
-        Loading order...
+        {t("Loading order...")}
       </main>
     );
   if (!isAuthenticated) {
