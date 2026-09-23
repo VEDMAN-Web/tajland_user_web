@@ -16,7 +16,11 @@ export async function loginAction(values: LoginFormValues): Promise<LoginActionR
   }
 
   try {
-    const response = await apiPost("/auth/login", parsed.data, loginResponseSchema);
+    const response = await apiPost(
+      "/auth/login",
+      { ...parsed.data, role: "USER" },
+      loginResponseSchema,
+    );
 
     if (!response.success) {
       return { ok: false, message: response.message || "Login failed. Please try again." };
