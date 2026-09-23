@@ -6,6 +6,7 @@ import Link from "next/link";
 import { routes } from "@/lib/constants/routes";
 import { ScrollAnimatedElement } from "@/components/animations/ScrollAnimatedElement";
 import { setAuthToken, setAuthUser } from "@/lib/api/auth.utils";
+import { getRememberedLogin, saveRememberedLogin } from "@/lib/api/remember-me.utils";
 import { loginSchema, type LoginFormValues } from "./schemas/login.schema";
 import { loginAction } from "./services/login.service";
 
@@ -62,8 +63,17 @@ export function LoginPage() {
   const [values, setValues] = useState<LoginFormValues>({ email: "", password: "" });
   const [errors, setErrors] = useState<LoginErrors>({});
   const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
   const [apiError, setApiError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  React.useEffect(() => {
+    const rememberedLogin = getRememberedLogin();
+    if (rememberedLogin) {
+      setValues((current) => ({ ...current, email: rememberedLogin.email }));
+      setRememberMe(rememberedLogin.rememberMe);
+    }
+  }, []);
 
   function updateField(field: keyof LoginFormValues, value: string) {
     setValues((current) => ({ ...current, [field]: value }));
@@ -97,12 +107,13 @@ export function LoginPage() {
       const actionResult = await loginAction(validationResult.data);
 
       if (actionResult.ok) {
+        saveRememberedLogin(validationResult.data.email, rememberMe);
         // Store authentication data
         if (actionResult.token) {
-          setAuthToken(actionResult.token);
+          setAuthToken(actionResult.token, rememberMe);
         }
         if (actionResult.user) {
-          setAuthUser(actionResult.user);
+          setAuthUser(actionResult.user, rememberMe);
         }
         // Redirect to dashboard
         router.push(routes.dashboard);
@@ -190,7 +201,12 @@ export function LoginPage() {
 
               <div className="mt-4 flex items-center justify-between gap-4 text-[11px]">
                 <label className="flex items-center gap-2 text-[#b8b9bd]">
-                  <input type="checkbox" className="h-3.5 w-3.5 rounded border-[#d7d8da] accent-navy" />
+                  <input
+                    type="checkbox"
+                    checked={rememberMe}
+                    onChange={(event) => setRememberMe(event.target.checked)}
+                    className="h-3.5 w-3.5 rounded border-[#d7d8da] accent-navy"
+                  />
                   Remember me
                 </label>
                 <Link href="/forgot-password" className="font-medium text-[#d9272e] hover:underline">Forgot password?</Link>

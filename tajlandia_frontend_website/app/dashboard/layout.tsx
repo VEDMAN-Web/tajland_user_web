@@ -1,5 +1,10 @@
 import { DashboardLanguageProvider } from "@/modules/dashboard/DashboardLanguageContext";
+import { DashboardAuthGuard } from "@/modules/dashboard/DashboardAuthGuard";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  return <DashboardLanguageProvider>{children}</DashboardLanguageProvider>;
+  return (
+    <DashboardAuthGuard>
+      <DashboardLanguageProvider>{children}</DashboardLanguageProvider>
+    </DashboardAuthGuard>
+  );
 }

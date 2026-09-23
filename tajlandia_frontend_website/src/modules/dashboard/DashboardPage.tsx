@@ -23,10 +23,11 @@ export function DashboardPage() {
   const { isAuthenticated, user, isLoading } = useAuth();
   const { t } = useDashboardLanguage();
 
-  if (!isLoading && !isAuthenticated) {
-    router.replace(routes.login);
-    return null;
-  }
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) router.replace(routes.login);
+  }, [isAuthenticated, isLoading, router]);
+
+  if (!isLoading && !isAuthenticated) return null;
   if (isLoading) return <LoadingSpinner />;
 
   const firstName = user?.name?.trim().split(/\s+/)[0] || "User";
