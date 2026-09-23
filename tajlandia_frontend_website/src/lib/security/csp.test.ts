@@ -2,16 +2,14 @@ import { describe, expect, it } from "vitest";
 import { buildContentSecurityPolicy } from "./csp";
 
 describe("buildContentSecurityPolicy", () => {
-  it("uses a nonce and omits unsafe-inline in production", () => {
+  it("allows Next.js production hydration scripts", () => {
     const policy = buildContentSecurityPolicy({ nonce: "abc123", isDev: false });
 
-    expect(policy).toContain("nonce-abc123");
-    expect(policy).toContain("strict-dynamic");
+    expect(policy).toContain("script-src 'self' 'unsafe-inline'");
     expect(policy).toContain("frame-ancestors 'none'");
     expect(policy).toContain("connect-src 'self'");
     expect(policy).toContain("media-src 'self'");
     expect(policy).toContain("frame-src 'none'");
-    expect(policy).not.toContain("unsafe-inline");
     expect(policy).not.toContain("unsafe-eval");
   });
 
