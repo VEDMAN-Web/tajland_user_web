@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+export const authRoleSchema = z.enum(["USER", "ADMIN", "SUPERADMIN"]);
+
 export const authResponseBaseSchema = z.object({
   success: z.boolean(),
   message: z.string(),
@@ -14,10 +16,10 @@ export const loginResponseSchema = authResponseBaseSchema.extend({
         id: z.string(),
         email: z.string().email(),
         name: z.string().optional(),
-        role: z.string().optional(),
+        role: authRoleSchema,
         isActive: z.boolean().optional(),
         isEmailVerified: z.boolean().optional(),
-        lastLoginAt: z.string().optional(),
+        lastLoginAt: z.string().nullable().optional(),
       }),
     })
     .optional(),
@@ -31,9 +33,10 @@ export const registerResponseSchema = authResponseBaseSchema.extend({
       id: z.string(),
       email: z.string().email(),
       name: z.string(),
-      role: z.string().optional(),
+      role: authRoleSchema,
       isActive: z.boolean().optional(),
       isEmailVerified: z.boolean().optional(),
+      lastLoginAt: z.string().nullable().optional(),
     })
     .optional(),
 });
@@ -54,10 +57,10 @@ export const verifyOtpResponseSchema = authResponseBaseSchema.extend({
           id: z.string(),
           email: z.string().email(),
           name: z.string().optional(),
-          role: z.string().optional(),
+          role: authRoleSchema,
           isActive: z.boolean().optional(),
           isEmailVerified: z.boolean().optional(),
-          lastLoginAt: z.string().optional(),
+          lastLoginAt: z.string().nullable().optional(),
         })
         .optional(),
     })

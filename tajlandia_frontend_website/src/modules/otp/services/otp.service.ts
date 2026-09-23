@@ -112,6 +112,7 @@ export async function completeSignupWithOtpAction(
       email: signupData.email,
       password: signupData.newPassword,
       name: `${signupData.firstName} ${signupData.lastName}`,
+      role: "USER",
     };
 
     const registerResponse = await apiPost(
@@ -128,6 +129,7 @@ export async function completeSignupWithOtpAction(
     const loginPayload = {
       email: signupData.email,
       password: signupData.newPassword,
+      role: "USER",
     };
 
     const loginResponse = await apiPost(
