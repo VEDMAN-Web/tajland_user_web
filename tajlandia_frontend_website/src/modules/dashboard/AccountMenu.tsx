@@ -7,6 +7,7 @@ import { useState } from "react";
 import { clearAuth } from "@/lib/api/auth.utils";
 import { routes } from "@/lib/constants/routes";
 import { useDashboardLanguage } from "./DashboardLanguageContext";
+import { logoutFromApi } from "./services/logout.client";
 
 function MenuIcon({ src, active = false }: { src: string; active?: boolean }) {
   return (
@@ -38,6 +39,7 @@ export function AccountMenu({
   const router = useRouter();
   const { t } = useDashboardLanguage();
   const [isLogoutOpen, setIsLogoutOpen] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const items = [
     {
       label: t("Profile"),
@@ -89,9 +91,16 @@ export function AccountMenu({
     },
   ];
 
-  function confirmLogout() {
-    clearAuth();
-    router.replace(routes.home);
+  async function confirmLogout() {
+    if (isLoggingOut) return;
+
+    setIsLoggingOut(true);
+    try {
+      await logoutFromApi();
+    } finally {
+      clearAuth();
+      router.replace(routes.login);
+    }
   }
 
   return (
@@ -173,9 +182,10 @@ export function AccountMenu({
               <button
                 type="button"
                 onClick={confirmLogout}
+                disabled={isLoggingOut}
                 className="h-10 rounded-[9px] bg-[#e51d2a] text-[12px] font-medium text-white shadow-[0_4px_10px_rgba(229,29,42,0.2)] hover:bg-[#cc1520]"
               >
-                Log Out
+                {isLoggingOut ? "Logging out..." : "Log Out"}
               </button>
             </div>
           </section>
