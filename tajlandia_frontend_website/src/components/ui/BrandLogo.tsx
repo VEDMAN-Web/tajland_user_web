@@ -24,7 +24,7 @@ export function BrandLogo({ className, compact = false, href = routes.home }: Br
         height={brand.logo.height}
         priority
         className={cn(
-          "h-10 w-auto max-w-[9.5rem] bg-transparent object-contain object-left sm:h-11 sm:max-w-[11rem] lg:h-12 lg:max-w-[13rem]",
+          "h-11 w-auto max-w-[11rem] bg-transparent object-contain object-left sm:h-12 sm:max-w-[12.5rem] lg:h-14 lg:max-w-[15rem]",
           compact && "h-9 max-w-[8rem]",
         )}
       />

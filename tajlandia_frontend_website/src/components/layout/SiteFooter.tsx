@@ -138,7 +138,7 @@ export function SiteFooter() {
       <Container className="relative grid gap-12 py-14 md:grid-cols-[1.55fr_0.72fr_0.72fr_1fr] md:gap-10 md:py-20">
         <ScrollAnimatedElement animation="fade-in" duration={600}>
           <div className="max-w-[330px]">
-            <BrandLogo compact />
+            <BrandLogo />
             <p className="mt-6 text-[15px] leading-6 text-[#5B6B86]">
               A symbolic map of Thailand. Choose a fragment, claim your certificate, make
               it a part of your story.
