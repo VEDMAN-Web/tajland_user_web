@@ -14,7 +14,7 @@ export function FeatureSection({ content }: FeatureSectionProps) {
   }
 
   return (
-    <section className="bg-white py-[60px]">
+    <section className="bg-white pt-8 pb-[60px] sm:pt-9">
       <Container>
         <ScrollAnimatedElement animation="fade-in" duration={600}>
           <SectionHeading description={content.subtitle}>{content.heading}</SectionHeading>
