@@ -21,24 +21,24 @@ export function HeroSection({ content }: HeroSectionProps) {
 
   return (
     <section
-      className="relative w-full min-h-[100svh] overflow-hidden"
+      className="relative w-full min-h-[72svh] overflow-hidden"
       aria-label={heading || undefined}
     >
-      <div className="absolute inset-0 z-0 h-full w-full min-h-[100svh]">
+      <div className="absolute inset-0 z-0 h-full w-full min-h-[72svh]">
         {content.image ? (
           <HomeMedia
             image={content.image}
             fill
             priority
             sizes="100vw"
-            className="h-full w-full max-w-none object-cover object-center"
+            className="h-full w-full max-w-none object-cover object-bottom"
           />
         ) : (
           <div className="h-full w-full bg-sky-200" aria-hidden="true" />
         )}
       </div>
       <div className="absolute inset-0 z-10 bg-gradient-to-b from-white/35 via-white/5 to-transparent" />
-      <div className="relative z-20 flex min-h-[100svh] w-full justify-center px-5 pb-16 pt-[14vh] text-center sm:px-8 sm:pt-[16vh] md:pt-[18vh]">
+      <div className="relative z-20 flex min-h-[72svh] w-full justify-center px-5 pb-10 pt-[8vh] text-center sm:px-8 sm:pt-[10vh] md:pt-[12vh]">
         <ScrollAnimatedElement animation="slide-in-up" duration={800} className="w-full max-w-[760px] text-navy">
           <h1 className="font-[family-name:var(--font-playfair-display)] text-[68px] font-semibold leading-[1.04] tracking-[-0.055em] max-[767px]:text-[48px]">
             <span className="block">{content.title}</span>

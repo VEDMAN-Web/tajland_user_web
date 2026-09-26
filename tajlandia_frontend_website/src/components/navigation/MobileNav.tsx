@@ -73,14 +73,23 @@ export function MobileNav() {
                   href={item.href}
                   aria-current={isActive ? "page" : undefined}
                   className={cn(
-                    "rounded-full px-5 py-4 text-xl transition-colors",
+                    "group relative inline-block rounded-full px-5 py-4 pb-[18px] text-xl transition-colors duration-200",
                     isActive
-                      ? "bg-[#f4f2ee] font-medium text-navy"
-                      : "text-[#61728c] hover:bg-[#f4f2ee] hover:text-navy",
+                      ? "font-medium text-navy"
+                      : "text-[#61728c] hover:text-navy",
                   )}
                   onClick={() => setOpen(false)}
                 >
                   {item.label}
+                  <span
+                    className={cn(
+                      "absolute bottom-3 left-5 right-5 h-[1.5px] transition-all duration-300",
+                      isActive
+                        ? "bg-[var(--Theme-2-Logo-Red,#E00C1B)]"
+                        : "w-0 scale-x-0 bg-[var(--Theme-2-Logo-Red,#E00C1B)] group-hover:scale-x-100",
+                    )}
+                    style={isActive ? {} : { transformOrigin: "left" }}
+                  />
                 </Link>
               );
             })}
