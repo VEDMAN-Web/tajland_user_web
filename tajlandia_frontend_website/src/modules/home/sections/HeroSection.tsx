@@ -21,24 +21,24 @@ export function HeroSection({ content }: HeroSectionProps) {
 
   return (
     <section
-      className="relative w-full min-h-[72svh] overflow-hidden"
+      className="relative h-[calc(100dvh-4.5rem)] w-full overflow-hidden sm:h-[calc(100dvh-5rem)]"
       aria-label={heading || undefined}
     >
-      <div className="absolute inset-0 z-0 h-full w-full min-h-[72svh]">
+      <div className="absolute inset-0 z-0">
         {content.image ? (
           <HomeMedia
             image={content.image}
             fill
             priority
             sizes="100vw"
-            className="h-full w-full max-w-none object-cover object-bottom"
+            className="h-full w-full max-w-none object-cover object-center"
           />
         ) : (
-          <div className="h-full w-full bg-sky-200" aria-hidden="true" />
+          <div className="absolute inset-0 bg-sky-200" aria-hidden="true" />
         )}
       </div>
       <div className="absolute inset-0 z-10 bg-gradient-to-b from-white/35 via-white/5 to-transparent" />
-      <div className="relative z-20 flex min-h-[72svh] w-full justify-center px-5 pb-10 pt-[8vh] text-center sm:px-8 sm:pt-[10vh] md:pt-[12vh]">
+      <div className="absolute inset-0 z-20 flex w-full justify-center px-5 pt-[10vh] text-center sm:px-8 sm:pt-[12vh] md:pt-[14vh]">
         <ScrollAnimatedElement animation="slide-in-up" duration={800} className="w-full max-w-[760px] text-navy">
           <h1 className="font-[family-name:var(--font-playfair-display)] text-[68px] font-semibold leading-[1.04] tracking-[-0.055em] max-[767px]:text-[48px]">
             <span className="block">{content.title}</span>
