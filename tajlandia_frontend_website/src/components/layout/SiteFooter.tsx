@@ -55,19 +55,19 @@ function FooterLink({ href, children }: { href: string; children: React.ReactNod
   return (
     <Link
       href={href}
-      className="inline-block relative transition-all duration-300 hover:text-navy hover:translate-x-1 group text-[#5B6B86]"
+      className="group relative inline-block pb-[3px] text-[15px] font-medium text-[#5B6B86] transition-colors duration-200 hover:text-navy hover:text-[#0b1f4d]"
     >
       {children}
-      <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-navy transition-all duration-300 group-hover:w-full" />
+      <span className="absolute bottom-0 left-0 h-[2px] w-0 bg-[#c81e1e] transition-all duration-300 group-hover:w-full" />
     </Link>
   );
 }
 
 function FooterText({ children }: { children: React.ReactNode }) {
   return (
-    <span className="group relative inline-block cursor-default text-[#5B6B86] transition-all duration-300 hover:translate-x-1 hover:text-navy">
+    <span className="group relative inline-block cursor-pointer pb-[3px] text-[15px] font-medium text-[#5B6B86] transition-colors duration-200 hover:text-navy hover:text-[#0b1f4d]">
       {children}
-      <span className="absolute bottom-0 left-0 h-0.5 w-0 bg-navy transition-all duration-300 group-hover:w-full" />
+      <span className="absolute bottom-0 left-0 h-[2px] w-0 bg-[#c81e1e] transition-all duration-300 group-hover:w-full" />
     </span>
   );
 }

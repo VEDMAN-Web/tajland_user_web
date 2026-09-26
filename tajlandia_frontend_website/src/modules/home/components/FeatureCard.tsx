@@ -7,9 +7,9 @@ type FeatureCardProps = {
 };
 
 const iconSources = {
-  pointer: "/images/home/features/explore-map.png",
-  bag: "/images/home/features/purchases.png",
-  gift: "/images/home/features/gift-plot.png",
+  pointer: "/images/home/features/explore-map.svg",
+  bag: "/images/home/features/purchases.svg",
+  gift: "/images/home/features/gift-plot.svg",
 } as const;
 
 export function FeatureCard({ item }: FeatureCardProps) {
