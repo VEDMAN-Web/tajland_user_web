@@ -14,10 +14,12 @@ export function FeatureSection({ content }: FeatureSectionProps) {
   }
 
   return (
-    <section className="bg-white pt-8 pb-[60px] sm:pt-9">
+    <section className="bg-white pb-[60px]">
       <Container>
         <ScrollAnimatedElement animation="fade-in" duration={600}>
-          <SectionHeading description={content.subtitle}>{content.heading}</SectionHeading>
+          <SectionHeading className="mt-12" description={content.subtitle}>
+            {content.heading}
+          </SectionHeading>
         </ScrollAnimatedElement>
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {content.items.map((item, index) => (
