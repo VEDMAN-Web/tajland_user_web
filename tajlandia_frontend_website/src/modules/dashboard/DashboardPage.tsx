@@ -9,6 +9,9 @@ import { ScrollAnimatedElement } from "@/components/animations/ScrollAnimatedEle
 import { useAuth } from "@/lib/hooks/useAuth";
 import { DashboardNavbar } from "./DashboardNavbar";
 import { useDashboardLanguage } from "./DashboardLanguageContext";
+import { useDashboard } from "./hooks/useDashboard";
+import { formatCurrency } from "@/lib/api/dashboard.service";
+import type { FeaturedRegion } from "@/lib/api/dashboard.schemas";
 
 function LoadingSpinner() {
   return (
@@ -18,17 +21,57 @@ function LoadingSpinner() {
   );
 }
 
+function ErrorState({ message, onRetry }: { message: string; onRetry: () => void }) {
+  return (
+    <div className="flex min-h-[100svh] flex-col items-center justify-center bg-white px-6 text-center">
+      <div className="mb-4 text-4xl">⚠️</div>
+      <h2 className="mb-2 text-xl font-semibold text-navy">Unable to Load Dashboard</h2>
+      <p className="mb-6 max-w-md text-sm text-muted">{message}</p>
+      <button
+        onClick={onRetry}
+        className="rounded-full bg-navy px-6 py-2.5 text-sm font-medium text-white hover:bg-navy/90"
+      >
+        Try Again
+      </button>
+    </div>
+  );
+}
+
 export function DashboardPage() {
   const router = useRouter();
-  const { isAuthenticated, user, isLoading } = useAuth();
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
   const { t } = useDashboardLanguage();
+  
+  // Fetch dashboard data
+  const {
+    user,
+    collection,
+    verification,
+    featuredRegions,
+    giftEnabled,
+    isLoading: dashboardLoading,
+    error,
+    refresh,
+  } = useDashboard({
+    fetchOnMount: isAuthenticated,
+  });
 
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) router.replace(routes.login);
-  }, [isAuthenticated, isLoading, router]);
+    if (!authLoading && !isAuthenticated) router.replace(routes.login);
+  }, [isAuthenticated, authLoading, router]);
 
-  if (!isLoading && !isAuthenticated) return null;
-  if (isLoading) return <LoadingSpinner />;
+  // Redirect if not authenticated
+  if (!authLoading && !isAuthenticated) return null;
+  
+  // Show loading during auth check or initial dashboard load
+  if (authLoading || (isAuthenticated && dashboardLoading && !user)) {
+    return <LoadingSpinner />;
+  }
+  
+  // Show error state with retry
+  if (error && !user) {
+    return <ErrorState message={error} onRetry={refresh} />;
+  }
 
   const firstName = user?.name?.trim().split(/\s+/)[0] || "User";
 
@@ -73,74 +116,80 @@ export function DashboardPage() {
                 {t("Your Collection")}
               </h2>
             </div>
-            <p className="font-manrope hidden text-[14px] font-bold text-navy sm:block">
-              ● {t("All holdings verified across Thailand")}
-            </p>
+            {verification?.verified && (
+              <p className="font-manrope hidden text-[14px] font-bold text-navy sm:block">
+                ● {verification.message}
+              </p>
+            )}
           </div>
           <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
             <Stat
               icon="/images/dashboard/stat-land.png"
               background="/images/dashboard/stat-land-bg.png"
-              value="8000"
-              label={t("Total Land (Sq Rai)")}
+              value={collection?.totalLandSqFt.toLocaleString() || "0"}
+              label={t("Total Land (Sq Ft)")}
               tone="blue"
+              showUnit={true}
             />
             <Stat
               icon="/images/dashboard/stat-plots.png"
               background="/images/dashboard/stat-plots-bg.png"
-              value="12"
+              value={collection?.plotsClaimed.toString() || "0"}
               label={t("Plots Claimed")}
               tone="green"
             />
             <Stat
               icon="/images/dashboard/stat-regions.png"
               background="/images/dashboard/regions-bg.png"
-              value="05"
+              value={collection?.regionsCount.toString().padStart(2, "0") || "00"}
               label={t("Regions")}
               tone="purple"
             />
             <Stat
               icon="/images/dashboard/stat-spent.png"
               background="/images/dashboard/stat-spent-bg.png"
-              value="48,500"
+              value={collection?.totalSpent.toLocaleString() || "0"}
               label={t("Total Spent")}
               tone="gold"
+              currency={collection?.currency}
             />
           </div>
         </ScrollAnimatedElement>
 
         <section className="mt-5">
-          <div className="relative min-h-[228px] overflow-hidden rounded-[22px] border border-brand-red bg-[#fff8f8] px-5 py-6 sm:px-8 lg:px-[86px] lg:py-0">
-            <Image
-              src="/images/dashboard/gift-ribbon.png"
-              alt=""
-              width={150}
-              height={110}
-              className="pointer-events-none absolute -left-3 -top-2 h-[120px] w-[150px] object-contain object-left-top"
-            />
-            <div className="relative z-10 lg:absolute lg:left-[86px] lg:top-[91px]">
-              <p className="font-manrope text-[12px] font-bold uppercase tracking-[0.08em] text-brand-red">
-                {t("Give a Little Piece")}
-              </p>
-              <h2 className="font-manrope mt-2 max-w-[520px] text-[30px] font-semibold leading-tight text-[#171717]">
-                {t("Give a Little Piece of Thailand")}
-              </h2>
-              <p className="font-manrope mt-2 max-w-[430px] text-[14px] font-normal leading-5 text-[#9aa3ad]">
-                {t("Share a place worth remembering. Gift a Tajlandia plot to someone special and let them build their own collection.")}
-              </p>
-            </div>
-            <div className="mt-5 flex flex-col gap-5 lg:absolute lg:right-[37px] lg:top-[93px] lg:mt-0 lg:w-[282px] lg:gap-6">
-              <button
-                type="button"
-                className="font-manrope self-start rounded-full bg-brand-red px-7 py-2.5 text-[16px] font-medium text-white lg:self-end"
-              >
-                {t("Gift a plot")} →
-              </button>
-              <div className="font-manrope border-t border-brand-red/15 pt-3 text-[11px] text-[#6f7780] lg:pt-4">
-                ✓ {t("Instant Digital Certificate")} &nbsp;&nbsp; ✓ {t("Official Cadastre Deed")}
+          {giftEnabled && (
+            <div className="relative mb-5 min-h-[228px] overflow-hidden rounded-[22px] border border-brand-red bg-[#fff8f8] px-5 py-6 sm:px-8 lg:px-[86px] lg:py-0">
+              <Image
+                src="/images/dashboard/gift-ribbon.png"
+                alt=""
+                width={150}
+                height={110}
+                className="pointer-events-none absolute -left-3 -top-2 h-[120px] w-[150px] object-contain object-left-top"
+              />
+              <div className="relative z-10 lg:absolute lg:left-[86px] lg:top-[91px]">
+                <p className="font-manrope text-[12px] font-bold uppercase tracking-[0.08em] text-brand-red">
+                  {t("Give a Little Piece")}
+                </p>
+                <h2 className="font-manrope mt-2 max-w-[520px] text-[30px] font-semibold leading-tight text-[#171717]">
+                  {t("Give a Little Piece of Thailand")}
+                </h2>
+                <p className="font-manrope mt-2 max-w-[430px] text-[14px] font-normal leading-5 text-[#9aa3ad]">
+                  {t("Share a place worth remembering. Gift a Tajlandia plot to someone special and let them build their own collection.")}
+                </p>
+              </div>
+              <div className="mt-5 flex flex-col gap-5 lg:absolute lg:right-[37px] lg:top-[93px] lg:mt-0 lg:w-[282px] lg:gap-6">
+                <button
+                  type="button"
+                  className="font-manrope self-start rounded-full bg-brand-red px-7 py-2.5 text-[16px] font-medium text-white lg:self-end"
+                >
+                  {t("Gift a plot")} →
+                </button>
+                <div className="font-manrope border-t border-brand-red/15 pt-3 text-[11px] text-[#6f7780] lg:pt-4">
+                  ✓ {t("Instant Digital Certificate")} &nbsp;&nbsp; ✓ {t("Official Cadastre Deed")}
+                </div>
               </div>
             </div>
-          </div>
+          )}
           <div className="mt-6 flex items-end justify-between">
             <div>
               <p className="text-[8px] font-semibold uppercase tracking-[0.08em] text-brand-red">
@@ -151,7 +200,7 @@ export function DashboardPage() {
               </h2>
             </div>
           </div>
-          <ExploreCarousel />
+          <ExploreCarousel regions={featuredRegions} />
         </section>
       </main>
     </div>
@@ -165,6 +214,8 @@ function Stat({
   label,
   tone,
   iconSize = 32,
+  showUnit = false,
+  currency,
 }: {
   icon: string;
   background: string;
@@ -172,6 +223,8 @@ function Stat({
   label: string;
   tone: "blue" | "green" | "purple" | "gold";
   iconSize?: number;
+  showUnit?: boolean;
+  currency?: string;
 }) {
   const tones = {
     blue: "bg-[#f1f6ff] text-[#1156b5]",
@@ -179,6 +232,19 @@ function Stat({
     purple: "bg-[#fbf2ff] text-[#8b21b7]",
     gold: "bg-[#fff9e9] text-[#bd8a00]",
   };
+  
+  // Format currency symbol
+  const getCurrencySymbol = (curr?: string) => {
+    if (!curr) return "";
+    const symbols: Record<string, string> = {
+      USD: "$",
+      THB: "฿",
+      EUR: "€",
+      GBP: "£",
+    };
+    return symbols[curr] || curr;
+  };
+  
   return (
     <div
       className={`relative min-h-[70px] overflow-hidden rounded-[10px] p-3 ${tones[tone]}`}
@@ -199,8 +265,9 @@ function Stat({
           className="object-contain"
         />
         <strong className="font-manrope mt-2 block text-[20px] font-black">
+          {currency && getCurrencySymbol(currency)}
           {value}
-          {tone === "blue" ? " sq ft" : ""}
+          {showUnit ? " sq ft" : ""}
         </strong>
         <span className="font-manrope block text-[14px] font-semibold text-[#697586]">
           {label}
@@ -250,10 +317,12 @@ function ExploreCard({
   );
 }
 
-function ExploreCarousel() {
+function ExploreCarousel({ regions }: { regions: FeaturedRegion[] }) {
   const carouselRef = useRef<HTMLDivElement>(null);
   const [activePage, setActivePage] = useState(0);
-  const destinations = [
+  
+  // Fallback destinations if API returns empty
+  const fallbackDestinations = [
     {
       image: "/images/explore/phuket.jpg",
       badge: "ICON",
@@ -297,6 +366,18 @@ function ExploreCarousel() {
       locations: "18 locations",
     },
   ];
+  
+  // Convert API regions to card format
+  const apiRegions = regions.map((region) => ({
+    image: region.imageUrl,
+    badge: region.badge,
+    name: region.name,
+    description: region.description,
+    locations: `${region.locationCount} locations`,
+  }));
+  
+  // Use API regions if available, otherwise fallback
+  const destinations = apiRegions.length > 0 ? apiRegions : fallbackDestinations;
 
   useEffect(() => {
     const carousel = carouselRef.current;
