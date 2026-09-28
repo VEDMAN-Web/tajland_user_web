@@ -5,6 +5,13 @@ import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { cn } from "@/lib/utils/cn";
 
+export type PlotMarker = {
+  id: string;
+  coordinates: [number, number];
+  status: "AVAILABLE" | "LOCKED" | "CLAIMED" | "SOLD";
+  isOwned?: boolean;
+};
+
 export type MapboxMapHandle = {
   zoomIn: () => void;
   zoomOut: () => void;
@@ -15,6 +22,8 @@ export type MapboxMapHandle = {
     label?: string,
   ) => void;
   searchAndFlyTo: (query: string) => Promise<"success" | "not-found" | "error">;
+  setPlotMarkers: (plots: PlotMarker[]) => void;
+  clearPlotMarkers: () => void;
 };
 
 type MapboxMapProps = {
@@ -26,21 +35,90 @@ type MapboxMapProps = {
     coordinates: [number, number];
     zoom?: number;
   };
+  plotMarkers?: PlotMarker[];
+  onPlotClick?: (plotId: string) => void;
 };
 
 export const MapboxMap = forwardRef<MapboxMapHandle, MapboxMapProps>(function MapboxMap(
-  { className, initialCenter, initialZoom, selectedLocation },
+  { className, initialCenter, initialZoom, selectedLocation, plotMarkers, onPlotClick },
   ref,
 ) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const selectedMarkerRef = useRef<mapboxgl.Marker | null>(null);
+  const plotMarkersRef = useRef<mapboxgl.Marker[]>([]);
   const initialViewRef = useRef({
     center:
       initialCenter ?? selectedLocation?.coordinates ?? ([100.5, 15] as [number, number]),
     zoom: initialZoom ?? selectedLocation?.zoom ?? 4.5,
   });
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
+
+  function createPlotMarkerElement(plot: PlotMarker): HTMLElement {
+    const el = document.createElement("div");
+    el.className = "plot-marker";
+    el.style.cursor = "pointer";
+    el.style.width = "20px";
+    el.style.height = "20px";
+    el.style.borderRadius = "50%";
+    el.style.border = "2px solid white";
+    el.style.boxShadow = "0 2px 6px rgba(0,0,0,0.3)";
+    el.style.transition = "transform 0.2s";
+
+    // Status colors matching Figma
+    const colors = {
+      AVAILABLE: "#2cbf65", // green
+      LOCKED: "#e7b52c",    // yellow
+      CLAIMED: "#d64242",   // red/taken
+      SOLD: "#d64242",      // red/taken
+    };
+
+    // User's own plots get navy blue
+    el.style.background = plot.isOwned ? "#0b1f4d" : colors[plot.status];
+
+    el.addEventListener("mouseenter", () => {
+      el.style.transform = "scale(1.2)";
+    });
+    el.addEventListener("mouseleave", () => {
+      el.style.transform = "scale(1)";
+    });
+
+    if (onPlotClick) {
+      el.addEventListener("click", (e) => {
+        e.stopPropagation();
+        onPlotClick(plot.id);
+      });
+    }
+
+    return el;
+  }
+
+  function setPlotMarkers(plots: PlotMarker[]) {
+    const map = mapRef.current;
+    if (!map) return;
+
+    // Clear existing markers
+    plotMarkersRef.current.forEach((m) => m.remove());
+    plotMarkersRef.current = [];
+
+    // Add new markers
+    plots.forEach((plot) => {
+      if (!plot.coordinates) return;
+      const marker = new mapboxgl.Marker({
+        element: createPlotMarkerElement(plot),
+        anchor: "center",
+      })
+        .setLngLat(plot.coordinates)
+        .addTo(map);
+
+      plotMarkersRef.current.push(marker);
+    });
+  }
+
+  function clearPlotMarkers() {
+    plotMarkersRef.current.forEach((m) => m.remove());
+    plotMarkersRef.current = [];
+  }
 
   function focusLocation(coordinates: [number, number], zoom: number, label: string) {
     const map = mapRef.current;
@@ -129,10 +207,18 @@ export const MapboxMap = forwardRef<MapboxMapHandle, MapboxMapProps>(function Ma
     return () => {
       disposed = true;
       resizeObserver.disconnect();
+      clearPlotMarkers();
       map.remove();
       mapRef.current = null;
     };
   }, []);
+
+  // Update plot markers when prop changes
+  useEffect(() => {
+    if (status === "ready" && plotMarkers) {
+      setPlotMarkers(plotMarkers);
+    }
+  }, [plotMarkers, status]);
 
   useImperativeHandle(
     ref,
@@ -142,6 +228,8 @@ export const MapboxMap = forwardRef<MapboxMapHandle, MapboxMapProps>(function Ma
       flyToCoordinates: (coordinates, zoom = 13, label = "Selected location") => {
         focusLocation(coordinates, zoom, label);
       },
+      setPlotMarkers,
+      clearPlotMarkers,
       searchAndFlyTo: async (query) => {
         const map = mapRef.current;
         const accessToken = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN;

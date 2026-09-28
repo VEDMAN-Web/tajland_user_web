@@ -18,7 +18,7 @@ export function buildContentSecurityPolicy({ nonce, isDev }: CspOptions): string
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",
-    "connect-src 'self' https://api.mapbox.com https://events.mapbox.com https://*.tiles.mapbox.com https://*.mapbox.com",
+    "connect-src 'self' https://tajlandai-backend.onrender.com https://api.mapbox.com https://events.mapbox.com https://*.tiles.mapbox.com https://*.mapbox.com",
     "worker-src 'self' blob:",
     "frame-src 'none'",
     "frame-ancestors 'none'",

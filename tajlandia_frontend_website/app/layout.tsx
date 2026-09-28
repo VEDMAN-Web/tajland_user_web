@@ -18,7 +18,7 @@ const plusJakarta = Plus_Jakarta_Sans({
 const cormorant = Cormorant_Garamond({
   variable: "--font-cormorant",
   subsets: ["latin"],
-  weight: ["500", "600", "700"],
+  weight: "700",
 });
 
 const playfairDisplay = Playfair_Display({
