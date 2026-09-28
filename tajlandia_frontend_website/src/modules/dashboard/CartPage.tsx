@@ -7,90 +7,69 @@ import { DashboardNavbar } from "./DashboardNavbar";
 import { useAuth } from "@/lib/hooks/useAuth";
 import { routes } from "@/lib/constants/routes";
 import { useDashboardLanguage } from "./DashboardLanguageContext";
-
-type CartItem = {
-  id?: string;
-  name?: string;
-  region?: string;
-  rai?: number;
-  amount?: number;
-  image?: string;
-  badge?: string;
-};
-
-const initialCart: CartItem[] = [25, 25, 25, 25].map((rai, index) => ({
-  id: `PH-${1024 + index}`,
-  name: "Seaview Ridge Plot",
-  region: "Phuket City",
-  rai,
-  amount: 2.5,
-  image: "/images/explore/phuket.jpg",
-  badge: "ICON",
-}));
-
-function readCart(): CartItem[] {
-  try {
-    const stored = localStorage.getItem("tajlandia_cart");
-    if (stored === null) return initialCart;
-    const parsed = JSON.parse(stored);
-    if (
-      Array.isArray(parsed) &&
-      parsed.length === 0 &&
-      localStorage.getItem("tajlandia_cart_admin_empty") !== "true"
-    )
-      return initialCart;
-    if (
-      Array.isArray(parsed) &&
-      parsed.length === 4 &&
-      parsed.every((item) => item?.id?.startsWith("PH-"))
-    )
-      return initialCart;
-    return Array.isArray(parsed)
-      ? parsed.filter((item): item is CartItem => item && typeof item === "object")
-      : [];
-  } catch {
-    return [];
-  }
-}
+import { useCart } from "@/modules/cart/hooks/useCart";
+import type { CartItem } from "@/lib/api/cart.schemas";
 
 export function CartPage() {
   const router = useRouter();
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
   const { t } = useDashboardLanguage();
-  const [cartItems, setCartItems] = useState<CartItem[]>(() => readCart());
-  const [coupon, setCoupon] = useState("");
-  const [showSelectionProgress, setShowSelectionProgress] = useState(true);
-  const totalRai = cartItems.reduce(
-    (total, item) => total + (typeof item.rai === "number" ? item.rai : 0),
-    0,
-  );
-  const total = cartItems.reduce(
-    (sum, item) => sum + (typeof item.amount === "number" ? item.amount : 0),
-    0,
-  );
-  const progress = Math.min(100, (totalRai / 100) * 100);
+  const cart = useCart();
+  const [couponInput, setCouponInput] = useState("");
+  const [showCouponError, setShowCouponError] = useState(false);
 
-  function clearAll() {
-    setCartItems(initialCart);
-    setShowSelectionProgress(false);
-    localStorage.setItem("tajlandia_cart", JSON.stringify(initialCart));
-    localStorage.removeItem("tajlandia_cart_admin_empty");
+  const progress = Math.min(100, (cart.totalRai / cart.minimumRai) * 100);
+
+  async function handleClearAll() {
+    if (!confirm("Remove all items from cart?")) return;
+    const success = await cart.clearAllItems();
+    if (success) {
+      // Cart cleared successfully
+    }
   }
 
-  function removeItem(index: number) {
-    setCartItems((current) => {
-      const next = current.filter((_, itemIndex) => itemIndex !== index);
-      localStorage.setItem("tajlandia_cart", JSON.stringify(next));
-      return next;
-    });
+  async function handleRemoveItem(plotId: string) {
+    await cart.removeItem(plotId);
   }
 
-  if (isLoading)
+  async function handleApplyCoupon() {
+    if (!couponInput.trim()) return;
+    setShowCouponError(false);
+    
+    const success = await cart.applyCouponCode(couponInput.trim());
+    if (success) {
+      setCouponInput("");
+    } else {
+      setShowCouponError(true);
+    }
+  }
+
+  async function handleRemoveCoupon() {
+    await cart.removeCouponCode();
+  }
+
+  async function handleCheckout() {
+    // Validate first
+    const isValid = await cart.validateCartForCheckout();
+    if (!isValid) {
+      alert(cart.error || "Cart validation failed");
+      return;
+    }
+
+    // Proceed to checkout
+    const orderId = await cart.checkout();
+    if (orderId) {
+      router.push(`${routes.purchases}?orderId=${orderId}`);
+    }
+  }
+
+  if (authLoading || cart.isLoading)
     return (
       <main className="flex min-h-[100svh] items-center justify-center bg-[#f7fafc] text-sm text-muted">
         {t("Loading cart...")}
       </main>
     );
+  
   if (!isAuthenticated) {
     router.replace(routes.login);
     return null;
@@ -107,17 +86,32 @@ export function CartPage() {
           <p className="mt-1 text-[12px] text-[#7b858f]">
             {t("Review your selected plots before checkout.")}
           </p>
-          {cartItems.length ? (
+          
+          {/* Show error if any */}
+          {cart.error && (
+            <div className="mt-3 rounded-lg bg-red-50 p-3 text-sm text-red-600">
+              {cart.error}
+            </div>
+          )}
+          
+          {cart.items.length > 0 ? (
             <FilledCart
-              items={cartItems}
-              totalRai={totalRai}
-              total={total}
+              items={cart.items}
+              totalRai={cart.totalRai}
+              totalPrice={cart.totalPrice}
               progress={progress}
-              showSelectionProgress={showSelectionProgress}
-              coupon={coupon}
-              setCoupon={setCoupon}
-              onClearAll={clearAll}
-              onRemove={removeItem}
+              minimumReached={cart.minimumReached}
+              couponCode={cart.couponCode}
+              discount={cart.discount}
+              couponInput={couponInput}
+              setCouponInput={setCouponInput}
+              showCouponError={showCouponError}
+              isCheckingOut={cart.isCheckingOut}
+              onClearAll={handleClearAll}
+              onRemoveItem={handleRemoveItem}
+              onApplyCoupon={handleApplyCoupon}
+              onRemoveCoupon={handleRemoveCoupon}
+              onCheckout={handleCheckout}
             />
           ) : (
             <EmptyCart />
@@ -166,27 +160,42 @@ function EmptyCart() {
 function FilledCart({
   items,
   totalRai,
-  total,
+  totalPrice,
   progress,
-  showSelectionProgress,
-  coupon,
-  setCoupon,
+  minimumReached,
+  couponCode,
+  discount,
+  couponInput,
+  setCouponInput,
+  showCouponError,
+  isCheckingOut,
   onClearAll,
-  onRemove,
+  onRemoveItem,
+  onApplyCoupon,
+  onRemoveCoupon,
+  onCheckout,
 }: {
   items: CartItem[];
   totalRai: number;
-  total: number;
+  totalPrice: number;
   progress: number;
-  showSelectionProgress: boolean;
-  coupon: string;
-  setCoupon: (value: string) => void;
+  minimumReached: boolean;
+  couponCode: string | null;
+  discount: number;
+  couponInput: string;
+  setCouponInput: (value: string) => void;
+  showCouponError: boolean;
+  isCheckingOut: boolean;
   onClearAll: () => void;
-  onRemove: (index: number) => void;
+  onRemoveItem: (plotId: string) => void;
+  onApplyCoupon: () => void;
+  onRemoveCoupon: () => void;
+  onCheckout: () => void;
 }) {
+  const showProgress = totalRai < 100;
   return (
     <div className="mt-5">
-      {showSelectionProgress ? (
+      {showProgress ? (
         <section className="rounded-[15px] bg-white p-5 shadow-[0_5px_24px_rgba(11,31,77,0.08)]">
           <div className="flex items-start justify-between gap-4">
             <div>
@@ -205,7 +214,7 @@ function FilledCart({
             <span>
               {items.length} Plot{items.length === 1 ? "" : "s"}
             </span>
-            <strong>Total: ${total.toFixed(2)}</strong>
+            <strong>Total: ${totalPrice.toFixed(2)}</strong>
           </div>
           <div className="mt-2 h-1 rounded-full bg-[#e5e9ed]">
             <div
@@ -223,7 +232,7 @@ function FilledCart({
         </section>
       ) : null}
       <div
-        className={`${showSelectionProgress ? "mt-6" : "mt-2"} grid gap-5 lg:grid-cols-[minmax(0,1fr)_280px]`}
+        className={`${showProgress ? "mt-6" : "mt-2"} grid gap-5 lg:grid-cols-[minmax(0,1fr)_280px]`}
       >
         <section>
           <h2 className="text-[17px] font-semibold text-[#171717]">Selected Plots</h2>
@@ -237,11 +246,11 @@ function FilledCart({
             </button>
           </div>
           <div className="mt-2 space-y-2">
-            {items.map((item, index) => (
+            {items.map((item) => (
               <CartItemCard
-                key={item.id ?? index}
+                key={item.plotId}
                 item={item}
-                onRemove={() => onRemove(index)}
+                onRemove={() => onRemoveItem(item.plotId)}
               />
             ))}
           </div>
@@ -264,20 +273,50 @@ function FilledCart({
           </div>
         </section>
         <aside>
-          <div className="flex gap-2">
-            <input
-              value={coupon}
-              onChange={(event) => setCoupon(event.target.value)}
-              placeholder="Enter Code"
-              className="h-11 min-w-0 flex-1 rounded-[9px] border border-[#e3e8ed] bg-white px-3 text-[10px] outline-none"
-            />
-            <button
-              type="button"
-              className="h-11 rounded-[9px] bg-navy px-5 text-[11px] text-white"
-            >
-              Apply
-            </button>
-          </div>
+          {/* Coupon Section */}
+          {!couponCode ? (
+            <div className="flex gap-2">
+              <input
+                value={couponInput}
+                onChange={(event) => setCouponInput(event.target.value)}
+                placeholder="Enter Code"
+                className="h-11 min-w-0 flex-1 rounded-[9px] border border-[#e3e8ed] bg-white px-3 text-[10px] outline-none"
+              />
+              <button
+                type="button"
+                onClick={onApplyCoupon}
+                className="h-11 rounded-[9px] bg-navy px-5 text-[11px] text-white"
+              >
+                Apply
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between rounded-[9px] bg-green-50 px-4 py-3">
+              <div>
+                <p className="text-[10px] font-semibold text-green-700">
+                  Coupon Applied: {couponCode}
+                </p>
+                <p className="text-[9px] text-green-600">
+                  -${discount.toFixed(2)} discount
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={onRemoveCoupon}
+                className="text-[9px] text-red-600 underline"
+              >
+                Remove
+              </button>
+            </div>
+          )}
+          
+          {showCouponError && (
+            <p className="mt-1 text-[9px] text-red-600">
+              Invalid or expired coupon code
+            </p>
+          )}
+          
+          {/* Order Summary */}
           <div className="mt-3 rounded-[12px] bg-white p-4 shadow-[0_5px_18px_rgba(11,31,77,0.06)]">
             <h2 className="text-[17px] font-semibold text-[#242b32]">Order Summary</h2>
             <div className="mt-4 space-y-2 text-[11px] text-[#8f99a4]">
@@ -293,18 +332,25 @@ function FilledCart({
             <div className="my-4 border-t border-[#e8edf1]" />
             <p className="flex justify-between text-[11px] text-[#8f99a4]">
               <span>Subtotal</span>
-              <strong>${total.toFixed(2)}</strong>
+              <strong>${(totalPrice + discount).toFixed(2)}</strong>
             </p>
+          {discount > 0 && (
+              <p className="flex justify-between text-[11px] text-green-600">
+                <span>Discount</span>
+                <strong>-${discount.toFixed(2)}</strong>
+              </p>
+            )}
             <p className="mt-3 flex justify-between border-t border-[#e8edf1] pt-3 text-[12px] text-[#8f99a4]">
               <span>Total</span>
-              <strong className="text-[21px] text-[#171717]">${total.toFixed(2)}</strong>
+              <strong className="text-[21px] text-[#171717]">${totalPrice.toFixed(2)}</strong>
             </p>
             <button
               type="button"
-              disabled={totalRai < 100}
-              className="mt-5 h-10 w-full rounded-[9px] bg-[#d3d3d3] text-[11px] text-white disabled:cursor-not-allowed"
+              onClick={onCheckout}
+              disabled={!minimumReached || isCheckingOut}
+              className="mt-5 h-10 w-full rounded-[9px] bg-navy text-[11px] text-white disabled:cursor-not-allowed disabled:bg-[#d3d3d3]"
             >
-              Proceed to checkout →
+              {isCheckingOut ? "Processing..." : "Proceed to checkout →"}
             </button>
             <Link
               href={routes.dashboardExplore}
@@ -312,7 +358,7 @@ function FilledCart({
             >
               Continue Exploring
             </Link>
-            {totalRai < 100 ? (
+            {!minimumReached ? (
               <p className="mt-4 text-center text-[9px] text-brand-red">
                 △ Requires {100 - totalRai} more Rai to activate checkout
               </p>
@@ -328,29 +374,30 @@ function CartItemCard({ item, onRemove }: { item: CartItem; onRemove: () => void
   return (
     <article className="flex items-center gap-3 rounded-[12px] bg-white p-3 shadow-[0_5px_18px_rgba(11,31,77,0.06)]">
       <div className="h-16 w-16 shrink-0 overflow-hidden rounded-[9px] bg-[#edf3f8]">
-        {item.image ? (
-          <img src={item.image} alt="" className="h-full w-full object-cover" />
-        ) : null}
+        {/* Placeholder - no image in API response */}
+        <div className="flex h-full w-full items-center justify-center text-[10px] text-gray-400">
+          Plot
+        </div>
       </div>
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           <span className="rounded bg-[#fff4c6] px-1.5 py-0.5 text-[8px] text-[#c19a16]">
-            {item.badge ?? "PLOT"}
+            {item.zone ?? "PLOT"}
           </span>
-          <span className="text-[8px] text-[#aab2bd]">{item.id ?? "TJ-0000"}</span>
+          <span className="text-[8px] text-[#aab2bd]">{item.plotId}</span>
         </div>
         <h3 className="truncate text-[12px] font-semibold text-navy">
-          {item.name ?? "Selected Plot"}
+          {item.city || item.region || "Selected Plot"}
         </h3>
         <p className="text-[9px] text-[#8f99a4]">◉ {item.region ?? "Thailand"}</p>
         <p className="mt-1 text-[9px] text-brand-red">
-          {item.rai ?? 0} Rai{" "}
-          <span className="text-[#8f99a4]">· ${(item.amount ?? 0).toFixed(2)} / Rai</span>
+          {item.sizeRai} Rai{" "}
+          <span className="text-[#8f99a4]">· ${item.pricePerRai.toFixed(2)} / Rai</span>
         </p>
       </div>
       <div className="text-right">
         <strong className="text-[21px] text-[#171717]">
-          ${(item.amount ?? 0).toFixed(2)}
+          ${item.subtotal.toFixed(2)}
         </strong>
         <button
           type="button"

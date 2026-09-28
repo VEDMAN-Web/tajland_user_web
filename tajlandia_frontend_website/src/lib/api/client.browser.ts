@@ -180,6 +180,23 @@ export async function browserPost<T>(
   );
 }
 
+export async function browserPut<T>(
+  path: string,
+  body?: unknown,
+): Promise<T> {
+  const url = buildUrl(path);
+
+  return withTimeout((signal) =>
+    fetch(url, {
+      method: "PUT",
+      headers: buildHeaders(),
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+      cache: "no-store",
+      signal,
+    }).then((r) => parseResponse<T>(r)),
+  );
+}
+
 export async function browserDelete<T>(
   path: string,
 ): Promise<T> {

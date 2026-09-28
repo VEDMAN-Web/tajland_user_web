@@ -6,6 +6,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { routes } from "@/lib/constants/routes";
 import { useAuth } from "@/lib/hooks/useAuth";
 import { addToCart } from "@/lib/utils/cart.utils";
+import { addItemToCart } from "@/lib/api/cart.service";
 import { DashboardNavbar } from "@/modules/dashboard/DashboardNavbar";
 import { MapboxMap, type MapboxMapHandle, type PlotMarker } from "@/components/maps/MapboxMap";
 import { useDashboardLanguage } from "@/modules/dashboard/DashboardLanguageContext";
@@ -194,35 +195,19 @@ export function AuthenticatedExploreMapPage() {
     setSelectedPlotId(plotId);
   }
 
-  function handleAddToCart(plotId: string) {
-    const plot = exploreMap.plots.find((p) => p.id === plotId);
-    if (!plot) {
-      console.error("[Cart] Plot not found:", plotId);
-      return;
-    }
-
-    const success = addToCart({
-      id: `cart-${Date.now()}`,
-      plotId: plot.id,
-      name: plot.name || `Plot ${plot.plotNumber || plotId}`,
-      region: plot.region?.name,
-      city: plot.city?.name,
-      rai: plot.sizeRai || 0,
-      pricePerRai: plot.pricePerRai || 0,
-      amount: plot.totalPrice || (plot.sizeRai || 0) * (plot.pricePerRai || 0),
-      image: plot.imageUrl,
-      coordinates: plot.coordinates,
-    });
-
-    if (success) {
-      console.log("[Cart] Added plot to cart:", plotId);
-      // Optionally show success notification
+  async function handleAddToCart(plotId: string) {
+    try {
+      // Call API to add item to cart
+      await addItemToCart(plotId);
+      
+      console.log("[Cart] Added plot to cart via API:", plotId);
       setSelectedPlotId(null);
       
-      // Refresh plot list to update cart status
-      exploreMap.refetchPlots();
-    } else {
-      console.warn("[Cart] Failed to add plot to cart");
+      // Show success message (you can add toast notification here)
+      alert("Plot added to cart successfully!");
+    } catch (error) {
+      console.error("[Cart] Failed to add plot to cart:", error);
+      alert("Failed to add plot to cart. Please try again.");
     }
   }
 
