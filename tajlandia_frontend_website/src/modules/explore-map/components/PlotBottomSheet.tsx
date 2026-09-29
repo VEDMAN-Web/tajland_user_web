@@ -29,6 +29,7 @@ export function PlotBottomSheet({ plotId, onClose, onAddToCart }: PlotBottomShee
     if (!plotId) {
       setPlot(null);
       setEligibility(null);
+      setError(null);
       return;
     }
 
@@ -58,8 +59,12 @@ export function PlotBottomSheet({ plotId, onClose, onAddToCart }: PlotBottomShee
   if (!plotId) return null;
 
   const isOpen = Boolean(plotId);
+  
+  // Safety check: if plot data is incomplete, show error
   const canAddToCart =
-    plot?.status === "AVAILABLE" && eligibility?.eligible && !plot?.isInCart;
+    plot?.status === "AVAILABLE" && 
+    eligibility?.eligible && 
+    !plot?.isInCart;
 
   return (
     <>
@@ -142,16 +147,24 @@ export function PlotBottomSheet({ plotId, onClose, onAddToCart }: PlotBottomShee
                 <DetailItem label="Size" value={`${plot.sizeRai} Rai`} />
                 <DetailItem
                   label="Price per Rai"
-                  value={`$${plot.pricePerRai?.toLocaleString()}`}
+                  value={plot.pricePerRai 
+                    ? `$${(plot.currency === "THB" ? plot.pricePerRai / 35 : plot.pricePerRai).toLocaleString(undefined, { maximumFractionDigits: 2 })}`
+                    : "N/A"
+                  }
                 />
                 <DetailItem
                   label="Total Price"
-                  value={`$${plot.totalPrice?.toLocaleString()} ${plot.currency}`}
+                  value={plot.totalPrice 
+                    ? `$${(plot.currency === "THB" ? plot.totalPrice / 35 : plot.totalPrice).toLocaleString(undefined, { maximumFractionDigits: 2 })}`
+                    : "N/A"
+                  }
                 />
-                <DetailItem
-                  label="Location"
-                  value={`${plot.location?.name}, ${plot.region?.name}`}
-                />
+                {plot.location?.name && plot.region?.name && (
+                  <DetailItem
+                    label="Location"
+                    value={`${plot.location.name}, ${plot.region.name}`}
+                  />
+                )}
               </div>
 
               {/* Zone Info */}
@@ -179,33 +192,35 @@ export function PlotBottomSheet({ plotId, onClose, onAddToCart }: PlotBottomShee
               )}
 
               {/* Actions */}
-              <div className="mt-6 flex gap-3">
-                {canAddToCart && onAddToCart ? (
-                  <button
-                    onClick={() => onAddToCart(plot.id)}
-                    className="flex-1 rounded-full bg-brand-red px-6 py-3 text-sm font-medium text-white shadow-sm hover:bg-brand-red/90"
-                  >
-                    Add to Cart
-                  </button>
-                ) : plot.isInCart ? (
-                  <button
-                    disabled
-                    className="flex-1 rounded-full bg-gray-200 px-6 py-3 text-sm font-medium text-gray-500"
-                  >
-                    Already in Cart
-                  </button>
-                ) : plot.isOwned ? (
-                  <button className="flex-1 rounded-full bg-navy px-6 py-3 text-sm font-medium text-white">
-                    View Certificate
-                  </button>
-                ) : null}
+              <div className="mt-6 flex flex-col gap-3">
+                <div className="flex gap-3">
+                  {canAddToCart && onAddToCart ? (
+                    <button
+                      onClick={() => onAddToCart(plot.id)}
+                      className="flex-1 rounded-full bg-brand-red px-6 py-3 text-sm font-medium text-white shadow-sm hover:bg-brand-red/90"
+                    >
+                      Add to Cart
+                    </button>
+                  ) : plot.isInCart ? (
+                    <button
+                      disabled
+                      className="flex-1 rounded-full bg-gray-200 px-6 py-3 text-sm font-medium text-gray-500"
+                    >
+                      Already in Cart
+                    </button>
+                  ) : plot.isOwned ? (
+                    <button className="flex-1 rounded-full bg-navy px-6 py-3 text-sm font-medium text-white">
+                      View Certificate
+                    </button>
+                  ) : null}
 
-                <button
-                  onClick={onClose}
-                  className="rounded-full border border-gray-300 px-6 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50"
-                >
-                  Close
-                </button>
+                  <button
+                    onClick={onClose}
+                    className="rounded-full border border-gray-300 px-6 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                  >
+                    Close
+                  </button>
+                </div>
               </div>
             </>
           ) : null}

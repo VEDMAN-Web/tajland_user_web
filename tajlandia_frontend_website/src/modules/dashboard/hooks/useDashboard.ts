@@ -6,7 +6,11 @@
  */
 
 import { useEffect, useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { getDashboard } from "@/lib/api/dashboard.service";
+import { isBrowserApiError } from "@/lib/api/client.browser";
+import { clearAuth } from "@/lib/api/auth.utils";
+import { routes } from "@/lib/constants/routes";
 import type {
   DashboardUser,
   DashboardCollection,
@@ -109,6 +113,7 @@ export interface UseDashboardOptions {
  */
 export function useDashboard(options: UseDashboardOptions = {}): UseDashboardState {
   const { fetchOnMount = true, onSuccess, onError } = options;
+  const router = useRouter();
 
   // State
   const [user, setUser] = useState<DashboardUser | null>(null);
@@ -157,6 +162,15 @@ export function useDashboard(options: UseDashboardOptions = {}): UseDashboardSta
       
       setError(errorMessage);
       
+      // Handle 401 - Session expired, redirect to login
+      if (isBrowserApiError(err) && err.status === 401) {
+        console.log("[useDashboard] Session expired, clearing token and redirecting to login");
+        clearAuth();
+        setTimeout(() => {
+          router.replace(routes.login);
+        }, 1500); // Show error message briefly before redirect
+      }
+      
       // Error callback
       if (onError) {
         onError(errorMessage);
@@ -167,7 +181,7 @@ export function useDashboard(options: UseDashboardOptions = {}): UseDashboardSta
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  }, [onSuccess, onError]);
+  }, [onSuccess, onError, router]);
 
   // Fetch on mount
   useEffect(() => {

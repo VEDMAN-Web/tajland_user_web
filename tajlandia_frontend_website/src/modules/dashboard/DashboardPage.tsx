@@ -369,7 +369,7 @@ function ExploreCarousel({ regions }: { regions: FeaturedRegion[] }) {
   
   // Convert API regions to card format
   const apiRegions = regions.map((region) => ({
-    image: region.imageUrl,
+    image: region.imageUrl || "/images/explore/placeholder.jpg", // Fallback for null/empty
     badge: region.badge,
     name: region.name,
     description: region.description,

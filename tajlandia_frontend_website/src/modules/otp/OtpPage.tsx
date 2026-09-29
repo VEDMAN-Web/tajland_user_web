@@ -10,6 +10,7 @@ import { otpSchema } from "./schemas/otp.schema";
 import type { SignupFormValues } from "@/modules/signup/schemas/signup.schema";
 import { verifyOtpAction, resendOtpAction, completeSignupWithOtpAction } from "./services/otp.service";
 
+
 const OTP_LENGTH = 6;
 
 function OtpPageContent() {

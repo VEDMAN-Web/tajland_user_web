@@ -1,9 +1,26 @@
+/**
+ * MapboxMap Component
+ * 
+ * Renders an interactive Mapbox GL map with Thailand focus.
+ * 
+ * Current features:
+ * - DOM-based plot markers (colored dots by status)
+ * - Search/geocoding for Thai locations
+ * - Click handlers for plot selection
+ * 
+ * Migration in progress:
+ * - Adding GeoJSON polygon layers for plot boundaries
+ * - Markers will serve as fallback for plots without geometry
+ * - Polygons render below markers (z-index via layer order)
+ */
+
 "use client";
 
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { cn } from "@/lib/utils/cn";
+import type { PlotFeatureCollection } from "@/lib/api/explore.schemas";
 
 export type PlotMarker = {
   id: string;
@@ -24,6 +41,9 @@ export type MapboxMapHandle = {
   searchAndFlyTo: (query: string) => Promise<"success" | "not-found" | "error">;
   setPlotMarkers: (plots: PlotMarker[]) => void;
   clearPlotMarkers: () => void;
+  setPlotPolygons: (data: PlotFeatureCollection) => void;
+  setStatusFilter: (status: "AVAILABLE" | "LOCKED" | "CLAIMED" | "SOLD" | "OWNED" | "all" | null) => void;
+  getMap: () => mapboxgl.Map | null;
 };
 
 type MapboxMapProps = {
@@ -36,17 +56,21 @@ type MapboxMapProps = {
     zoom?: number;
   };
   plotMarkers?: PlotMarker[];
+  plotPolygons?: PlotFeatureCollection;
   onPlotClick?: (plotId: string) => void;
+  onViewportChange?: () => void;
 };
 
 export const MapboxMap = forwardRef<MapboxMapHandle, MapboxMapProps>(function MapboxMap(
-  { className, initialCenter, initialZoom, selectedLocation, plotMarkers, onPlotClick },
+  { className, initialCenter, initialZoom, selectedLocation, plotMarkers, plotPolygons, onPlotClick, onViewportChange },
   ref,
 ) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const selectedMarkerRef = useRef<mapboxgl.Marker | null>(null);
   const plotMarkersRef = useRef<mapboxgl.Marker[]>([]);
+  const hoveredPlotIdRef = useRef<string | null>(null);
+  const selectedPlotIdRef = useRef<string | null>(null);
   const initialViewRef = useRef({
     center:
       initialCenter ?? selectedLocation?.coordinates ?? ([100.5, 15] as [number, number]),
@@ -102,6 +126,9 @@ export const MapboxMap = forwardRef<MapboxMapHandle, MapboxMapProps>(function Ma
     plotMarkersRef.current = [];
 
     // Add new markers
+    // Note: In the future, this should only render markers for plots that have
+    // coordinates but NO valid geometry (fallback for plots without polygons).
+    // For now, we render all provided markers to maintain backward compatibility.
     plots.forEach((plot) => {
       if (!plot.coordinates) return;
       const marker = new mapboxgl.Marker({
@@ -118,6 +145,300 @@ export const MapboxMap = forwardRef<MapboxMapHandle, MapboxMapProps>(function Ma
   function clearPlotMarkers() {
     plotMarkersRef.current.forEach((m) => m.remove());
     plotMarkersRef.current = [];
+  }
+
+  function setupPolygonLayers(map: mapboxgl.Map) {
+    // Only set up if style is loaded and source doesn't already exist
+    if (!map.isStyleLoaded() || map.getSource("plots")) return;
+
+    // Add empty GeoJSON source with promoteId for feature state
+    map.addSource("plots", {
+      type: "geojson",
+      data: {
+        type: "FeatureCollection",
+        features: [],
+      },
+      promoteId: "id",
+    });
+
+    // Layer 1: Fill (polygon interior)
+    map.addLayer({
+      id: "plots-fill",
+      type: "fill",
+      source: "plots",
+      minzoom: 11, // Changed from 13 to 11 for earlier visibility
+      paint: {
+        "fill-color": [
+          "match",
+          ["get", "displayStatus"],
+          "AVAILABLE", "#2CBF65",  // green
+          "LOCKED", "#E7B52C",      // yellow
+          "CLAIMED", "#D64242",     // red
+          "SOLD", "#D64242",        // red
+          "OWNED", "#0B1F4D",       // navy blue
+          "#999999",                // fallback gray
+        ],
+        "fill-opacity": [
+          "case",
+          ["boolean", ["feature-state", "hover"], false], 0.55,
+          ["==", ["get", "displayStatus"], "OWNED"], 0.5,
+          0.3,
+        ],
+      },
+    });
+
+    // Layer 2: Line (polygon border)
+    map.addLayer({
+      id: "plots-line",
+      type: "line",
+      source: "plots",
+      minzoom: 11, // Changed from 13 to 11 for earlier visibility
+      paint: {
+        "line-color": [
+          "match",
+          ["get", "displayStatus"],
+          "AVAILABLE", "#2CBF65",
+          "LOCKED", "#E7B52C",
+          "CLAIMED", "#D64242",
+          "SOLD", "#D64242",
+          "OWNED", "#0B1F4D",
+          "#999999",
+        ],
+        "line-width": [
+          "case",
+          ["boolean", ["feature-state", "selected"], false], 3,
+          2,
+        ],
+        "line-opacity": 1,
+      },
+    });
+
+    // Layer 3: Label (plot names)
+    map.addLayer({
+      id: "plots-label",
+      type: "symbol",
+      source: "plots",
+      minzoom: 14,
+      layout: {
+        "text-field": ["get", "name"],
+        "text-size": 12,
+        "text-anchor": "center",
+        "text-allow-overlap": false,
+        "text-ignore-placement": false,
+      },
+      paint: {
+        "text-color": "#151515",
+        "text-halo-color": "#ffffff",
+        "text-halo-width": 1.2,
+      },
+    });
+  }
+
+  function cleanupPolygonLayers(map: mapboxgl.Map) {
+    // Remove layers in reverse order (top to bottom)
+    const layers = ["plots-label", "plots-line", "plots-fill"];
+    layers.forEach((layerId) => {
+      if (map.getLayer(layerId)) {
+        map.removeLayer(layerId);
+      }
+    });
+
+    // Remove source
+    if (map.getSource("plots")) {
+      map.removeSource("plots");
+    }
+  }
+
+  function setPlotPolygons(data: PlotFeatureCollection) {
+    const map = mapRef.current;
+    if (!map || !map.isStyleLoaded()) {
+      console.log("[MapboxMap] ⚠️ Cannot set polygons - map not ready");
+      return;
+    }
+
+    const source = map.getSource("plots") as mapboxgl.GeoJSONSource | undefined;
+    if (source) {
+      console.log("[MapboxMap] 📍 Setting plot polygons:", {
+        featureCount: data.features.length,
+        zoom: map.getZoom().toFixed(1),
+        minZoomForVisibility: 13,
+        willBeVisible: map.getZoom() >= 13
+      });
+      source.setData(data);
+    } else {
+      console.log("[MapboxMap] ⚠️ Plots source not found");
+    }
+  }
+
+  function setupPolygonInteractions(map: mapboxgl.Map) {
+    // Only set up if layer exists
+    if (!map.getLayer("plots-fill")) return;
+
+    // Hover interaction
+    const onMouseMove = (e: mapboxgl.MapMouseEvent) => {
+      if (!map.isStyleLoaded()) return;
+      
+      const features = map.queryRenderedFeatures(e.point, {
+        layers: ["plots-fill"],
+      }) as Array<{ id?: string | number; properties?: Record<string, unknown> }>;
+
+      // Clear previous hover state
+      if (hoveredPlotIdRef.current !== null) {
+        map.setFeatureState(
+          { source: "plots", id: hoveredPlotIdRef.current },
+          { hover: false }
+        );
+      }
+
+      if (features.length > 0) {
+        const feature = features[0];
+        if (!feature) return;
+        
+        const plotId = (feature.id ?? feature.properties?.id) as string;
+        
+        if (!plotId) return;
+        
+        // Set new hover state
+        hoveredPlotIdRef.current = plotId;
+        map.setFeatureState(
+          { source: "plots", id: plotId },
+          { hover: true }
+        );
+        
+        // Change cursor
+        map.getCanvas().style.cursor = "pointer";
+      } else {
+        hoveredPlotIdRef.current = null;
+        map.getCanvas().style.cursor = "";
+      }
+    };
+
+    const onMouseLeave = () => {
+      if (!map.isStyleLoaded()) return;
+      
+      // Clear hover state when leaving the layer
+      if (hoveredPlotIdRef.current !== null) {
+        map.setFeatureState(
+          { source: "plots", id: hoveredPlotIdRef.current },
+          { hover: false }
+        );
+        hoveredPlotIdRef.current = null;
+      }
+      map.getCanvas().style.cursor = "";
+    };
+
+    // Click interaction with 5px tolerance
+    const onClick = (e: mapboxgl.MapMouseEvent) => {
+      if (!map.isStyleLoaded()) return;
+
+      // Build 5px bbox around click point for better tap targeting
+      const bbox: [mapboxgl.PointLike, mapboxgl.PointLike] = [
+        [e.point.x - 5, e.point.y - 5],
+        [e.point.x + 5, e.point.y + 5],
+      ];
+
+      const features = map.queryRenderedFeatures(bbox, {
+        layers: ["plots-fill"],
+      }) as Array<{ id?: string | number; properties?: Record<string, unknown> }>;
+
+      // Clear previous selection
+      if (selectedPlotIdRef.current !== null) {
+        map.setFeatureState(
+          { source: "plots", id: selectedPlotIdRef.current },
+          { selected: false }
+        );
+      }
+
+      if (features.length > 0) {
+        const feature = features[0];
+        if (!feature) {
+          selectedPlotIdRef.current = null;
+          return;
+        }
+        
+        const plotId = (feature.id ?? feature.properties?.id) as string;
+
+        if (!plotId) {
+          selectedPlotIdRef.current = null;
+          return;
+        }
+
+        // Set new selection
+        selectedPlotIdRef.current = plotId;
+        map.setFeatureState(
+          { source: "plots", id: plotId },
+          { selected: true }
+        );
+
+        // Call external click handler
+        if (onPlotClick) {
+          onPlotClick(plotId);
+        }
+      } else {
+        // Empty click - clear selection
+        selectedPlotIdRef.current = null;
+      }
+    };
+
+    // Attach listeners
+    map.on("mousemove", "plots-fill", onMouseMove);
+    map.on("mouseleave", "plots-fill", onMouseLeave);
+    map.on("click", onClick);
+
+    // Store handlers for cleanup (attach to map object)
+    type MapWithHandlers = mapboxgl.Map & {
+      _plotInteractionHandlers?: {
+        onMouseMove: typeof onMouseMove;
+        onMouseLeave: typeof onMouseLeave;
+        onClick: typeof onClick;
+      };
+    };
+    (map as MapWithHandlers)._plotInteractionHandlers = {
+      onMouseMove,
+      onMouseLeave,
+      onClick,
+    };
+  }
+
+  function cleanupPolygonInteractions(map: mapboxgl.Map) {
+    type MapWithHandlers = mapboxgl.Map & {
+      _plotInteractionHandlers?: {
+        onMouseMove: (e: mapboxgl.MapMouseEvent) => void;
+        onMouseLeave: () => void;
+        onClick: (e: mapboxgl.MapMouseEvent) => void;
+      };
+    };
+    const handlers = (map as MapWithHandlers)._plotInteractionHandlers;
+    if (!handlers) return;
+
+    // Remove all event listeners
+    map.off("mousemove", "plots-fill", handlers.onMouseMove);
+    map.off("mouseleave", "plots-fill", handlers.onMouseLeave);
+    map.off("click", handlers.onClick);
+
+    // Clear refs
+    hoveredPlotIdRef.current = null;
+    selectedPlotIdRef.current = null;
+
+    // Clean up stored handlers
+    delete (map as MapWithHandlers)._plotInteractionHandlers;
+  }
+
+  function setStatusFilter(status: "AVAILABLE" | "LOCKED" | "CLAIMED" | "SOLD" | "OWNED" | "all" | null) {
+    const map = mapRef.current;
+    if (!map || !map.isStyleLoaded()) return;
+
+    const layers = ["plots-fill", "plots-line", "plots-label"];
+    const filter = 
+      status === "all" || status === null
+        ? null
+        : ["==", ["get", "displayStatus"], status];
+
+    layers.forEach((layerId) => {
+      if (map.getLayer(layerId)) {
+        map.setFilter(layerId, filter);
+      }
+    });
   }
 
   function focusLocation(coordinates: [number, number], zoom: number, label: string) {
@@ -189,6 +510,10 @@ export const MapboxMap = forwardRef<MapboxMapHandle, MapboxMapProps>(function Ma
     resizeObserver.observe(containerRef.current);
     map.once("load", () => map.resize());
     map.once("load", () => {
+      setupPolygonLayers(map);
+      setupPolygonInteractions(map);
+    });
+    map.once("load", () => {
       if (!selectedLocation) return;
       focusLocation(
         selectedLocation.coordinates,
@@ -199,6 +524,12 @@ export const MapboxMap = forwardRef<MapboxMapHandle, MapboxMapProps>(function Ma
     map.once("idle", () => {
       if (!disposed) setStatus("ready");
     });
+    
+    // Viewport change listener for lazy loading
+    if (onViewportChange) {
+      map.on("moveend", onViewportChange);
+    }
+    
     map.on("error", (event) => {
       console.error("Mapbox failed to load", event.error);
       if (!map.isStyleLoaded() && !disposed) setStatus("error");
@@ -208,6 +539,13 @@ export const MapboxMap = forwardRef<MapboxMapHandle, MapboxMapProps>(function Ma
       disposed = true;
       resizeObserver.disconnect();
       clearPlotMarkers();
+      if (onViewportChange) {
+        map.off("moveend", onViewportChange);
+      }
+      if (map.isStyleLoaded()) {
+        cleanupPolygonInteractions(map);
+        cleanupPolygonLayers(map);
+      }
       map.remove();
       mapRef.current = null;
     };
@@ -220,6 +558,13 @@ export const MapboxMap = forwardRef<MapboxMapHandle, MapboxMapProps>(function Ma
     }
   }, [plotMarkers, status]);
 
+  // Update plot polygons when prop changes
+  useEffect(() => {
+    if (status === "ready" && plotPolygons) {
+      setPlotPolygons(plotPolygons);
+    }
+  }, [plotPolygons, status]);
+
   useImperativeHandle(
     ref,
     () => ({
@@ -230,6 +575,9 @@ export const MapboxMap = forwardRef<MapboxMapHandle, MapboxMapProps>(function Ma
       },
       setPlotMarkers,
       clearPlotMarkers,
+      setPlotPolygons,
+      setStatusFilter,
+      getMap: () => mapRef.current,
       searchAndFlyTo: async (query) => {
         const map = mapRef.current;
         const accessToken = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN;
@@ -255,26 +603,55 @@ export const MapboxMap = forwardRef<MapboxMapHandle, MapboxMapProps>(function Ma
           const response = await fetch(
             `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(normalizedQuery)}.json?${params}`,
           );
-          if (!response.ok) return "error";
+          if (!response.ok) {
+            console.error("[Mapbox] API error:", response.status);
+            return "error";
+          }
 
           const data = (await response.json()) as {
             features?: Array<{
               center?: [number, number];
+              place_name?: string;
               properties?: { short_code?: string };
-              context?: Array<{ short_code?: string }>;
+              context?: Array<{ short_code?: string; id?: string }>;
             }>;
           };
+          
+          console.log("[Mapbox] Geocoding response:", data);
+          
           const feature = data.features?.[0];
+          
+          if (!feature || !feature.center) {
+            console.log("[Mapbox] No results found for:", normalizedQuery);
+            return "not-found";
+          }
+          
+          // Check if result is in Thailand (more lenient check)
           const countryCode =
             feature?.properties?.short_code ??
-            feature?.context?.find((item) => item.short_code?.startsWith("th"))
-              ?.short_code;
-          const center = feature?.center;
-
-          if (!center || countryCode?.toLowerCase() !== "th") return "not-found";
+            feature?.context?.find((item) => 
+              item.short_code?.toLowerCase().startsWith("th") || 
+              item.id?.toLowerCase().includes("country.thailand")
+            )?.short_code;
+          
+          console.log("[Mapbox] Country code:", countryCode);
+          console.log("[Mapbox] Location:", feature.place_name);
+          
+          // If within Thailand bbox, we accept it even without country code match
+          // This handles cases where Mapbox doesn't return country context
+          const center = feature.center;
+          const [lng, lat] = center;
+          const isInThailandBbox = lng >= 97.3 && lng <= 105.7 && lat >= 5.6 && lat <= 20.5;
+          
+          if (!isInThailandBbox && countryCode?.toLowerCase() !== "th") {
+            console.log("[Mapbox] Location not in Thailand");
+            return "not-found";
+          }
+          
           focusLocation(center, 13, normalizedQuery);
           return "success";
-        } catch {
+        } catch (error) {
+          console.error("[Mapbox] Geocoding error:", error);
           return "error";
         }
       },

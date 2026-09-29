@@ -56,6 +56,7 @@ function validate<T>(schema: { safeParse: (v: unknown) => { success: boolean; da
   const result = schema.safeParse(raw);
   if (!result.success) {
     console.error("[explore service] schema mismatch", result.error);
+    console.error("[explore service] raw response:", JSON.stringify(raw, null, 2));
     throw new Error("Unexpected API response shape");
   }
   return result.data as T;
@@ -79,7 +80,15 @@ export async function fetchExploreMap(bbox?: string): Promise<ExploreMapData> {
     bbox ? { bbox } : undefined,
   );
   const parsed = validate(exploreMapResponseSchema, raw);
-  return parsed.data;
+  const data = parsed.data;
+
+  // Ensure plots array exists (backend may omit it)
+  const plots = data.plots || [];
+
+  return {
+    ...data,
+    plots,
+  };
 }
 
 // ─── 2. Plot list ─────────────────────────────────────────────────────────────
@@ -100,6 +109,7 @@ export async function fetchPlots(params: PlotFilterParams = {}): Promise<PlotsPa
     toQueryParams(params as Record<string, string | number | boolean | undefined>),
   );
   const parsed = validate(plotsListResponseSchema, raw);
+  
   return parsed.data;
 }
 
@@ -308,12 +318,19 @@ export async function fetchMyPlots(
   sortBy = "createdAt",
   sortOrder: "asc" | "desc" = "desc",
 ): Promise<MyPlotItem[]> {
-  const raw = await browserGet<unknown>("/explore/my-plots", {
-    page,
-    limit,
-    sortBy,
-    sortOrder,
-  });
-  const parsed = validate(myPlotsResponseSchema, raw);
-  return parsed.data;
+  try {
+    const raw = await browserGet<unknown>("/explore/my-plots", {
+      page,
+      limit,
+      sortBy,
+      sortOrder,
+    });
+    const parsed = validate(myPlotsResponseSchema, raw);
+    return parsed.data;
+  } catch (error) {
+    // Return empty array if user has no plots or endpoint fails
+    // This is non-critical for map functionality
+    console.warn("[fetchMyPlots] Failed to load user plots:", error);
+    return [];
+  }
 }

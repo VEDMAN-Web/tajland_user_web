@@ -15,7 +15,7 @@ import { z } from "zod";
 export const plotStatusSchema = z.enum(["AVAILABLE", "LOCKED", "CLAIMED", "SOLD"]);
 export type PlotStatus = z.infer<typeof plotStatusSchema>;
 
-export const zoneTierSchema = z.enum(["ICON", "PREMIUM", "STANDARD"]);
+export const zoneTierSchema = z.enum(["ICON", "PREMIUM", "STANDARD", "POPULAR"]);
 export type ZoneTier = z.infer<typeof zoneTierSchema>;
 
 // ─── Shared sub-schemas ───────────────────────────────────────────────────────
@@ -24,6 +24,64 @@ export const coordinatesSchema = z.object({
   lat: z.number(),
   lng: z.number(),
 });
+
+// ─── GeoJSON Geometry Schemas (Thailand-specific validation) ─────────────────
+
+/**
+ * Validates a GeoJSON position [lng, lat]
+ * Thailand bounds: lng 97-106, lat 5-21
+ */
+const positionSchema = z.tuple([
+  z.number().min(97).max(106), // longitude
+  z.number().min(5).max(21),   // latitude
+]).refine(
+  ([lng, lat]) => lng >= 97 && lng <= 106 && lat >= 5 && lat <= 21,
+  { message: "Coordinates must be within Thailand bounds" }
+);
+
+/**
+ * Validates a linear ring (closed polygon ring)
+ * - Must have at least 4 positions
+ * - First and last positions must be identical (closed)
+ */
+const linearRingSchema = z.array(positionSchema)
+  .min(4, "Ring must have at least 4 positions")
+  .refine(
+    (ring) => {
+      const first = ring[0];
+      const last = ring[ring.length - 1];
+      return first && last && first[0] === last[0] && first[1] === last[1];
+    },
+    { message: "Ring must be closed (first position === last position)" }
+  );
+
+/**
+ * GeoJSON Polygon geometry
+ */
+export const polygonGeometrySchema = z.object({
+  type: z.literal("Polygon"),
+  coordinates: z.array(linearRingSchema).min(1, "Polygon must have at least one ring"),
+});
+
+/**
+ * GeoJSON MultiPolygon geometry (for island chains, non-contiguous plots)
+ */
+export const multiPolygonGeometrySchema = z.object({
+  type: z.literal("MultiPolygon"),
+  coordinates: z.array(
+    z.array(linearRingSchema).min(1, "Each polygon must have at least one ring")
+  ).min(1, "MultiPolygon must have at least one polygon"),
+});
+
+/**
+ * Combined Polygon | MultiPolygon schema
+ */
+export const geometrySchema = z.union([
+  polygonGeometrySchema,
+  multiPolygonGeometrySchema,
+]).optional();
+
+export type PlotGeometry = z.infer<typeof geometrySchema>;
 
 export const regionSchema = z.object({
   id: z.string(),
@@ -63,8 +121,8 @@ export const plotSummarySchema = z.object({
   coordinates: coordinatesSchema.optional(),
   // map-only fields from /explore/map
   regionId: z.string().optional(),
-  geometry: z.unknown().optional(),
-  centroid: z.unknown().optional(),
+  geometry: geometrySchema.optional(), // Explicitly optional — plots from /explore/plots lack this
+  centroid: coordinatesSchema.optional(),
 });
 export type PlotSummary = z.infer<typeof plotSummarySchema>;
 
@@ -102,11 +160,17 @@ export const plotListItemSchema = z.object({
   name: z.string().optional(),
   status: plotStatusSchema,
   sizeRai: z.number().optional(),
+  areaUnit: z.string().optional(), // Backend sends "rai", "sqft", etc.
   pricePerRai: z.number().optional(),
   totalPrice: z.number().optional(),
   currency: z.string().optional(),
   imageUrl: z.string().optional(),
   coordinates: coordinatesSchema.optional(),
+  geometry: geometrySchema, // Backend returns geometry in /explore/plots with bbox
+  centroid: coordinatesSchema.optional(), // Backend may return centroid
+  regionId: z.string().optional(), // Backend returns regionId
+  isOwned: z.boolean().optional(), // Backend includes this in response
+  isInCart: z.boolean().optional(), // Backend includes this in response
   zone: z
     .object({
       id: z.string(),
@@ -373,4 +437,101 @@ export type PlotFilterParams = {
   bbox?: string;
   sortBy?: string;
   sortOrder?: "asc" | "desc";
+};
+
+// ─── GeoJSON Feature Types for Map Rendering ──────────────────────────────────
+
+/**
+ * Display status includes frontend-only "OWNED" state
+ * OWNED is derived from myPlots, not returned by API
+ */
+export type DisplayStatus = PlotStatus | "OWNED";
+
+/**
+ * Properties attached to each GeoJSON feature
+ */
+export interface PlotFeatureProperties {
+  id: string;
+  name: string;
+  status: PlotStatus;
+  isOwned: boolean;
+  displayStatus: DisplayStatus;
+}
+
+/**
+ * GeoJSON Feature for a single plot polygon
+ */
+export interface PlotFeature {
+  type: "Feature";
+  id: string;
+  geometry: NonNullable<PlotGeometry>;
+  properties: PlotFeatureProperties;
+}
+
+/**
+ * GeoJSON FeatureCollection for all plot polygons
+ */
+export interface PlotFeatureCollection {
+  type: "FeatureCollection";
+  features: PlotFeature[];
+}
+
+/**
+ * Converts plot summaries to GeoJSON FeatureCollection
+ * 
+ * - Skips plots without valid geometry
+ * - Sets isOwned based on myPlotIds
+ * - Computes displayStatus (OWNED if owned, otherwise status)
+ * 
+ * @param plots - Array of plot summaries from API (PlotSummary or PlotListItem)
+ * @param myPlotIds - Set of plot IDs owned by current user
+ * @returns GeoJSON FeatureCollection ready for Mapbox
+ * 
+ * @example
+ * const featureCollection = toPlotFeatureCollection(plots, new Set(["plot1", "plot2"]));
+ * map.getSource("plots").setData(featureCollection);
+ */
+export function toPlotFeatureCollection(
+  plots: (PlotSummary | PlotListItem)[],
+  myPlotIds: Set<string>
+): PlotFeatureCollection {
+  const features: PlotFeature[] = [];
+
+  for (const plot of plots) {
+    // Skip plots without valid geometry
+    if (!plot.geometry) {
+      console.log(`[toPlotFeatureCollection] Skipping plot ${plot.id} - no geometry`);
+      continue;
+    }
+
+    const isOwned = myPlotIds.has(plot.id);
+    const displayStatus: DisplayStatus = isOwned ? "OWNED" : plot.status;
+
+    features.push({
+      type: "Feature",
+      id: plot.id,
+      geometry: plot.geometry,
+      properties: {
+        id: plot.id,
+        name: plot.name || plot.plotNumber || plot.id,
+        status: plot.status,
+        isOwned,
+        displayStatus,
+      },
+    });
+  }
+
+  console.log(`[toPlotFeatureCollection] Created ${features.length} features from ${plots.length} plots`);
+  return {
+    type: "FeatureCollection",
+    features,
+  };
+}
+
+/**
+ * Empty FeatureCollection for initialization
+ */
+export const EMPTY_FEATURE_COLLECTION: PlotFeatureCollection = {
+  type: "FeatureCollection",
+  features: [],
 };

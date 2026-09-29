@@ -67,7 +67,8 @@ export const FeaturedRegionSchema = z.object({
   name: z.string().min(1, "Region name is required"),
   slug: z.string().min(1, "Region slug is required"),
   description: z.string().min(1, "Region description is required"),
-  imageUrl: z.string().url("Invalid image URL"),
+  // Backend may return empty string, relative path, or full URL
+  imageUrl: z.string().optional().nullable().transform(val => val || null),
   locationCount: z.number().int().nonnegative("Location count must be non-negative"),
   badge: z.string().min(1, "Badge is required"),
   displayOrder: z.number().int().nonnegative("Display order must be non-negative"),

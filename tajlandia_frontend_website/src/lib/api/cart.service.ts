@@ -21,6 +21,7 @@ import {
   type CheckoutResult,
   type UpdateCartItemRequest,
 } from "@/lib/api/cart.schemas";
+import { addMockPlotToCart, getMockCart, isMockPlot, removeMockPlotFromCart, clearMockCart } from "./cart.mock";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -42,8 +43,17 @@ function validate<T>(
 /**
  * GET /cart
  * Retrieve complete shopping cart for authenticated user.
+ * Returns mock cart if it contains mock plots.
  */
 export async function fetchCart(): Promise<Cart> {
+  // Check if we have mock plots in cart
+  const mockCart = getMockCart();
+  if (mockCart.items.length > 0) {
+    console.log("[Cart] Using mock cart:", mockCart);
+    return mockCart;
+  }
+  
+  // Otherwise fetch from backend
   const raw = await browserGet<unknown>("/cart");
   const parsed = validate(cartResponseSchema, raw);
   return parsed.data;
@@ -54,8 +64,17 @@ export async function fetchCart(): Promise<Cart> {
 /**
  * DELETE /cart
  * Remove all plots from cart and release all reservations.
+ * Clears mock cart if it contains mock plots.
  */
 export async function clearCart(): Promise<void> {
+  // Check if we have mock plots
+  const mockCart = getMockCart();
+  if (mockCart.items.length > 0) {
+    clearMockCart();
+    console.log("[Cart] Cleared mock cart");
+    return;
+  }
+  
   const raw = await browserDelete<unknown>("/cart");
   validate(successResponseSchema, raw);
 }
@@ -65,9 +84,34 @@ export async function clearCart(): Promise<void> {
 /**
  * POST /cart/items
  * Add a reserved plot to shopping cart.
- * Plot must be reserved first before adding to cart.
+ * For mock plots, stores locally. For real plots, calls backend.
  */
-export async function addItemToCart(plotId: string): Promise<Cart> {
+export async function addItemToCart(plotId: string, plotData?: {
+  sizeRai: number;
+  pricePerRai: number;
+  region?: string;
+  city?: string;
+  zone?: string;
+  coordinates?: { latitude: number; longitude: number };
+}): Promise<Cart> {
+  // Handle mock plots locally
+  if (isMockPlot(plotId)) {
+    if (!plotData) {
+      throw new Error("Plot data required for mock plots");
+    }
+    console.log("[Cart] Adding mock plot to local cart:", plotId);
+    return addMockPlotToCart(
+      plotId,
+      plotData.sizeRai,
+      plotData.pricePerRai,
+      plotData.region,
+      plotData.city,
+      plotData.zone,
+      plotData.coordinates
+    );
+  }
+  
+  // Real plots use backend
   const body: AddToCartRequest = { plotId };
   const raw = await browserPost<unknown>("/cart/items", body);
   const parsed = validate(cartResponseSchema, raw);
@@ -92,8 +136,16 @@ export async function updateCartItem(plotId: string, rai: number): Promise<Cart>
 /**
  * DELETE /cart/items/{plotId}
  * Remove a plot from cart and release its reservation.
+ * For mock plots, removes from local storage.
  */
 export async function removeCartItem(plotId: string): Promise<void> {
+  // Handle mock plots locally
+  if (isMockPlot(plotId)) {
+    removeMockPlotFromCart(plotId);
+    console.log("[Cart] Removed mock plot from local cart:", plotId);
+    return;
+  }
+  
   const raw = await browserDelete<unknown>(`/cart/items/${plotId}`);
   validate(successResponseSchema, raw);
 }

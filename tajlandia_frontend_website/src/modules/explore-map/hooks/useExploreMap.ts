@@ -14,6 +14,7 @@ import type {
   MapConfig,
   PlotFilterParams,
   PlotListItem,
+  PlotSummary,
 } from "@/lib/api/explore.schemas";
 import {
   fetchExploreMap,
@@ -29,8 +30,10 @@ export type UseExploreMapState = {
   // Map
   mapConfig: MapConfig | null;
   regions: ExploreMapData["regions"];
-  
-  // Plots
+
+  // mapPlots: from GET /explore/map — carries geometry for polygon rendering
+  mapPlots: PlotSummary[];
+  // plots: from GET /explore/plots — paginated list for sidebar/search cards (no geometry)
   plots: PlotListItem[];
   myPlots: PlotListItem[];
   pagination: PlotsPage["pagination"] | null;
@@ -47,6 +50,8 @@ export type UseExploreMapState = {
   
   // Actions
   setFilters: (filters: PlotFilterParams) => void;
+  updatePlots: (plots: PlotListItem[]) => void;
+  updateMapPlots: (plots: PlotSummary[]) => void;
   refetchPlots: () => void;
   refetchAll: () => void;
 };
@@ -54,7 +59,8 @@ export type UseExploreMapState = {
 export function useExploreMap(): UseExploreMapState {
   const [mapConfig, setMapConfig] = useState<MapConfig | null>(null);
   const [regions, setRegions] = useState<ExploreMapData["regions"]>([]);
-  const [plots, setPlots] = useState<PlotListItem[]>([]);
+  const [mapPlots, setMapPlots] = useState<PlotSummary[]>([]); // from /explore/map — has geometry
+  const [plots, setPlots] = useState<PlotListItem[]>([]); // from /explore/plots — no geometry
   const [myPlots, setMyPlots] = useState<PlotListItem[]>([]);
   const [pagination, setPagination] = useState<PlotsPage["pagination"] | null>(null);
   const [filterOptions, setFilterOptions] = useState<FilterOptions | null>(null);
@@ -81,6 +87,7 @@ export function useExploreMap(): UseExploreMapState {
         if (!mounted) return;
         setMapConfig(mapData.map);
         setRegions(mapData.regions);
+        setMapPlots(mapData.plots); // ← keep geometry-bearing plots from /explore/map
         setFilterOptions(filters);
         setSortOptions(sorts);
         setMyPlots(owned as PlotListItem[]);
@@ -110,37 +117,20 @@ export function useExploreMap(): UseExploreMapState {
     };
   }, []);
 
-  // Fetch plots whenever filters change
-  useEffect(() => {
-    if (!mapConfig) return;
-
-    let mounted = true;
-    setIsLoadingPlots(true);
-
-    fetchPlots(activeFilters)
-      .then((data) => {
-        if (!mounted) return;
-        setPlots(data.items);
-        setPagination(data.pagination);
-        setError(null);
-      })
-      .catch((err) => {
-        if (!mounted) return;
-        setError(
-          isBrowserApiError(err) ? err.message : "Failed to load plots",
-        );
-      })
-      .finally(() => {
-        if (mounted) setIsLoadingPlots(false);
-      });
-
-    return () => {
-      mounted = false;
-    };
-  }, [mapConfig, activeFilters]);
+  // NOTE: Plot fetching is now handled by viewport loader (useViewportLoader hook)
+  // This prevents unnecessary pagination-based API calls
+  // Plots are loaded dynamically based on the visible map area
 
   const setFilters = (filters: PlotFilterParams) => {
     setActiveFilters((prev) => ({ ...prev, ...filters, page: 1 }));
+  };
+
+  const updatePlots = (newPlots: PlotListItem[]) => {
+    setPlots(newPlots);
+  };
+
+  const updateMapPlots = (newPlots: PlotSummary[]) => {
+    setMapPlots(newPlots);
   };
 
   const refetchPlots = () => {
@@ -157,6 +147,7 @@ export function useExploreMap(): UseExploreMapState {
       .then(([mapData, filters, owned]) => {
         setMapConfig(mapData.map);
         setRegions(mapData.regions);
+        setMapPlots(mapData.plots); // ← keep geometry-bearing plots
         setFilterOptions(filters);
         setMyPlots(owned as PlotListItem[]);
         setError(null);
@@ -183,6 +174,7 @@ export function useExploreMap(): UseExploreMapState {
   return {
     mapConfig,
     regions,
+    mapPlots,
     plots,
     myPlots,
     pagination,
@@ -193,6 +185,8 @@ export function useExploreMap(): UseExploreMapState {
     isLoadingPlots,
     error,
     setFilters,
+    updatePlots,
+    updateMapPlots,
     refetchPlots,
     refetchAll,
   };
