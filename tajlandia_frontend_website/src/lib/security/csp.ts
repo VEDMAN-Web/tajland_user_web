@@ -12,7 +12,7 @@ export function buildContentSecurityPolicy({ nonce, isDev }: CspOptions): string
     "default-src 'self'",
     `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}`,
     styleSource,
-    "img-src 'self' blob: data: https://api.mapbox.com https://*.tiles.mapbox.com https://*.mapbox.com",
+    "img-src 'self' blob: data: https://api.mapbox.com https://*.tiles.mapbox.com https://*.mapbox.com https://i.postimg.cc",
     "media-src 'self'",
     "font-src 'self' data:",
     "object-src 'none'",

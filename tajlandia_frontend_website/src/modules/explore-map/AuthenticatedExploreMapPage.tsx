@@ -358,7 +358,7 @@ export function AuthenticatedExploreMapPage() {
         >
           <div className="flex items-start gap-2">
             <label
-              className="flex h-11 w-[300px] items-center gap-2 rounded-[10px] bg-white/95 px-4 text-[12px] text-[#aab2bd] shadow-[0_3px_12px_rgba(11,31,77,0.12)]"
+              className="flex h-11 w-[300px] items-center gap-2 rounded-[20px] bg-white/95 px-4 text-[12px] text-[#aab2bd] shadow-[0_3px_12px_rgba(11,31,77,0.12)]"
             >
               <span className="sr-only">Search Maps</span>
               <input
@@ -394,12 +394,12 @@ export function AuthenticatedExploreMapPage() {
                   setIsFilterOpen((open) => !open);
                   setIsSortOpen(false);
                 }}
-                className="flex h-11 items-center gap-1 rounded-[10px] bg-white/95 px-3 text-[12px] text-[#6d7784] shadow-[0_3px_12px_rgba(11,31,77,0.12)]"
+                className="flex h-11 items-center gap-1 rounded-[20px] bg-white/95 px-3 text-[12px] text-[#6d7784] shadow-[0_3px_12px_rgba(11,31,77,0.12)]"
               >
                 ☷ Filter
               </button>
               {isFilterOpen ? (
-                <div className="absolute left-0 top-12 w-36 rounded-[10px] bg-white p-2 text-[11px] shadow-[0_5px_18px_rgba(11,31,77,0.16)]">
+                <div className="absolute left-0 top-12 w-36 rounded-[16px] bg-white p-2 text-[11px] shadow-[0_5px_18px_rgba(11,31,77,0.16)]">
                   <button
                     type="button"
                     onClick={() => applyStatusFilter("all")}
@@ -427,12 +427,12 @@ export function AuthenticatedExploreMapPage() {
                 onClick={() => {
                   setIsSortOpen((open) => !open);
                 }}
-                className="flex h-11 items-center gap-1 rounded-[10px] bg-white/95 px-3 text-[12px] text-[#6d7784] shadow-[0_3px_12px_rgba(11,31,77,0.12)]"
+                className="flex h-11 items-center gap-1 rounded-[20px] bg-white/95 px-3 text-[12px] text-[#6d7784] shadow-[0_3px_12px_rgba(11,31,77,0.12)]"
               >
                 ↕ Sort
               </button>
               {isSortOpen ? (
-                <div className="absolute left-0 top-12 w-48 rounded-[10px] bg-white p-2 text-[11px] shadow-[0_5px_18px_rgba(11,31,77,0.16)]">
+                <div className="absolute left-0 top-12 w-48 rounded-[16px] bg-white p-2 text-[11px] shadow-[0_5px_18px_rgba(11,31,77,0.16)]">
                   {exploreMap.sortOptions.map((option) => (
                     <button
                       key={option.id}
