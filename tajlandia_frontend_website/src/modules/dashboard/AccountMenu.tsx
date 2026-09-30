@@ -105,14 +105,14 @@ export function AccountMenu({
 
   return (
     <>
-      <aside className="h-fit rounded-[15px] bg-white p-5 shadow-[0_5px_24px_rgba(11,31,77,0.08)]">
-        <p className="px-1 text-[10px] font-medium uppercase tracking-[0.08em] text-[#7b858f]">
+      <aside className="h-fit rounded-[16px] bg-white p-4 shadow-[0_8px_28px_rgba(11,31,77,0.06)] sm:p-5">
+        <p className="px-2 font-manrope text-[11px] font-semibold uppercase tracking-[0.14em] text-[#8b939e]">
           {t("Account Menu")}
         </p>
-        <nav className="mt-4 space-y-1">
+        <nav className="mt-3 space-y-0.5">
           {items.map((item) => {
             const isActive = item.key === active;
-            const className = `flex h-10 items-center gap-3 rounded-[9px] px-3 text-[12px] ${isActive ? "bg-navy font-medium text-white" : "text-[#81909d] hover:bg-[#f3f6f8]"}`;
+            const className = `flex h-10 items-center gap-3 rounded-[12px] px-3 font-manrope text-[13px] font-medium leading-none ${isActive ? "bg-navy text-white" : "text-[#66717c] hover:bg-[#f4f7fa]"}`;
             return (
               <Link key={item.label} href={item.href} className={className}>
                 <MenuIcon src={item.icon} active={isActive} />
@@ -125,10 +125,10 @@ export function AccountMenu({
         <button
           type="button"
           onClick={() => setIsLogoutOpen(true)}
-          className="flex h-10 w-full items-center gap-3 rounded-[9px] px-3 text-[12px] text-[#ec2633] hover:bg-[#fff3f4]"
+          className="flex h-10 w-full items-center gap-3 rounded-[12px] px-3 font-manrope text-[13px] font-medium leading-none text-[#e11d2e] hover:bg-[#fff3f4]"
         >
           <MenuIcon src="/images/dashboard/account-menu/logout.png" />
-          Logout
+          {t("Logout")}
         </button>
       </aside>
       {isLogoutOpen ? (

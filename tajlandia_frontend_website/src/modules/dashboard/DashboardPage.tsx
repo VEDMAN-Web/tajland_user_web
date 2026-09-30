@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { Button } from "@/components/ui/Button";
 import { routes } from "@/lib/constants/routes";
 import { ScrollAnimatedElement } from "@/components/animations/ScrollAnimatedElement";
 import { useAuth } from "@/lib/hooks/useAuth";
@@ -33,123 +34,119 @@ export function DashboardPage() {
   const firstName = user?.name?.trim().split(/\s+/)[0] || "User";
 
   return (
-    <div className="min-h-[100svh] bg-white text-navy">
+    <div className="min-h-[100svh] bg-[#f7f9fc] text-navy">
       <DashboardNavbar active="home" />
 
-      <main className="mx-auto w-[92%] max-w-none px-5 py-8 sm:px-8 sm:py-10">
+      <main className="mx-auto w-full max-w-[1180px] px-5 pb-14 pt-6 sm:px-8 sm:pt-8">
         <ScrollAnimatedElement animation="fade-in" duration={600}>
-          <section className="flex items-end justify-between gap-6">
+          <section className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-      <p className="font-manrope text-[14px] font-bold uppercase tracking-[0.08em] text-navy">
+              <p className="font-manrope text-[11px] font-bold uppercase tracking-[0.16em] text-navy">
                 {t("Your Tajlandia Home")}
               </p>
-              <h1 className="font-manrope mt-2 text-[36px] font-semibold leading-none tracking-[-0.04em] text-[#171717] sm:text-[48px]">
-                {t("Welcome back,")} {firstName} <span className="text-brand-red">✦</span>
+              <h1 className="font-manrope mt-2 text-[28px] font-semibold leading-[1.15] tracking-[-0.03em] text-[#1a1a1a] sm:text-[32px]">
+                {t("Welcome back,")} {firstName}
+                <span aria-hidden="true" className="ml-1.5 inline-block translate-y-[-1px] text-[0.62em] text-brand-red">◆</span>
               </h1>
-              <p className="font-manrope mt-2 text-[16px] font-normal text-[#9aa3ad]">
-                {t("Here’s everything you own in Thailand.")}
-              </p>
             </div>
-            <Link
+            <Button
               href="/dashboard/explore"
-              className="font-manrope hidden rounded-full bg-navy px-5 py-3 text-[16px] font-medium text-white sm:inline-flex"
+              className="font-manrope h-11 shrink-0 cursor-pointer self-start bg-navy px-5 text-[14px] font-medium shadow-[0_8px_24px_rgba(11,31,77,0.12)] hover:bg-navy-deep sm:self-auto"
             >
               {t("Explore Thailand →")}
-            </Link>
+            </Button>
           </section>
         </ScrollAnimatedElement>
 
-        <ScrollAnimatedElement
-          animation="fade-in-scale"
-          duration={600}
-          className="mt-7 rounded-[18px] border border-[#e6eaf0] px-4 py-5 sm:px-6"
-        >
-          <div className="flex items-center justify-between gap-4">
+        <ScrollAnimatedElement animation="fade-in-scale" duration={600} className="mt-8">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <p className="font-manrope text-[12px] font-bold uppercase tracking-[0.08em] text-navy">
+              <p className="font-manrope text-[11px] font-bold uppercase tracking-[0.16em] text-navy">
                 {t("Ownership Overview")}
               </p>
-              <h2 className="font-manrope mt-1 text-[24px] font-semibold text-[#171717]">
+              <h2 className="font-manrope mt-1.5 text-[22px] font-semibold tracking-[-0.02em] text-[#1a1a1a] sm:text-[24px]">
                 {t("Your Collection")}
               </h2>
             </div>
-            <p className="font-manrope hidden text-[14px] font-bold text-navy sm:block">
-              ● {t("All holdings verified across Thailand")}
+            <p className="font-manrope flex items-center gap-2 text-[13px] font-medium text-navy">
+              <span className="flex h-4 w-4 items-center justify-center rounded-full bg-navy text-[9px] text-white">✓</span>
+              {t("All holdings verified across Thailand")}
             </p>
           </div>
-          <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
+          <div className="mt-4 grid grid-cols-1 gap-3 min-[520px]:grid-cols-2 xl:grid-cols-4">
             <Stat
-              icon="/images/dashboard/stat-land.png"
+              icon="/images/dashboard/cards/ic_land.svg"
               background="/images/dashboard/stat-land-bg.png"
               value="8000"
-              label={t("Total Land (Sq Rai)")}
-              tone="blue"
+              suffix="sq ft"
+              label={t("Total Land (5 Rai)")}
             />
             <Stat
-              icon="/images/dashboard/stat-plots.png"
+              icon="/images/dashboard/cards/ic_plot.svg"
               background="/images/dashboard/stat-plots-bg.png"
               value="12"
               label={t("Plots Claimed")}
-              tone="green"
             />
             <Stat
-              icon="/images/dashboard/stat-regions.png"
+              icon="/images/dashboard/cards/ic_region.svg"
               background="/images/dashboard/regions-bg.png"
               value="05"
               label={t("Regions")}
-              tone="purple"
             />
             <Stat
-              icon="/images/dashboard/stat-spent.png"
+              icon="/images/dashboard/cards/ic_total-spent.svg"
               background="/images/dashboard/stat-spent-bg.png"
               value="48,500"
+              prefix="$"
               label={t("Total Spent")}
-              tone="gold"
             />
           </div>
         </ScrollAnimatedElement>
 
         <section className="mt-5">
-          <div className="relative min-h-[228px] overflow-hidden rounded-[22px] border border-brand-red bg-[#fff8f8] px-5 py-6 sm:px-8 lg:px-[86px] lg:py-0">
+          <div className="relative overflow-hidden rounded-[22px] border border-[#f3c3c3] bg-[#fff8f8] px-5 py-6 sm:px-8 sm:py-7 lg:px-10">
             <Image
               src="/images/dashboard/gift-ribbon.png"
               alt=""
-              width={150}
-              height={110}
-              className="pointer-events-none absolute -left-3 -top-2 h-[120px] w-[150px] object-contain object-left-top"
+              width={168}
+              height={120}
+              className="pointer-events-none absolute -left-1 -top-1 h-[88px] w-[130px] object-contain object-left-top sm:h-[104px] sm:w-[150px]"
             />
-            <div className="relative z-10 lg:absolute lg:left-[86px] lg:top-[91px]">
-              <p className="font-manrope text-[12px] font-bold uppercase tracking-[0.08em] text-brand-red">
-                {t("Give a Little Piece")}
-              </p>
-              <h2 className="font-manrope mt-2 max-w-[520px] text-[30px] font-semibold leading-tight text-[#171717]">
-                {t("Give a Little Piece of Thailand")}
-              </h2>
-              <p className="font-manrope mt-2 max-w-[430px] text-[14px] font-normal leading-5 text-[#9aa3ad]">
-                {t("Share a place worth remembering. Gift a Tajlandia plot to someone special and let them build their own collection.")}
-              </p>
-            </div>
-            <div className="mt-5 flex flex-col gap-5 lg:absolute lg:right-[37px] lg:top-[93px] lg:mt-0 lg:w-[282px] lg:gap-6">
-              <button
-                type="button"
-                className="font-manrope self-start rounded-full bg-brand-red px-7 py-2.5 text-[16px] font-medium text-white lg:self-end"
-              >
-                {t("Gift a plot")} →
-              </button>
-              <div className="font-manrope border-t border-brand-red/15 pt-3 text-[11px] text-[#6f7780] lg:pt-4">
-                ✓ {t("Instant Digital Certificate")} &nbsp;&nbsp; ✓ {t("Official Cadastre Deed")}
+            <div className="relative z-10 flex flex-col gap-5 pl-2 pt-8 sm:pl-6 sm:pt-6 lg:flex-row lg:items-center lg:justify-between lg:pl-16 lg:pt-4">
+              <div className="max-w-[560px]">
+                <p className="font-manrope text-[11px] font-bold uppercase tracking-[0.16em] text-brand-red">
+                  {t("Give a Little Piece")}
+                </p>
+                <h2 className="font-manrope mt-2 text-[22px] font-semibold leading-tight tracking-[-0.02em] text-[#1a1a1a] sm:text-[26px]">
+                  {t("Give a Little Piece of Thailand")}
+                </h2>
+                <p className="font-manrope mt-2 text-[13px] font-normal leading-5 text-[#8b939e] sm:text-[14px] sm:leading-6">
+                  <span className="block">{t("Share a place worth remembering. Gift a Tajlandia plot to someone")}</span>
+                  <span className="block">{t("special and let them build their own collection.")}</span>
+                </p>
+              </div>
+              <div className="flex flex-col items-start gap-4 lg:items-end lg:self-stretch lg:justify-between lg:py-1">
+                <Button
+                  href="/dashboard/explore"
+                  className="font-manrope h-11 cursor-pointer bg-brand-red px-5 text-[14px] font-medium shadow-[0_8px_24px_rgba(11,31,77,0.12)] hover:bg-[#a81818]"
+                >
+                  {t("Gift a plot")} →
+                </Button>
+                <div className="font-manrope flex w-full flex-col gap-1.5 border-t-[0.8px] border-solid border-[#E8344533] pt-3 text-[12px] text-[#11111199] sm:flex-row sm:justify-end sm:gap-4">
+                  <span>✓ {t("Instant Digital Certificate")}</span>
+                  <span>✓ {t("Official Cadastre Deed")}</span>
+                </div>
               </div>
             </div>
           </div>
-          <div className="mt-6 flex items-end justify-between">
-            <div>
-              <p className="text-[8px] font-semibold uppercase tracking-[0.08em] text-brand-red">
-                {t("Your Land Archive")}
-              </p>
-              <h2 className="mt-1 text-[16px] font-semibold text-navy">
-                {t("Explore Thailand")}
-              </h2>
-            </div>
+
+          <div className="mt-8">
+            <p className="font-manrope text-[11px] font-bold uppercase tracking-[0.16em] text-brand-red">
+              {t("Your Land Archive")}
+            </p>
+            <h2 className="font-manrope mt-1.5 text-[22px] font-semibold tracking-[-0.02em] text-navy sm:text-[24px]">
+              {t("Explore Thailand")}
+            </h2>
           </div>
           <ExploreCarousel />
         </section>
@@ -163,50 +160,35 @@ function Stat({
   background,
   value,
   label,
-  tone,
-  iconSize = 32,
+  prefix,
+  suffix,
 }: {
   icon: string;
   background: string;
   value: string;
   label: string;
-  tone: "blue" | "green" | "purple" | "gold";
-  iconSize?: number;
+  prefix?: string;
+  suffix?: string;
 }) {
-  const tones = {
-    blue: "bg-[#f1f6ff] text-[#1156b5]",
-    green: "bg-[#effaf3] text-[#198b55]",
-    purple: "bg-[#fbf2ff] text-[#8b21b7]",
-    gold: "bg-[#fff9e9] text-[#bd8a00]",
-  };
   return (
-    <div
-      className={`relative min-h-[70px] overflow-hidden rounded-[10px] p-3 ${tones[tone]}`}
-    >
+    <article className="relative h-[132px] overflow-hidden rounded-[16px] border border-[#e7edf3] bg-white px-4 py-4 shadow-[0_8px_24px_rgba(11,31,77,0.05)]">
       <Image
         src={background}
         alt=""
-        fill
-        sizes="180px"
-        className="object-contain object-right-bottom opacity-70"
+        width={150}
+        height={120}
+        className="pointer-events-none absolute bottom-1 right-1 h-[72%] w-auto object-contain object-right-bottom opacity-80"
       />
       <div className="relative z-10">
-        <Image
-          src={icon}
-          alt=""
-          width={iconSize}
-          height={iconSize}
-          className="object-contain"
-        />
-        <strong className="font-manrope mt-2 block text-[20px] font-black">
+        <Image src={icon} alt="" width={38} height={38} className="h-[38px] w-[38px]" />
+        <p className="font-manrope mt-3 text-[26px] font-bold leading-none tracking-[-0.03em] text-[#1a1a1a]">
+          {prefix ? <span className="text-[0.72em]">{prefix}</span> : null}
           {value}
-          {tone === "blue" ? " sq ft" : ""}
-        </strong>
-        <span className="font-manrope block text-[14px] font-semibold text-[#697586]">
-          {label}
-        </span>
+          {suffix ? <span className="ml-1 text-[13px] font-semibold tracking-normal">{suffix}</span> : null}
+        </p>
+        <p className="font-manrope mt-2 text-[13px] font-medium text-[#8b939e]">{label}</p>
       </div>
-    </div>
+    </article>
   );
 }
 
@@ -225,24 +207,26 @@ function ExploreCard({
 }) {
   const { t } = useDashboardLanguage();
   return (
-    <article className="min-w-0 snap-start flex-[0_0_86%] rounded-[18px] bg-white p-3 shadow-[0_5px_18px_rgba(11,31,77,0.08)] sm:flex-[0_0_48%] lg:flex-[0_0_32%]">
-      <Image
-        src={image}
-        alt={name}
-        width={320}
-        height={190}
-        className="aspect-[1.7] w-full rounded-[10px] object-cover"
-      />
-      <div className="px-1 pt-2">
-        <span className="rounded bg-[#fff4c6] px-1.5 py-0.5 text-[7px] text-[#c19a16]">
+    <article className="min-w-0 snap-start flex-[0_0_86%] rounded-[18px] border border-[#eef1f4] bg-white p-3 shadow-[0_10px_28px_rgba(11,31,77,0.06)] sm:flex-[0_0_48%] lg:flex-[0_0_calc((100%-2rem)/3)]">
+      <div className="relative">
+        <Image
+          src={image}
+          alt={name}
+          width={360}
+          height={220}
+          className="aspect-[1.55] w-full rounded-[14px] object-cover"
+        />
+        <span className={`absolute left-3 top-3 rounded-full px-2 py-0.5 font-manrope text-[10px] font-semibold uppercase tracking-[0.06em] ${badge === "POPULAR" ? "bg-[#f6d56a] text-[#6b5310]" : "bg-white/92 text-[#5c6570]"}`}>
           {t(badge)}
         </span>
-        <h3 className="mt-2 text-[16px] font-semibold text-navy">{name}</h3>
-        <p className="mt-1 text-[10px] text-[#9aa3ad]">{t(description)}</p>
       </div>
-      <div className="mt-3 flex items-center justify-between border-t border-[#edf0f2] px-1 pt-2 text-[8px] text-navy">
-        <span>{t(locations)}</span>
-        <Link href="/dashboard/explore" className="font-semibold">
+      <div className="px-1.5 pt-3">
+        <h3 className="font-manrope text-[18px] font-semibold leading-6 text-navy">{name}</h3>
+        <p className="font-manrope mt-1 text-[13px] leading-5 text-[#8b939e]">{t(description)}</p>
+      </div>
+      <div className="font-manrope mt-3 flex items-center justify-between border-t border-[#eef1f4] px-1.5 pt-3 text-[12px]">
+        <span className="text-[#8b939e]">{t(locations)}</span>
+        <Link href="/dashboard/explore" className="font-semibold text-navy hover:underline">
           {t("Discover Plots →")}
         </Link>
       </div>
@@ -256,7 +240,7 @@ function ExploreCarousel() {
   const destinations = [
     {
       image: "/images/explore/phuket.jpg",
-      badge: "ICON",
+      badge: "POPULAR",
       name: "Phuket",
       description: "Island life, reimagined.",
       locations: "24 locations",
@@ -325,7 +309,7 @@ function ExploreCarousel() {
       <div
         ref={carouselRef}
         onWheel={moveCarousel}
-        className="mt-3 flex snap-x snap-mandatory gap-3 overflow-x-auto overscroll-contain pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        className="mt-4 flex snap-x snap-mandatory gap-4 overflow-x-auto overscroll-contain pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
         {destinations.map((destination) => (
           <ExploreCard key={destination.name} {...destination} />
@@ -336,10 +320,10 @@ function ExploreCarousel() {
         aria-label="Explore carousel position"
       >
         <span
-          className={`h-1 rounded-full transition-all ${activePage === 0 ? "w-4 bg-navy" : "w-1 bg-[#c7cbd1]"}`}
+          className={`rounded-full transition-all ${activePage === 0 ? "h-1.5 w-6 bg-navy" : "h-1.5 w-1.5 bg-[#c7cbd1]"}`}
         />
         <span
-          className={`h-1 rounded-full transition-all ${activePage === 1 ? "w-4 bg-navy" : "w-1 bg-[#c7cbd1]"}`}
+          className={`rounded-full transition-all ${activePage === 1 ? "h-1.5 w-6 bg-navy" : "h-1.5 w-1.5 bg-[#c7cbd1]"}`}
         />
       </div>
     </>

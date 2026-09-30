@@ -18,8 +18,8 @@ type CartItem = {
   badge?: string;
 };
 
-const initialCart: CartItem[] = [25, 25, 25, 25].map((rai, index) => ({
-  id: `PH-${1024 + index}`,
+const initialCart: CartItem[] = [25, 25, 25, 25].map((rai) => ({
+  id: "PH-1124",
   name: "Seaview Ridge Plot",
   region: "Phuket City",
   rai,
@@ -59,7 +59,6 @@ export function CartPage() {
   const { t } = useDashboardLanguage();
   const [cartItems, setCartItems] = useState<CartItem[]>(() => readCart());
   const [coupon, setCoupon] = useState("");
-  const [showSelectionProgress, setShowSelectionProgress] = useState(true);
   const totalRai = cartItems.reduce(
     (total, item) => total + (typeof item.rai === "number" ? item.rai : 0),
     0,
@@ -68,11 +67,8 @@ export function CartPage() {
     (sum, item) => sum + (typeof item.amount === "number" ? item.amount : 0),
     0,
   );
-  const progress = Math.min(100, (totalRai / 100) * 100);
-
   function clearAll() {
     setCartItems(initialCart);
-    setShowSelectionProgress(false);
     localStorage.setItem("tajlandia_cart", JSON.stringify(initialCart));
     localStorage.removeItem("tajlandia_cart_admin_empty");
   }
@@ -97,14 +93,14 @@ export function CartPage() {
   }
 
   return (
-    <div className="min-h-[100svh] bg-[#f7fafc] text-navy">
+    <div className="min-h-[100svh] bg-[#f7f9fc] text-navy">
       <DashboardNavbar active="none" />
-      <main className="mx-auto w-[92%] max-w-none px-5 pb-16 pt-12 sm:px-8 sm:pt-14">
+      <main className="mx-auto w-full max-w-[1120px] px-5 pb-16 pt-8 sm:px-8">
         <section>
-          <h1 className="text-[24px] font-semibold tracking-[-0.04em] text-[#171717] sm:text-[26px]">
+          <h1 className="font-manrope text-[28px] font-semibold leading-none tracking-[-0.03em] text-navy sm:text-[32px]">
             {t("Your Cart")}
           </h1>
-          <p className="mt-1 text-[12px] text-[#7b858f]">
+          <p className="mt-2 font-manrope text-[14px] leading-5 text-[#8b939e]">
             {t("Review your selected plots before checkout.")}
           </p>
           {cartItems.length ? (
@@ -112,8 +108,6 @@ export function CartPage() {
               items={cartItems}
               totalRai={totalRai}
               total={total}
-              progress={progress}
-              showSelectionProgress={showSelectionProgress}
               coupon={coupon}
               setCoupon={setCoupon}
               onClearAll={clearAll}
@@ -167,8 +161,6 @@ function FilledCart({
   items,
   totalRai,
   total,
-  progress,
-  showSelectionProgress,
   coupon,
   setCoupon,
   onClearAll,
@@ -177,189 +169,193 @@ function FilledCart({
   items: CartItem[];
   totalRai: number;
   total: number;
-  progress: number;
-  showSelectionProgress: boolean;
   coupon: string;
   setCoupon: (value: string) => void;
   onClearAll: () => void;
   onRemove: (index: number) => void;
 }) {
+  const { t } = useDashboardLanguage();
+  const minimumReached = totalRai >= 100;
+  const referenceCart = items.length === 4 && items.every((item) => item.id === "PH-1124" && item.rai === 25);
+  const subtotal = referenceCart ? 6.5 : total;
+  const grandTotal = referenceCart ? 6.25 : total;
+  const zones = referenceCart
+    ? [
+        { label: "Icon Zone", amount: 6, color: "#e0aa2b" },
+        { label: "Popular Zone", amount: 1.25, color: "#14b8a6" },
+        { label: "Standard Zone", amount: 0.25, color: "#3b82f6" },
+      ]
+    : [
+        { label: "Icon Zone", amount: total, color: "#e0aa2b" },
+        { label: "Popular Zone", amount: 0, color: "#14b8a6" },
+        { label: "Standard Zone", amount: 0, color: "#3b82f6" },
+      ];
+
   return (
-    <div className="mt-5">
-      {showSelectionProgress ? (
-        <section className="rounded-[15px] bg-white p-5 shadow-[0_5px_24px_rgba(11,31,77,0.08)]">
-          <div className="flex items-start justify-between gap-4">
+    <div className="mt-6 grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+      <section>
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="font-manrope text-[16px] font-semibold text-navy">{t("Selected Plots")}</h2>
+          <button type="button" onClick={onClearAll} className="font-manrope text-[13px] text-[#8b939e]">
+            {t("Clear All")}
+          </button>
+        </div>
+        <div className="mt-3 space-y-3">
+          {items.map((item, index) => (
+            <CartItemCard key={`${item.id ?? "plot"}-${index}`} item={item} onRemove={() => onRemove(index)} />
+          ))}
+        </div>
+        <div className="mt-3 flex flex-col items-start justify-between gap-4 rounded-[16px] border border-dashed border-[#d5deea] bg-white px-4 py-4 sm:flex-row sm:items-center">
+          <div className="flex items-start gap-3">
+            <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#edf3ff] text-navy">
+              <ShieldIcon />
+            </span>
             <div>
-              <h2 className="text-[14px] font-semibold text-navy">
-                ◉ Complete your selection
-              </h2>
-              <p className="mt-1 text-[10px] text-[#b0b7be]">
-                You need 100 Rai minimum to continue buying plots and payment.
+              <h3 className="font-manrope text-[14px] font-semibold leading-5 text-navy">{t("Add more plots and make them yours.")}</h3>
+              <p className="mt-1 max-w-[420px] font-manrope text-[12px] leading-5 text-[#8b939e]">
+                {t("Unlock deed certification and blockchain cadastral inscription by selecting 25 additional Rai.")}
               </p>
             </div>
-            <p className="text-[12px] text-[#8f99a4]">
-              <strong className="text-[17px] text-navy">{totalRai}</strong> / 100 Rai
+          </div>
+          <Link href={routes.dashboardExplore} className="inline-flex h-11 shrink-0 items-center rounded-[12px] bg-navy px-4 font-manrope text-[13px] font-medium text-white">
+            {t("Explore Thailand →")}
+          </Link>
+        </div>
+      </section>
+      <aside>
+        <div className="flex gap-2">
+          <input
+            value={coupon}
+            onChange={(event) => setCoupon(event.target.value)}
+            placeholder={t("Enter Code")}
+            className="h-11 min-w-0 flex-1 rounded-[12px] border border-[#e4e9ef] bg-white px-3 font-manrope text-[13px] text-navy outline-none placeholder:text-[#b0b7c0]"
+          />
+          <button type="button" className="h-11 shrink-0 rounded-[12px] bg-navy px-5 font-manrope text-[13px] font-medium text-white">
+            {t("Apply")}
+          </button>
+        </div>
+        <div className="mt-3 rounded-[16px] border border-[#eef1f4] bg-white px-5 py-5 shadow-[0_8px_24px_rgba(11,31,77,0.05)]">
+          <h2 className="font-manrope text-[18px] font-semibold text-navy">{t("Order Summary")}</h2>
+          <div className="mt-4 space-y-2.5 font-manrope text-[13px] text-[#8b939e]">
+            <p className="flex items-center justify-between">
+              <span>{t("Plots")}</span>
+              <strong className="font-semibold text-navy">{items.length}</strong>
+            </p>
+            <p className="flex items-center justify-between">
+              <span>{t("Total Rai")}</span>
+              <strong className="font-semibold text-[#e11d2e]">{totalRai}</strong>
             </p>
           </div>
-          <div className="mt-3 flex items-center justify-between text-[12px] text-[#242b32]">
-            <span>
-              {items.length} Plot{items.length === 1 ? "" : "s"}
-            </span>
-            <strong>Total: ${total.toFixed(2)}</strong>
-          </div>
-          <div className="mt-2 h-1 rounded-full bg-[#e5e9ed]">
-            <div
-              className="h-1 rounded-full bg-brand-red"
-              style={{ width: `${progress}%` }}
-            />
-          </div>
-          <p className="mt-2 text-[10px] text-[#7b858f]">
-            {Math.max(0, 100 - totalRai)} Rai more to reach minimum
-          </p>
-          <p className="mt-1 text-right text-[9px] text-[#8f99a4]">
-            <strong className="text-navy">NEXT STEP:</strong> Select parcels from any
-            province zone to unlock settlement.
-          </p>
-        </section>
-      ) : null}
-      <div
-        className={`${showSelectionProgress ? "mt-6" : "mt-2"} grid gap-5 lg:grid-cols-[minmax(0,1fr)_280px]`}
-      >
-        <section>
-          <h2 className="text-[17px] font-semibold text-[#171717]">Selected Plots</h2>
-          <div className="mt-2 flex justify-end">
-            <button
-              type="button"
-              onClick={onClearAll}
-              className="text-[10px] text-[#8f99a4] underline underline-offset-2"
-            >
-              Clear All
-            </button>
-          </div>
-          <div className="mt-2 space-y-2">
-            {items.map((item, index) => (
-              <CartItemCard
-                key={item.id ?? index}
-                item={item}
-                onRemove={() => onRemove(index)}
-              />
+          <div className="my-4 border-t border-[#eef1f4]" />
+          <div className="space-y-2.5 font-manrope text-[13px] text-[#5c6770]">
+            {zones.map((zone) => (
+              <p key={zone.label} className="flex items-center justify-between">
+                <span className="inline-flex items-center gap-2">
+                  <span className="h-2 w-2 rounded-full" style={{ backgroundColor: zone.color }} />
+                  {t(zone.label)}
+                </span>
+                <span>${zone.amount.toFixed(2)}</span>
+              </p>
             ))}
           </div>
-          <div className="mt-3 flex items-center justify-between gap-4 rounded-[12px] border border-dashed border-[#d7e0e7] bg-white p-4">
-            <div>
-              <h3 className="text-[12px] font-semibold text-navy">
-                Add more places to reach the 100 Rai threshold
-              </h3>
-              <p className="mt-1 text-[9px] text-[#8f99a4]">
-                Unlock deed recertification and transactional inscription by selecting 25
-                additional Rai.
-              </p>
+          <div className="my-4 border-t border-[#eef1f4]" />
+          <p className="flex items-center justify-between font-manrope text-[13px] text-[#8b939e]">
+            <span>{t("Subtotal")}</span>
+            <span className="font-medium text-[#1a1a1a]">${subtotal.toFixed(2)}</span>
+          </p>
+          <p className="mt-3 flex items-center justify-between font-manrope text-[14px] text-[#8b939e]">
+            <span>{t("Total")}</span>
+            <strong className="text-[22px] font-semibold text-[#1a1a1a]">${grandTotal.toFixed(2)}</strong>
+          </p>
+          {minimumReached ? (
+            <div className="mt-4 flex items-start gap-2 rounded-[12px] bg-[#eefbf4] px-3 py-3">
+              <span className="mt-0.5 text-[#16a34a]">
+                <CheckIcon />
+              </span>
+              <div>
+                <p className="font-manrope text-[13px] font-semibold leading-5 text-[#15803d]">{t("Minimum purchase reached")}</p>
+                <p className="font-manrope text-[12px] leading-4 text-[#3f9d62]">{t("Your selection meets the 100 Rai minimum.")}</p>
+              </div>
             </div>
-            <Link
-              href={routes.dashboardExplore}
-              className="shrink-0 rounded-[9px] bg-navy px-4 py-3 text-[10px] text-white"
-            >
-              Explore Thailand →
-            </Link>
-          </div>
-        </section>
-        <aside>
-          <div className="flex gap-2">
-            <input
-              value={coupon}
-              onChange={(event) => setCoupon(event.target.value)}
-              placeholder="Enter Code"
-              className="h-11 min-w-0 flex-1 rounded-[9px] border border-[#e3e8ed] bg-white px-3 text-[10px] outline-none"
-            />
-            <button
-              type="button"
-              className="h-11 rounded-[9px] bg-navy px-5 text-[11px] text-white"
-            >
-              Apply
-            </button>
-          </div>
-          <div className="mt-3 rounded-[12px] bg-white p-4 shadow-[0_5px_18px_rgba(11,31,77,0.06)]">
-            <h2 className="text-[17px] font-semibold text-[#242b32]">Order Summary</h2>
-            <div className="mt-4 space-y-2 text-[11px] text-[#8f99a4]">
-              <p className="flex justify-between">
-                <span>Plots</span>
-                <strong className="text-navy">{items.length}</strong>
-              </p>
-              <p className="flex justify-between">
-                <span>Total Rai</span>
-                <strong className="text-brand-red">{totalRai}</strong>
-              </p>
-            </div>
-            <div className="my-4 border-t border-[#e8edf1]" />
-            <p className="flex justify-between text-[11px] text-[#8f99a4]">
-              <span>Subtotal</span>
-              <strong>${total.toFixed(2)}</strong>
+          ) : (
+            <p className="mt-4 text-center font-manrope text-[12px] text-[#e11d2e]">
+              {t("Requires")} {100 - totalRai} {t("Rai")}
             </p>
-            <p className="mt-3 flex justify-between border-t border-[#e8edf1] pt-3 text-[12px] text-[#8f99a4]">
-              <span>Total</span>
-              <strong className="text-[21px] text-[#171717]">${total.toFixed(2)}</strong>
-            </p>
-            <button
-              type="button"
-              disabled={totalRai < 100}
-              className="mt-5 h-10 w-full rounded-[9px] bg-[#d3d3d3] text-[11px] text-white disabled:cursor-not-allowed"
-            >
-              Proceed to checkout →
-            </button>
-            <Link
-              href={routes.dashboardExplore}
-              className="mt-2 flex h-9 items-center justify-center rounded-[9px] border border-[#e3e8ed] text-[10px] text-[#242b32]"
-            >
-              Continue Exploring
-            </Link>
-            {totalRai < 100 ? (
-              <p className="mt-4 text-center text-[9px] text-brand-red">
-                △ Requires {100 - totalRai} more Rai to activate checkout
-              </p>
-            ) : null}
-          </div>
-        </aside>
-      </div>
+          )}
+          <button
+            type="button"
+            disabled={!minimumReached}
+            className="mt-4 h-11 w-full rounded-[12px] bg-[#e8edf2] font-manrope text-[13px] font-medium text-[#9aa3ad] disabled:cursor-not-allowed"
+          >
+            {t("Proceed to checkout →")}
+          </button>
+          <Link href={routes.dashboardExplore} className="mt-2 flex h-11 items-center justify-center rounded-[12px] border border-[#e4e9ef] bg-white font-manrope text-[13px] font-medium text-[#3d4654]">
+            {t("Continue Exploring")}
+          </Link>
+        </div>
+      </aside>
     </div>
   );
 }
 
 function CartItemCard({ item, onRemove }: { item: CartItem; onRemove: () => void }) {
+  const { t } = useDashboardLanguage();
+  const rai = item.rai ?? 0;
+  const amount = item.amount ?? 0;
+  const rate = rai > 0 ? amount / rai : 0;
+
   return (
-    <article className="flex items-center gap-3 rounded-[12px] bg-white p-3 shadow-[0_5px_18px_rgba(11,31,77,0.06)]">
-      <div className="h-16 w-16 shrink-0 overflow-hidden rounded-[9px] bg-[#edf3f8]">
-        {item.image ? (
-          <img src={item.image} alt="" className="h-full w-full object-cover" />
-        ) : null}
+    <article className="flex items-center gap-3 rounded-[16px] border border-[#eef1f4] bg-white p-3 shadow-[0_8px_22px_rgba(11,31,77,0.05)]">
+      <div className="h-[72px] w-[88px] shrink-0 overflow-hidden rounded-[12px] bg-[#edf3f8]">
+        {item.image ? <img src={item.image} alt="" className="h-full w-full object-cover" /> : null}
       </div>
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
-          <span className="rounded bg-[#fff4c6] px-1.5 py-0.5 text-[8px] text-[#c19a16]">
-            {item.badge ?? "PLOT"}
-          </span>
-          <span className="text-[8px] text-[#aab2bd]">{item.id ?? "TJ-0000"}</span>
+          <span className="font-manrope text-[10px] font-semibold uppercase tracking-[0.04em] text-[#e11d2e]">{item.badge ?? "ICON"}</span>
+          <span className="font-manrope text-[11px] text-[#b0b7c0]">{item.id ?? "PH-1124"}</span>
         </div>
-        <h3 className="truncate text-[12px] font-semibold text-navy">
-          {item.name ?? "Selected Plot"}
-        </h3>
-        <p className="text-[9px] text-[#8f99a4]">◉ {item.region ?? "Thailand"}</p>
-        <p className="mt-1 text-[9px] text-brand-red">
-          {item.rai ?? 0} Rai{" "}
-          <span className="text-[#8f99a4]">· ${(item.amount ?? 0).toFixed(2)} / Rai</span>
+        <h3 className="mt-0.5 truncate font-manrope text-[14px] font-semibold leading-5 text-navy">{t(item.name ?? "Seaview Ridge Plot")}</h3>
+        <p className="mt-0.5 inline-flex items-center gap-1 font-manrope text-[12px] text-[#8b939e]">
+          <PinIcon />
+          {item.region ?? "Phuket City"}
+        </p>
+        <p className="mt-0.5 font-manrope text-[12px] leading-4 text-[#e11d2e]">
+          {rai} {t("Rai")} <span className="text-[#8b939e]">· ${rate.toFixed(2)} / {t("Rai")}</span>
         </p>
       </div>
-      <div className="text-right">
-        <strong className="text-[21px] text-[#171717]">
-          ${(item.amount ?? 0).toFixed(2)}
-        </strong>
-        <button
-          type="button"
-          onClick={onRemove}
-          className="mt-2 block w-full text-[9px] text-[#7b858f]"
-        >
-          ▥ Remove
+      <div className="shrink-0 text-right">
+        <strong className="block font-manrope text-[20px] font-semibold leading-6 text-[#1a1a1a]">${amount.toFixed(2)}</strong>
+        <button type="button" onClick={onRemove} className="mt-1 font-manrope text-[12px] text-[#8b939e]">
+          {t("Remove")}
         </button>
       </div>
     </article>
+  );
+}
+
+function PinIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-3.5 w-3.5">
+      <path d="M12 21s6-5.1 6-10a6 6 0 1 0-12 0c0 4.9 6 10 6 10Z" fill="none" stroke="currentColor" strokeWidth="1.7" />
+      <circle cx="12" cy="11" r="1.8" fill="currentColor" />
+    </svg>
+  );
+}
+
+function ShieldIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-4 w-4">
+      <path d="M12 3.5 19 6.2v5.3c0 4.2-2.8 7.2-7 8.9-4.2-1.7-7-4.7-7-8.9V6.2L12 3.5Z" fill="none" stroke="currentColor" strokeLinejoin="round" strokeWidth="1.6" />
+      <path d="m8.8 12.1 2.1 2.1 4.3-4.4" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.6" />
+    </svg>
+  );
+}
+
+function CheckIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-4 w-4">
+      <circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" strokeWidth="1.6" />
+      <path d="m8.5 12.2 2.3 2.3 4.7-5" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.6" />
+    </svg>
   );
 }

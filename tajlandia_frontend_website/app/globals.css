@@ -342,11 +342,13 @@ nextjs-portal {
   }
 }
 
-.group:hover .button-animate {
+.group:hover .button-animate,
+.group:active .button-animate {
   animation: buttonPulse 1.5s ease-in-out infinite;
 }
 
-.group:hover .button-shimmer {
+.group:hover .button-shimmer,
+.group:active .button-shimmer {
   animation: horizontalShimmer 1.5s ease-in-out infinite;
 }
 

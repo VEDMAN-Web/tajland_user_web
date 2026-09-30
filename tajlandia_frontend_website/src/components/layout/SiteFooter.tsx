@@ -55,7 +55,7 @@ function FooterLink({ href, children }: { href: string; children: React.ReactNod
   return (
     <Link
       href={href}
-      className="group relative inline-block pb-[3px] text-[15px] font-medium text-[#5B6B86] transition-colors duration-200 hover:text-navy hover:text-[#0b1f4d]"
+      className="group relative inline-block pb-[3px] text-left text-[15px] font-medium text-[#636363] transition-colors duration-200 hover:text-navy"
     >
       {children}
       <span className="absolute bottom-0 left-0 h-[2px] w-0 bg-[#c81e1e] transition-all duration-300 group-hover:w-full" />
@@ -65,7 +65,7 @@ function FooterLink({ href, children }: { href: string; children: React.ReactNod
 
 function FooterText({ children }: { children: React.ReactNode }) {
   return (
-    <span className="group relative inline-block cursor-pointer pb-[3px] text-[15px] font-medium text-[#5B6B86] transition-colors duration-200 hover:text-navy hover:text-[#0b1f4d]">
+    <span className="group relative inline-block cursor-pointer pb-[3px] text-left text-[15px] font-medium text-[#636363] transition-colors duration-200 hover:text-navy">
       {children}
       <span className="absolute bottom-0 left-0 h-[2px] w-0 bg-[#c81e1e] transition-all duration-300 group-hover:w-full" />
     </span>
@@ -74,7 +74,7 @@ function FooterText({ children }: { children: React.ReactNode }) {
 
 export function SiteFooter() {
   return (
-    <footer className="relative overflow-hidden bg-white/95 backdrop-blur-md text-navy">
+    <footer className="relative overflow-hidden bg-[#F7F9FC] text-navy">
       {/* Animated stars background - Full footer area */}
       <div
         className="pointer-events-none absolute inset-0"
@@ -137,11 +137,11 @@ export function SiteFooter() {
       </svg>
       <Container className="relative grid gap-12 py-14 md:grid-cols-[1.55fr_0.72fr_0.72fr_1fr] md:gap-10 md:py-20">
         <ScrollAnimatedElement animation="fade-in" duration={600}>
-          <div className="max-w-[330px]">
+          <div className="max-w-[28rem] text-left">
             <BrandLogo />
-            <p className="mt-6 text-[15px] leading-6 text-[#5B6B86]">
-              A symbolic map of Thailand. Choose a fragment, claim your certificate, make
-              it a part of your story.
+            <p className="mt-5 text-left text-[15px] font-normal leading-[1.55] text-[#636363]">
+              <span className="block">A symbolic map of Thailand. Choose a fragment, claim</span>
+              <span className="block">your certificate, make it part of your story.</span>
             </p>
           </div>
         </ScrollAnimatedElement>
@@ -149,7 +149,7 @@ export function SiteFooter() {
         <ScrollAnimatedElement animation="slide-in-up" duration={600} delay={100}>
           <div>
             <p className="mb-6 text-[17px] font-semibold text-navy">Company</p>
-            <ul className="space-y-3 text-[15px] text-[#5B6B86]">
+            <ul className="space-y-3 text-left text-[15px] text-[#636363]">
               <li>
                 <FooterLink href="/#how-it-works">Journal</FooterLink>
               </li>
@@ -172,7 +172,7 @@ export function SiteFooter() {
         <ScrollAnimatedElement animation="slide-in-up" duration={600} delay={200}>
           <div>
             <p className="mb-6 text-[17px] font-semibold text-navy">Legal</p>
-            <ul className="space-y-3 text-[15px] text-[#5B6B86]">
+            <ul className="space-y-3 text-left text-[15px] text-[#636363]">
               <li>
                 <FooterLink href={routes.privacy}>Privacy Policy</FooterLink>
               </li>
@@ -192,7 +192,7 @@ export function SiteFooter() {
         <ScrollAnimatedElement animation="slide-in-up" duration={600} delay={300}>
           <div>
             <p className="mb-6 text-[17px] font-semibold text-navy">Contact us</p>
-            <ul className="space-y-4 text-[15px] text-[#5B6B86]">
+            <ul className="space-y-4 text-left text-[15px] text-[#636363]">
               <li className="flex items-start gap-3">
                 <MailIcon />
                 <span>contact@company.com</span>
