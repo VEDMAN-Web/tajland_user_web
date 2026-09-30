@@ -226,7 +226,7 @@ export function MyLandPage() {
     )
     .filter((purchase) => {
       if (!filtersApplied) return true;
-      const typeAllowed = (purchase as any).gifted ? showGifted : showMyPlots;
+      const typeAllowed = purchase.gifted ? showGifted : showMyPlots;
       const zoneAllowed = zoneFilters.length === 0 || zoneFilters.includes(purchase.zone ?? "Standard");
       return (
         typeAllowed &&
@@ -247,7 +247,7 @@ export function MyLandPage() {
             : sort === "area-large"
               ? (b.rai ?? 0) - (a.rai ?? 0)
               : sort === "newest"
-                ? Date.parse((b as any).createdAt ?? "") - Date.parse((a as any).createdAt ?? "")
+                ? Date.parse(b.createdAt ?? "") - Date.parse(a.createdAt ?? "")
                 : 0,
     );
   const totalRai = 250;
@@ -514,7 +514,7 @@ export function MyPurchasesPage() {
             : sort === "area-large"
               ? (b.rai ?? 0) - (a.rai ?? 0)
               : sort === "newest"
-                ? Date.parse((b as any).createdAt ?? "") - Date.parse((a as any).createdAt ?? "")
+                ? Date.parse(b.createdAt ?? "") - Date.parse(a.createdAt ?? "")
                 : 0,
     );
   const totalRai = 250;
