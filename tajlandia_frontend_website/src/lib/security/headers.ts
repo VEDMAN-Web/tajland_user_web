@@ -11,6 +11,20 @@ export function getStaticSecurityHeaders(isProduction: boolean) {
     { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
     { key: "Cross-Origin-Resource-Policy", value: "same-origin" },
     { key: "X-Permitted-Cross-Domain-Policies", value: "none" },
+    {
+      key: "Content-Security-Policy",
+      value: [
+        "default-src 'self'",
+        "script-src 'self' 'unsafe-eval' 'unsafe-inline'",
+        "style-src 'self' 'unsafe-inline'",
+        "img-src 'self' data: https:",
+        "font-src 'self' data:",
+        "connect-src 'self' https://tajlandai-backend.onrender.com https://api.mapbox.com https://events.mapbox.com",
+        "frame-src 'self'",
+        "base-uri 'self'",
+        "form-action 'self'",
+      ].join("; "),
+    },
   ];
 
   if (isProduction) {

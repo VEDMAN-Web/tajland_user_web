@@ -10,6 +10,9 @@ import { ScrollAnimatedElement } from "@/components/animations/ScrollAnimatedEle
 import { useAuth } from "@/lib/hooks/useAuth";
 import { DashboardNavbar } from "./DashboardNavbar";
 import { useDashboardLanguage } from "./DashboardLanguageContext";
+import { useDashboard } from "./hooks/useDashboard";
+import { formatCurrency } from "@/lib/api/dashboard.service";
+import type { FeaturedRegion } from "@/lib/api/dashboard.schemas";
 
 function LoadingSpinner() {
   return (
@@ -19,17 +22,57 @@ function LoadingSpinner() {
   );
 }
 
+function ErrorState({ message, onRetry }: { message: string; onRetry: () => void }) {
+  return (
+    <div className="flex min-h-[100svh] flex-col items-center justify-center bg-white px-6 text-center">
+      <div className="mb-4 text-4xl">⚠️</div>
+      <h2 className="mb-2 text-xl font-semibold text-navy">Unable to Load Dashboard</h2>
+      <p className="mb-6 max-w-md text-sm text-muted">{message}</p>
+      <button
+        onClick={onRetry}
+        className="rounded-full bg-navy px-6 py-2.5 text-sm font-medium text-white hover:bg-navy/90"
+      >
+        Try Again
+      </button>
+    </div>
+  );
+}
+
 export function DashboardPage() {
   const router = useRouter();
-  const { isAuthenticated, user, isLoading } = useAuth();
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
   const { t } = useDashboardLanguage();
+  
+  // Fetch dashboard data
+  const {
+    user,
+    collection,
+    verification,
+    featuredRegions,
+    giftEnabled,
+    isLoading: dashboardLoading,
+    error,
+    refresh,
+  } = useDashboard({
+    fetchOnMount: isAuthenticated,
+  });
 
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) router.replace(routes.login);
-  }, [isAuthenticated, isLoading, router]);
+    if (!authLoading && !isAuthenticated) router.replace(routes.login);
+  }, [isAuthenticated, authLoading, router]);
 
-  if (!isLoading && !isAuthenticated) return null;
-  if (isLoading) return <LoadingSpinner />;
+  // Redirect if not authenticated
+  if (!authLoading && !isAuthenticated) return null;
+  
+  // Show loading during auth check or initial dashboard load
+  if (authLoading || (isAuthenticated && dashboardLoading && !user)) {
+    return <LoadingSpinner />;
+  }
+  
+  // Show error state with retry
+  if (error && !user) {
+    return <ErrorState message={error} onRetry={refresh} />;
+  }
 
   const firstName = user?.name?.trim().split(/\s+/)[0] || "User";
 
@@ -84,13 +127,13 @@ export function DashboardPage() {
             <Stat
               icon="/images/dashboard/cards/ic_plot.svg"
               background="/images/dashboard/stat-plots-bg.png"
-              value="12"
+              value={collection?.plotsClaimed.toString() || "0"}
               label={t("Plots Claimed")}
             />
             <Stat
               icon="/images/dashboard/cards/ic_region.svg"
               background="/images/dashboard/regions-bg.png"
-              value="05"
+              value={collection?.regionsCount.toString().padStart(2, "0") || "00"}
               label={t("Regions")}
             />
             <Stat
@@ -148,7 +191,7 @@ export function DashboardPage() {
               {t("Explore Thailand")}
             </h2>
           </div>
-          <ExploreCarousel />
+          <ExploreCarousel regions={featuredRegions} />
         </section>
       </main>
     </div>
@@ -234,10 +277,12 @@ function ExploreCard({
   );
 }
 
-function ExploreCarousel() {
+function ExploreCarousel({ regions }: { regions: FeaturedRegion[] }) {
   const carouselRef = useRef<HTMLDivElement>(null);
   const [activePage, setActivePage] = useState(0);
-  const destinations = [
+  
+  // Fallback destinations if API returns empty
+  const fallbackDestinations = [
     {
       image: "/images/explore/phuket.jpg",
       badge: "POPULAR",
@@ -281,6 +326,18 @@ function ExploreCarousel() {
       locations: "18 locations",
     },
   ];
+  
+  // Convert API regions to card format
+  const apiRegions = regions.map((region) => ({
+    image: region.imageUrl || "/images/explore/placeholder.jpg", // Fallback for null/empty
+    badge: region.badge,
+    name: region.name,
+    description: region.description,
+    locations: `${region.locationCount} locations`,
+  }));
+  
+  // Use API regions if available, otherwise fallback
+  const destinations = apiRegions.length > 0 ? apiRegions : fallbackDestinations;
 
   useEffect(() => {
     const carousel = carouselRef.current;

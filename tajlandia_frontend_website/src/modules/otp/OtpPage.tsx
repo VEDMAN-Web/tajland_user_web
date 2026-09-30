@@ -12,6 +12,7 @@ import type { SignupFormValues } from "@/modules/signup/schemas/signup.schema";
 import { verifyOtpAction, resendOtpAction, completeSignupWithOtpAction } from "./services/otp.service";
 import { verifyPasswordResetOtpAction } from "@/modules/reset-password/services/reset-password.service";
 
+
 const OTP_LENGTH = 6;
 
 function OtpPageContent() {
@@ -106,12 +107,12 @@ function OtpPageContent() {
         const actionResult = await completeSignupWithOtpAction(email, result.data, signupData);
 
         if (actionResult.ok) {
-          // Store authentication data
+          // Store authentication data in localStorage (persistent)
           if (actionResult.token) {
-            setAuthToken(actionResult.token);
+            setAuthToken(actionResult.token, true); // true = localStorage
           }
           if (actionResult.user) {
-            setAuthUser(actionResult.user);
+            setAuthUser(actionResult.user, true); // true = localStorage
           }
           // Clear signup data from sessionStorage
           sessionStorage.removeItem("signupFormData");
@@ -144,12 +145,12 @@ function OtpPageContent() {
         const actionResult = await verifyOtpAction(email, result.data);
 
         if (actionResult.ok) {
-          // Store authentication data
+          // Store authentication data in localStorage (persistent)
           if (actionResult.token) {
-            setAuthToken(actionResult.token);
+            setAuthToken(actionResult.token, true); // true = localStorage
           }
           if (actionResult.user) {
-            setAuthUser(actionResult.user);
+            setAuthUser(actionResult.user, true); // true = localStorage
           }
           setMessage("OTP verified successfully! Redirecting...");
           // Redirect to dashboard
