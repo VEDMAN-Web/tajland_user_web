@@ -1,15 +1,19 @@
 "use client";
 
 import Image from "next/image";
-import { useState, type FormEvent } from "react";
+import Link from "next/link";
+import { useEffect, useRef, useState, type FormEvent } from "react";
+import { Button } from "@/components/ui/Button";
 import { Container } from "@/components/ui/Container";
-import { ScrollAnimatedElement } from "@/components/animations/ScrollAnimatedElement";
+import { CountryFlag } from "@/components/ui/CountryFlag";
 import { routes } from "@/lib/constants/routes";
+import { countryCodes, defaultCountry, phonePlaceholder } from "@/lib/phone/countries";
 
 type FormValues = {
   firstName: string;
   lastName: string;
   email: string;
+  countryCode: string;
   phone: string;
   message: string;
 };
@@ -18,108 +22,316 @@ const initialValues: FormValues = {
   firstName: "",
   lastName: "",
   email: "",
+  countryCode: defaultCountry.id,
   phone: "",
   message: "",
 };
 
+type ContactErrors = Partial<Record<keyof FormValues, string>>;
+
+function fieldClass(hasError: boolean) {
+  return `mt-2 h-11 w-full rounded-[10px] border bg-white px-3 text-[14px] font-normal text-navy outline-none placeholder:text-[#c5ccd6] focus:border-navy focus:ring-2 focus:ring-navy/10 ${hasError ? "border-[#d52b35]" : "border-[#e4e9f0]"}`;
+}
+
+function validateContact(values: FormValues): ContactErrors {
+  const errors: ContactErrors = {};
+
+  if (!values.firstName.trim()) errors.firstName = "First name is required";
+  if (!values.lastName.trim()) errors.lastName = "Last name is required";
+  if (!values.email.trim()) errors.email = "Email is required";
+  else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.email.trim())) {
+    errors.email = "Please enter a valid email address";
+  }
+  const country = countryCodes.find((item) => item.id === values.countryCode) ?? defaultCountry;
+  if (!values.phone) errors.phone = "Phone number is required";
+  else if (values.phone.length !== country.digits) {
+    errors.phone = `Enter a ${country.digits}-digit phone number`;
+  }
+  if (!values.message.trim()) errors.message = "Message is required";
+
+  return errors;
+}
+
 function MailIcon() {
-  return <svg viewBox="0 0 24 24" aria-hidden="true" className="h-4 w-4 shrink-0"><path d="M3 5.5h18v13H3zM4.8 7l7.2 5.2L19.2 7" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" /></svg>;
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-[18px] w-[18px] shrink-0">
+      <path d="M3 5.5h18v13H3zM4.8 7l7.2 5.2L19.2 7" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+    </svg>
+  );
 }
 
 function PhoneIcon() {
-  return <svg viewBox="0 0 24 24" aria-hidden="true" className="h-4 w-4 shrink-0"><path d="M7.4 3.5 10 3l2 4.5-2.1 1.7c.8 1.8 2.1 3.1 3.9 3.9l1.7-2.1L20 13l-.5 2.6c-.3 1.5-1.6 2.5-3.1 2.4-6.6-.5-11.9-5.8-12.4-12.4-.1-1.5.9-2.8 2.4-3.1Z" fill="currentColor" /></svg>;
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-[18px] w-[18px] shrink-0">
+      <path d="M7.4 3.5 10 3l2 4.5-2.1 1.7c.8 1.8 2.1 3.1 3.9 3.9l1.7-2.1L20 13l-.5 2.6c-.3 1.5-1.6 2.5-3.1 2.4-6.6-.5-11.9-5.8-12.4-12.4-.1-1.5.9-2.8 2.4-3.1Z" fill="currentColor" />
+    </svg>
+  );
 }
 
 function LocationIcon() {
-  return <svg viewBox="0 0 24 24" aria-hidden="true" className="h-4 w-4 shrink-0"><path d="M12 2.8a6.2 6.2 0 0 0-6.2 6.2c0 4.6 6.2 12.2 6.2 12.2s6.2-7.6 6.2-12.2A6.2 6.2 0 0 0 12 2.8Zm0 8.8a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5Z" fill="currentColor" /></svg>;
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-[18px] w-[18px] shrink-0">
+      <path d="M12 2.8a6.2 6.2 0 0 0-6.2 6.2c0 4.6 6.2 12.2 6.2 12.2s6.2-7.6 6.2-12.2A6.2 6.2 0 0 0 12 2.8Zm0 8.8a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5Z" fill="currentColor" />
+    </svg>
+  );
 }
 
-export function ContactPage({ inquiryOpen: initialInquiryOpen = false }: { inquiryOpen?: boolean }) {
+export function ContactPage() {
   const [values, setValues] = useState<FormValues>(initialValues);
+  const [errors, setErrors] = useState<ContactErrors>({});
   const [submitted, setSubmitted] = useState(false);
-  const [inquiryOpen, setInquiryOpen] = useState(initialInquiryOpen);
+  const [countryOpen, setCountryOpen] = useState(false);
+  const countryMenuRef = useRef<HTMLDivElement>(null);
+  const selectedCountry = countryCodes.find((item) => item.id === values.countryCode) ?? defaultCountry;
 
-  function closeInquiry() {
-    window.history.replaceState({}, "", routes.contact);
-    setInquiryOpen(false);
-  }
+  useEffect(() => {
+    if (!countryOpen) return;
+
+    function closeOnOutside(event: MouseEvent) {
+      if (!countryMenuRef.current?.contains(event.target as Node)) setCountryOpen(false);
+    }
+
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") setCountryOpen(false);
+    }
+
+    document.addEventListener("mousedown", closeOnOutside);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("mousedown", closeOnOutside);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [countryOpen]);
 
   function updateField(field: keyof FormValues, value: string) {
     setValues((current) => ({ ...current, [field]: value }));
+    setErrors((current) => ({ ...current, [field]: undefined }));
     setSubmitted(false);
+  }
+
+  function updateCountry(countryId: string) {
+    const country = countryCodes.find((item) => item.id === countryId) ?? defaultCountry;
+    setValues((current) => ({
+      ...current,
+      countryCode: country.id,
+      phone: current.phone.slice(0, country.digits),
+    }));
+    setErrors((current) => ({ ...current, phone: undefined }));
+    setSubmitted(false);
+  }
+
+  function updatePhone(value: string) {
+    const country = countryCodes.find((item) => item.id === values.countryCode) ?? defaultCountry;
+    updateField("phone", value.replace(/\D/g, "").slice(0, country.digits));
   }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const nextErrors = validateContact(values);
+    setErrors(nextErrors);
+
+    if (Object.keys(nextErrors).length > 0) {
+      setSubmitted(false);
+      return;
+    }
+
     setSubmitted(true);
   }
 
   return (
-    <main className="relative bg-white pt-12 sm:pt-14">
-      <section>
-        <Container>
-          <ScrollAnimatedElement animation="fade-in" duration={600}>
-            <div className="mx-auto max-w-[760px] text-center">
-              <h1 className="font-display text-[56px] font-semibold italic leading-none tracking-[-0.04em] text-navy">
-                Get in <span className="italic text-brand-red">Touch</span>
-              </h1>
-              <p className="mt-3 text-[24px] text-[#9aa3ad]">Choose the way that works best for you.</p>
-            </div>
-          </ScrollAnimatedElement>
+    <main className="bg-white pb-16 pt-12 sm:pt-16">
+      <Container>
+        <header className="mx-auto max-w-[640px] text-center">
+          <h1 className="font-[family-name:var(--font-playfair-display)] text-[42px] font-semibold leading-none tracking-[-0.03em] text-navy sm:text-[52px]">
+            Get in <span className="italic text-brand-red">Touch</span>
+          </h1>
+          <p className="mt-3 font-[family-name:var(--font-manrope)] text-[16px] font-normal text-[#8a99aa] sm:text-[18px]">
+            Choose the way that works best for you.
+          </p>
+        </header>
 
-          <ScrollAnimatedElement animation="scale-in" duration={700} className="mx-auto mt-10 grid w-full gap-8 rounded-[10px] bg-white p-2 shadow-[0_12px_45px_rgba(11,31,77,0.08)] sm:mt-11 sm:min-h-[667px] sm:grid-cols-[491px_1fr] sm:gap-10 sm:p-[9px]">
-            <aside className="flex min-h-[420px] flex-col rounded-[15px] bg-[radial-gradient(ellipse_at_50%_100%,rgba(255,177,177,0.9),transparent_30%),linear-gradient(180deg,#061b4d_0%,#0b3478_42%,#467fc4_72%,#e8b7c6_100%)] px-6 py-7 text-white sm:h-[647px] sm:min-h-0 sm:w-[491px] sm:px-7 sm:py-9">
-              <p className="text-[12px] font-medium uppercase tracking-[0.12em] text-white/75">Send a message</p>
-              <h2 className="mt-2 font-display text-[36px] font-medium leading-none">How can we help?</h2>
-              <p className="mt-4 max-w-[390px] text-[16px] leading-[1.55] text-white/70">Tell us what you need and our team will get back to you as soon as possible. We pride ourselves on concierge-level responsiveness.</p>
-
-              <div className="mt-auto">
-                <h3 className="text-[20px] font-medium">Contacts us</h3>
-                <ul className="mt-5 space-y-3 text-[18px] text-white/80">
-                  <li className="flex items-center gap-2"><MailIcon /><span>contact@company.com</span></li>
-                  <li className="flex items-center gap-2"><PhoneIcon /><span>(414) 687 - 5892</span></li>
-                  <li className="flex items-start gap-2"><LocationIcon /><span>794 Mcallister St<br />San Francisco, 94102</span></li>
+        <div className="mx-auto mt-10 grid max-w-[1080px] items-stretch gap-4 rounded-[28px] bg-white p-3 shadow-[0_18px_50px_rgba(11,31,77,0.08)] sm:p-4 lg:mt-12 lg:grid-cols-[0.92fr_1.08fr] lg:gap-8 lg:p-5">
+          <aside className="relative flex min-h-[460px] flex-col overflow-hidden rounded-[22px] text-white lg:min-h-[560px]">
+            <Image
+              src="/images/home/get-in-touch.jpg"
+              alt=""
+              fill
+              priority
+              sizes="(max-width: 1024px) 100vw, 460px"
+              className="object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-b from-black/35 via-black/25 to-black/60" />
+            <div className="relative flex flex-1 flex-col px-7 py-8 sm:px-8 sm:py-9">
+              <p className="text-[12px] font-medium uppercase tracking-[0.16em] text-white/80">Send a message</p>
+              <h2 className="mt-3 font-[family-name:var(--font-playfair-display)] text-[32px] font-semibold leading-none sm:text-[36px]">
+                How can we help?
+              </h2>
+              <p className="mt-4 max-w-[22rem] font-[family-name:var(--font-manrope)] text-[14px] font-normal leading-[1.6] text-white/85 sm:text-[15px]">
+                Tell us what you need and our team will get back to you as soon as possible. We pride ourselves on concierge-level responsiveness.
+              </p>
+              <div className="mt-auto pt-10">
+                <h3 className="text-[18px] font-semibold">Contacts us</h3>
+                <ul className="mt-4 space-y-3 text-[14px] text-white/90 sm:text-[15px]">
+                  <li className="flex items-center gap-2.5">
+                    <MailIcon />
+                    <span>contact@company.com</span>
+                  </li>
+                  <li className="flex items-center gap-2.5">
+                    <PhoneIcon />
+                    <span>(414) 687 - 5892</span>
+                  </li>
+                  <li className="flex items-start gap-2.5">
+                    <LocationIcon />
+                    <span>
+                      794 Mcallister St
+                      <br />
+                      San Francisco, 94102
+                    </span>
+                  </li>
                 </ul>
               </div>
-            </aside>
-
-            <form onSubmit={handleSubmit} className="flex flex-col justify-center px-3 py-7 sm:px-0 sm:pr-12">
-              <div className="grid gap-4 sm:grid-cols-2 sm:gap-x-3 sm:gap-y-4">
-                <label className="text-[11px] font-medium text-[#252525]">First Name<input required value={values.firstName} onChange={(event) => updateField("firstName", event.target.value)} placeholder="Enter your first name" className="mt-2 h-10 w-full rounded-[8px] border border-[#e5e7eb] px-3 text-[10px] font-normal outline-none placeholder:text-[#c9cdd2] focus:border-navy focus:ring-2 focus:ring-navy/10" /></label>
-                <label className="text-[11px] font-medium text-[#252525]">Last Name<input required value={values.lastName} onChange={(event) => updateField("lastName", event.target.value)} placeholder="Enter your last name" className="mt-2 h-10 w-full rounded-[8px] border border-[#e5e7eb] px-3 text-[10px] font-normal outline-none placeholder:text-[#c9cdd2] focus:border-navy focus:ring-2 focus:ring-navy/10" /></label>
-                <label className="text-[11px] font-medium text-[#252525]">Email Id<input required type="email" value={values.email} onChange={(event) => updateField("email", event.target.value)} placeholder="Enter your email id" className="mt-2 h-10 w-full rounded-[8px] border border-[#e5e7eb] px-3 text-[10px] font-normal outline-none placeholder:text-[#c9cdd2] focus:border-navy focus:ring-2 focus:ring-navy/10" /></label>
-                <label className="text-[11px] font-medium text-[#252525]">Phone Number<input value={values.phone} onChange={(event) => updateField("phone", event.target.value)} placeholder="+91 XXXXXX XXXXX" className="mt-2 h-10 w-full rounded-[8px] border border-[#e5e7eb] px-3 text-[10px] font-normal outline-none placeholder:text-[#c9cdd2] focus:border-navy focus:ring-2 focus:ring-navy/10" /></label>
-              </div>
-              <label className="mt-4 text-[11px] font-medium text-[#252525]">Write your message<textarea required value={values.message} onChange={(event) => updateField("message", event.target.value)} placeholder="Enter your message..." className="mt-2 h-[98px] w-full resize-none rounded-[8px] border border-[#e5e7eb] px-3 py-3 text-[10px] font-normal outline-none placeholder:text-[#c9cdd2] focus:border-navy focus:ring-2 focus:ring-navy/10" /></label>
-              <button type="submit" className="mt-4 h-10 w-[157px] rounded-full bg-navy text-[12px] text-white shadow-[0_3px_6px_rgba(11,31,77,0.18)]">Send Message →</button>
-              {submitted ? <p role="status" className="mt-3 text-[10px] text-green-600">Thanks. We&apos;ll get back to you soon.</p> : null}
-              <p className="mt-5 max-w-[360px] text-[8px] leading-[1.45] text-[#9da2a8]">By submitting this form, you agree to our <span className="underline">Privacy Policy</span> and consent to having our team contact you regarding your request.</p>
-            </form>
-          </ScrollAnimatedElement>
-        </Container>
-      </section>
-
-      <div className="mt-14 h-36 bg-[#fbfcfd] gradient-contact-bg" aria-hidden="true" />
-
-      {inquiryOpen ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#dce3ef]/65 px-4 backdrop-blur-[3px]" role="presentation">
-          <section role="dialog" aria-modal="true" aria-labelledby="inquiry-title" className="relative grid w-full max-w-[650px] overflow-hidden rounded-[20px] bg-white shadow-[0_20px_60px_rgba(11,31,77,0.18)] sm:grid-cols-[275px_1fr]">
-            <div className="relative min-h-[260px] sm:min-h-[365px]">
-              <Image src="/images/explore/chiang-mai.jpg" alt="Temple in Thailand" fill sizes="275px" className="object-cover" />
             </div>
-            <div className="flex min-h-[365px] flex-col px-8 py-9 sm:px-8">
-              <button type="button" onClick={closeInquiry} aria-label="Close inquiry" className="absolute right-5 top-4 flex h-7 w-7 items-center justify-center rounded-full text-[20px] text-[#c9cdd2] shadow-[0_2px_8px_rgba(11,31,77,0.08)] transition-colors hover:text-navy">×</button>
-              <p className="text-[8px] uppercase tracking-[0.12em] text-[#c4c7cc]">Let&apos;s talk</p>
-              <h2 id="inquiry-title" className="mt-3 max-w-[250px] text-[21px] font-medium leading-[1.25] text-navy">Have a question about Tajlandia?</h2>
-              <p className="mt-2 max-w-[255px] text-[11px] leading-[1.45] text-[#a0a7b0]">Whether you&apos;re exploring a location, looking for a plot, or simply curious, we&apos;d love to hear from you.</p>
-              <div className="mt-auto flex items-center justify-between gap-4 border-t border-[#e5e7eb] pt-3">
-                <button type="button" onClick={closeInquiry} className="text-[10px] text-[#c7cbd0]">Maybe later</button>
-                <button type="button" onClick={closeInquiry} className="h-[35px] w-[104px] rounded-[10px] bg-navy text-[11px] text-white shadow-[0_3px_8px_rgba(11,31,77,0.16)]">Continue →</button>
+          </aside>
+
+          <form noValidate onSubmit={handleSubmit} className="flex flex-col justify-center px-2 py-4 sm:px-4 sm:py-6 lg:px-6 lg:py-8">
+            <div className="grid gap-4 sm:grid-cols-2 sm:gap-x-4 sm:gap-y-5">
+              <div>
+                <label htmlFor="contact-first-name" className="text-[13px] font-semibold text-[#1c1c1c]">
+                  First Name
+                </label>
+                <input
+                  id="contact-first-name"
+                  value={values.firstName}
+                  onChange={(event) => updateField("firstName", event.target.value)}
+                  placeholder="Enter your first name"
+                  aria-invalid={Boolean(errors.firstName)}
+                  aria-describedby={errors.firstName ? "contact-first-name-error" : undefined}
+                  className={fieldClass(Boolean(errors.firstName))}
+                />
+                {errors.firstName ? <p id="contact-first-name-error" className="mt-1.5 text-[11px] text-[#d52b35]">{errors.firstName}</p> : null}
+              </div>
+              <div>
+                <label htmlFor="contact-last-name" className="text-[13px] font-semibold text-[#1c1c1c]">
+                  Last Name
+                </label>
+                <input
+                  id="contact-last-name"
+                  value={values.lastName}
+                  onChange={(event) => updateField("lastName", event.target.value)}
+                  placeholder="Enter your last name"
+                  aria-invalid={Boolean(errors.lastName)}
+                  aria-describedby={errors.lastName ? "contact-last-name-error" : undefined}
+                  className={fieldClass(Boolean(errors.lastName))}
+                />
+                {errors.lastName ? <p id="contact-last-name-error" className="mt-1.5 text-[11px] text-[#d52b35]">{errors.lastName}</p> : null}
+              </div>
+              <div>
+                <label htmlFor="contact-email" className="text-[13px] font-semibold text-[#1c1c1c]">
+                  Email Id
+                </label>
+                <input
+                  id="contact-email"
+                  type="email"
+                  value={values.email}
+                  onChange={(event) => updateField("email", event.target.value)}
+                  placeholder="Enter your email id"
+                  aria-invalid={Boolean(errors.email)}
+                  aria-describedby={errors.email ? "contact-email-error" : undefined}
+                  className={fieldClass(Boolean(errors.email))}
+                />
+                {errors.email ? <p id="contact-email-error" className="mt-1.5 text-[11px] text-[#d52b35]">{errors.email}</p> : null}
+              </div>
+              <div>
+                <label htmlFor="contact-phone" className="text-[13px] font-semibold text-[#1c1c1c]">
+                  Phone Number
+                </label>
+                <div className={`relative mt-2 flex h-11 items-center rounded-[10px] border bg-white focus-within:border-navy focus-within:ring-2 focus-within:ring-navy/10 ${countryOpen ? "z-30" : ""} ${errors.phone ? "border-[#d52b35]" : "border-[#e4e9f0]"}`}>
+                  <div ref={countryMenuRef} className="relative h-full shrink-0">
+                    <button
+                      type="button"
+                      id="contact-country"
+                      aria-haspopup="listbox"
+                      aria-expanded={countryOpen}
+                      aria-label={`${selectedCountry.name} (${selectedCountry.dial})`}
+                      onClick={() => setCountryOpen((open) => !open)}
+                      className="flex h-full cursor-pointer items-center gap-1.5 border-r border-[#e4e9f0] px-2.5 text-[13px] font-medium text-navy"
+                    >
+                      <CountryFlag id={selectedCountry.id} />
+                      <span>({selectedCountry.dial})</span>
+                      <svg viewBox="0 0 12 12" aria-hidden="true" className="h-3 w-3 text-[#8a99aa]">
+                        <path d="M2.5 4.5 6 8l3.5-3.5" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+                      </svg>
+                    </button>
+                    {countryOpen ? (
+                      <ul role="listbox" aria-label="Country code" className="absolute left-0 top-[calc(100%+6px)] z-30 max-h-56 w-[8.5rem] overflow-auto rounded-[10px] border border-[#e4e9f0] bg-white py-1 shadow-[0_12px_30px_rgba(11,31,77,0.12)]">
+                        {countryCodes.map((country) => (
+                          <li key={country.id} role="presentation">
+                            <button
+                              type="button"
+                              role="option"
+                              aria-selected={country.id === selectedCountry.id}
+                              onClick={() => {
+                                updateCountry(country.id);
+                                setCountryOpen(false);
+                              }}
+                              className={`flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-left text-[13px] font-medium text-navy ${country.id === selectedCountry.id ? "bg-[#f4f6fa]" : "hover:bg-[#f7f9fc]"}`}
+                            >
+                              <CountryFlag id={country.id} />
+                              <span>({country.dial})</span>
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : null}
+                  </div>
+                  <input
+                    id="contact-phone"
+                    inputMode="numeric"
+                    autoComplete="tel-national"
+                    value={values.phone}
+                    onChange={(event) => updatePhone(event.target.value)}
+                    placeholder={phonePlaceholder(selectedCountry.digits)}
+                    aria-invalid={Boolean(errors.phone)}
+                    aria-describedby={errors.phone ? "contact-phone-error" : undefined}
+                    className="h-full min-w-0 flex-1 border-0 bg-transparent px-3 text-[14px] text-navy outline-none placeholder:text-[#c5ccd6]"
+                  />
+                </div>
+                {errors.phone ? <p id="contact-phone-error" className="mt-1.5 text-[11px] text-[#d52b35]">{errors.phone}</p> : null}
               </div>
             </div>
-          </section>
+            <div className="mt-5">
+              <label htmlFor="contact-message" className="text-[13px] font-semibold text-[#1c1c1c]">
+                Write your message
+              </label>
+              <textarea
+                id="contact-message"
+                value={values.message}
+                onChange={(event) => updateField("message", event.target.value)}
+                placeholder="Enter your message..."
+                aria-invalid={Boolean(errors.message)}
+                aria-describedby={errors.message ? "contact-message-error" : undefined}
+                className={`${fieldClass(Boolean(errors.message))} h-[120px] resize-none py-3`}
+              />
+              {errors.message ? <p id="contact-message-error" className="mt-1.5 text-[11px] text-[#d52b35]">{errors.message}</p> : null}
+            </div>
+            <Button type="submit" size="lg" className="mt-6 h-12 w-fit cursor-pointer px-7 text-[15px]">
+              Send Message →
+            </Button>
+            {submitted ? (
+              <p role="status" className="mt-3 text-[14px] text-green-700">
+                Thanks. We&apos;ll get back to you soon.
+              </p>
+            ) : null}
+            <p className="mt-5 max-w-[28rem] font-[family-name:var(--font-manrope)] text-[12px] leading-[1.55] text-[#8a99aa]">
+              By submitting this form, you agree to our{" "}
+              <Link href={routes.privacy} className="underline">
+                Privacy Policy
+              </Link>{" "}
+              and consent to having our team contact you regarding your request.
+            </p>
+          </form>
         </div>
-      ) : null}
+      </Container>
     </main>
   );
 }

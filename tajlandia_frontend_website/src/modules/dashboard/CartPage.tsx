@@ -94,19 +94,21 @@ export function CartPage() {
             </div>
           )}
           
+          {/* Show warning if cart has rai but no items (backend issue) */}
+          {!cart.error && cart.items.length === 0 && cart.totalRai > 0 && (
+            <div className="mt-3 rounded-lg bg-yellow-50 p-3 text-sm text-yellow-800">
+              ⚠️ Cart has {cart.totalRai} Rai (${cart.totalPrice.toFixed(2)}) but items are not loading. 
+              This is a backend issue - the GET /cart endpoint is not returning the items array.
+            </div>
+          )}
+          
           {cart.items.length > 0 ? (
             <FilledCart
               items={cart.items}
               totalRai={cart.totalRai}
-              totalPrice={cart.totalPrice}
-              progress={progress}
-              minimumReached={cart.minimumReached}
-              couponCode={cart.couponCode}
-              discount={cart.discount}
-              couponInput={couponInput}
-              setCouponInput={setCouponInput}
-              showCouponError={showCouponError}
-              isCheckingOut={cart.isCheckingOut}
+              total={cart.totalPrice}
+              coupon={couponInput}
+              setCoupon={setCouponInput}
               onClearAll={handleClearAll}
               onRemoveItem={handleRemoveItem}
               onApplyCoupon={handleApplyCoupon}
@@ -122,53 +124,12 @@ export function CartPage() {
   );
 }
 
-function EmptyCart() {
-  return (
-    <div className="flex min-h-[calc(100svh-210px)] flex-col items-center justify-center text-center">
-      <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[#f5f8fc]">
-        <img
-          src="/images/dashboard/navbar/cart-default.png"
-          alt=""
-          className="h-8 w-8 object-contain"
-        />
-      </div>
-      <h2 className="mt-5 text-[21px] font-semibold text-[#171717]">
-        Your cart is empty
-      </h2>
-      <p className="mt-1 max-w-[310px] text-[12px] leading-5 text-[#7b858f]">
-        You haven&apos;t selected any plots yet. Explore Thailand and discover a place to
-        add to your collection.
-      </p>
-      <div className="mt-6 flex w-full max-w-[365px] gap-2">
-        <Link
-          href={routes.purchases}
-          className="flex flex-1 items-center justify-center rounded-[9px] border border-[#e1e7ec] bg-white px-4 py-3 text-[11px] text-navy"
-        >
-          My Purchase
-        </Link>
-        <Link
-          href={routes.dashboardExplore}
-          className="flex flex-1 items-center justify-center rounded-[9px] bg-navy px-4 py-3 text-[11px] text-white"
-        >
-          Explore Thailand →
-        </Link>
-      </div>
-    </div>
-  );
-}
-
 function FilledCart({
   items,
   totalRai,
-  totalPrice,
-  progress,
-  minimumReached,
-  couponCode,
-  discount,
-  couponInput,
-  setCouponInput,
-  showCouponError,
-  isCheckingOut,
+  total,
+  coupon,
+  setCoupon,
   onClearAll,
   onRemoveItem,
   onApplyCoupon,
@@ -177,236 +138,148 @@ function FilledCart({
 }: {
   items: CartItem[];
   totalRai: number;
-  totalPrice: number;
-  progress: number;
-  minimumReached: boolean;
-  couponCode: string | null;
-  discount: number;
-  couponInput: string;
-  setCouponInput: (value: string) => void;
-  showCouponError: boolean;
-  isCheckingOut: boolean;
+  total: number;
+  coupon: string;
+  setCoupon: (value: string) => void;
   onClearAll: () => void;
   onRemoveItem: (plotId: string) => void;
   onApplyCoupon: () => void;
   onRemoveCoupon: () => void;
   onCheckout: () => void;
 }) {
-  const showProgress = totalRai < 100;
   return (
-    <div className="mt-5">
-      {showProgress ? (
-        <section className="rounded-[15px] bg-white p-5 shadow-[0_5px_24px_rgba(11,31,77,0.08)]">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <h2 className="text-[14px] font-semibold text-navy">
-                ◉ Complete your selection
-              </h2>
-              <p className="mt-1 text-[10px] text-[#b0b7be]">
-                You need 100 Rai minimum to continue buying plots and payment.
-              </p>
-            </div>
-            <p className="text-[12px] text-[#8f99a4]">
-              <strong className="text-[17px] text-navy">{totalRai}</strong> / 100 Rai
-            </p>
-          </div>
-          <div className="mt-3 flex items-center justify-between text-[12px] text-[#242b32]">
-            <span>
-              {items.length} Plot{items.length === 1 ? "" : "s"}
-            </span>
-            <strong>Total: ${totalPrice.toFixed(2)}</strong>
-          </div>
-          <div className="mt-2 h-1 rounded-full bg-[#e5e9ed]">
+    <div className="mt-8 grid gap-8 lg:grid-cols-[1fr,400px]">
+      {/* Cart Items */}
+      <div>
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-[18px] font-semibold">Items ({items.length})</h2>
+          <button
+            onClick={onClearAll}
+            className="text-[12px] text-red-600 hover:underline"
+          >
+            Clear All
+          </button>
+        </div>
+
+        <div className="space-y-4">
+          {items.map((item, index) => (
             <div
-              className="h-1 rounded-full bg-brand-red"
-              style={{ width: `${progress}%` }}
-            />
-          </div>
-          <p className="mt-2 text-[10px] text-[#7b858f]">
-            {Math.max(0, 100 - totalRai)} Rai more to reach minimum
-          </p>
-          <p className="mt-1 text-right text-[9px] text-[#8f99a4]">
-            <strong className="text-navy">NEXT STEP:</strong> Select parcels from any
-            province zone to unlock settlement.
-          </p>
-        </section>
-      ) : null}
-      <div
-        className={`${showProgress ? "mt-6" : "mt-2"} grid gap-5 lg:grid-cols-[minmax(0,1fr)_280px]`}
-      >
-        <section>
-          <h2 className="text-[17px] font-semibold text-[#171717]">Selected Plots</h2>
-          <div className="mt-2 flex justify-end">
-            <button
-              type="button"
-              onClick={onClearAll}
-              className="text-[10px] text-[#8f99a4] underline underline-offset-2"
+              key={item.plotId || index}
+              className="flex gap-4 rounded-lg border border-[#e5e7eb] bg-white p-4"
             >
-              Clear All
-            </button>
-          </div>
-          <div className="mt-2 space-y-2">
-            {items.map((item) => (
-              <CartItemCard
-                key={item.plotId}
-                item={item}
-                onRemove={() => onRemoveItem(item.plotId)}
-              />
-            ))}
-          </div>
-          <div className="mt-3 flex items-center justify-between gap-4 rounded-[12px] border border-dashed border-[#d7e0e7] bg-white p-4">
-            <div>
-              <h3 className="text-[12px] font-semibold text-navy">
-                Add more places to reach the 100 Rai threshold
-              </h3>
-              <p className="mt-1 text-[9px] text-[#8f99a4]">
-                Unlock deed recertification and transactional inscription by selecting 25
-                additional Rai.
-              </p>
-            </div>
-            <Link
-              href={routes.dashboardExplore}
-              className="shrink-0 rounded-[9px] bg-navy px-4 py-3 text-[10px] text-white"
-            >
-              Explore Thailand →
-            </Link>
-          </div>
-        </section>
-        <aside>
-          {/* Coupon Section */}
-          {!couponCode ? (
-            <div className="flex gap-2">
-              <input
-                value={couponInput}
-                onChange={(event) => setCouponInput(event.target.value)}
-                placeholder="Enter Code"
-                className="h-11 min-w-0 flex-1 rounded-[9px] border border-[#e3e8ed] bg-white px-3 text-[10px] outline-none"
-              />
-              <button
-                type="button"
-                onClick={onApplyCoupon}
-                className="h-11 rounded-[9px] bg-navy px-5 text-[11px] text-white"
-              >
-                Apply
-              </button>
-            </div>
-          ) : (
-            <div className="flex items-center justify-between rounded-[9px] bg-green-50 px-4 py-3">
-              <div>
-                <p className="text-[10px] font-semibold text-green-700">
-                  Coupon Applied: {couponCode}
+              <div className="h-20 w-20 flex-shrink-0 overflow-hidden rounded-lg bg-gray-100">
+                <div className="flex h-full w-full items-center justify-center text-xs text-gray-400">
+                  Plot Image
+                </div>
+              </div>
+
+              <div className="flex-1">
+                <h3 className="text-[14px] font-semibold">{item.plotId}</h3>
+                <p className="mt-1 text-[12px] text-[#7b858f]">
+                  {item.region} · {item.city}
                 </p>
-                <p className="text-[9px] text-green-600">
-                  -${discount.toFixed(2)} discount
+                <p className="mt-2 text-[12px] font-semibold">
+                  {item.sizeRai} Rai · ${item.subtotal.toFixed(2)}
                 </p>
               </div>
+
               <button
-                type="button"
-                onClick={onRemoveCoupon}
-                className="text-[9px] text-red-600 underline"
+                onClick={() => onRemoveItem(item.plotId)}
+                className="text-red-600 hover:text-red-700"
               >
-                Remove
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
+                </svg>
               </button>
             </div>
-          )}
-          
-          {showCouponError && (
-            <p className="mt-1 text-[9px] text-red-600">
-              Invalid or expired coupon code
-            </p>
-          )}
-          
-          {/* Order Summary */}
-          <div className="mt-3 rounded-[12px] bg-white p-4 shadow-[0_5px_18px_rgba(11,31,77,0.06)]">
-            <h2 className="text-[17px] font-semibold text-[#242b32]">Order Summary</h2>
-            <div className="mt-4 space-y-2 text-[11px] text-[#8f99a4]">
-              <p className="flex justify-between">
-                <span>Plots</span>
-                <strong className="text-navy">{items.length}</strong>
-              </p>
-              <p className="flex justify-between">
-                <span>Total Rai</span>
-                <strong className="text-brand-red">{totalRai}</strong>
-              </p>
+          ))}
+        </div>
+      </div>
+
+      {/* Summary */}
+      <div>
+        <div className="rounded-lg border border-[#e5e7eb] bg-white p-6">
+          <h2 className="text-[18px] font-semibold">Order Summary</h2>
+
+          <div className="mt-4 space-y-3">
+            <div className="flex justify-between text-[14px]">
+              <span>Total Rai</span>
+              <span className="font-semibold">{totalRai} Rai</span>
             </div>
-            <div className="my-4 border-t border-[#e8edf1]" />
-            <p className="flex justify-between text-[11px] text-[#8f99a4]">
+            <div className="flex justify-between text-[14px]">
               <span>Subtotal</span>
-              <strong>${(totalPrice + discount).toFixed(2)}</strong>
-            </p>
-          {discount > 0 && (
-              <p className="flex justify-between text-[11px] text-green-600">
-                <span>Discount</span>
-                <strong>-${discount.toFixed(2)}</strong>
-              </p>
-            )}
-            <p className="mt-3 flex justify-between border-t border-[#e8edf1] pt-3 text-[12px] text-[#8f99a4]">
-              <span>Total</span>
-              <strong className="text-[21px] text-[#171717]">${totalPrice.toFixed(2)}</strong>
-            </p>
-            <button
-              type="button"
-              onClick={onCheckout}
-              disabled={!minimumReached || isCheckingOut}
-              className="mt-5 h-10 w-full rounded-[9px] bg-navy text-[11px] text-white disabled:cursor-not-allowed disabled:bg-[#d3d3d3]"
-            >
-              {isCheckingOut ? "Processing..." : "Proceed to checkout →"}
-            </button>
-            <Link
-              href={routes.dashboardExplore}
-              className="mt-2 flex h-9 items-center justify-center rounded-[9px] border border-[#e3e8ed] text-[10px] text-[#242b32]"
-            >
-              Continue Exploring
-            </Link>
-            {!minimumReached ? (
-              <p className="mt-4 text-center text-[9px] text-brand-red">
-                △ Requires {100 - totalRai} more Rai to activate checkout
-              </p>
-            ) : null}
+              <span>${total.toFixed(2)}</span>
+            </div>
           </div>
-        </aside>
+
+          {/* Coupon */}
+          <div className="mt-4">
+            <input
+              type="text"
+              value={coupon}
+              onChange={(e) => setCoupon(e.target.value)}
+              placeholder="Coupon code"
+              className="w-full rounded-lg border border-[#e5e7eb] px-4 py-2 text-[14px]"
+            />
+            <button
+              onClick={onApplyCoupon}
+              className="mt-2 w-full rounded-lg bg-gray-100 py-2 text-[14px] font-medium hover:bg-gray-200"
+            >
+              Apply Coupon
+            </button>
+          </div>
+
+          <div className="mt-6 border-t border-[#e5e7eb] pt-4">
+            <div className="flex justify-between text-[16px] font-semibold">
+              <span>Total</span>
+              <span>${total.toFixed(2)}</span>
+            </div>
+          </div>
+
+          <button
+            onClick={onCheckout}
+            className="mt-6 w-full rounded-lg bg-navy py-3 text-[14px] font-semibold text-white hover:bg-navy/90"
+          >
+            Proceed to Checkout
+          </button>
+        </div>
       </div>
     </div>
   );
 }
 
-function CartItemCard({ item, onRemove }: { item: CartItem; onRemove: () => void }) {
+function EmptyCart() {
   return (
-    <article className="flex items-center gap-3 rounded-[12px] bg-white p-3 shadow-[0_5px_18px_rgba(11,31,77,0.06)]">
-      <div className="h-16 w-16 shrink-0 overflow-hidden rounded-[9px] bg-[#edf3f8]">
-        {/* Placeholder - no image in API response */}
-        <div className="flex h-full w-full items-center justify-center text-[10px] text-gray-400">
-          Plot
+    <div className="mx-auto mt-16 max-w-md text-center">
+      <div className="mb-6 flex justify-center">
+        <div className="flex h-24 w-24 items-center justify-center rounded-full bg-navy/10">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-navy">
+            <circle cx="9" cy="21" r="1"/>
+            <circle cx="20" cy="21" r="1"/>
+            <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
+          </svg>
         </div>
       </div>
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2">
-          <span className="rounded bg-[#fff4c6] px-1.5 py-0.5 text-[8px] text-[#c19a16]">
-            {item.zone ?? "PLOT"}
-          </span>
-          <span className="text-[8px] text-[#aab2bd]">{item.plotId}</span>
-        </div>
-        <h3 className="truncate text-[12px] font-semibold text-navy">
-          {item.city || item.region || "Selected Plot"}
-        </h3>
-        <p className="text-[9px] text-[#8f99a4]">◉ {item.region ?? "Thailand"}</p>
-        <p className="mt-1 text-[9px] text-brand-red">
-          {item.sizeRai} Rai{" "}
-          <span className="text-[#8f99a4]">· ${item.pricePerRai.toFixed(2)} / Rai</span>
-        </p>
-      </div>
-      <div className="text-right">
-        <strong className="text-[21px] text-[#171717]">
-          ${item.subtotal.toFixed(2)}
-        </strong>
-        <button
-          type="button"
-          onClick={onRemove}
-          className="mt-2 block w-full text-[9px] text-[#7b858f]"
+
+      <h2 className="text-[20px] font-semibold text-navy">Your cart is empty</h2>
+      <p className="mt-2 text-[14px] text-[#7b858f]">
+        You haven't selected any plots yet. Explore Thailand and discover a place to add to your collection.
+      </p>
+
+      <div className="mt-8 flex justify-center gap-4">
+        <Link
+          href={routes.purchases}
+          className="rounded-lg border border-navy px-6 py-3 text-[14px] font-medium text-navy hover:bg-navy/5"
         >
-          ▥ Remove
-        </button>
+          My Purchase
+        </Link>
+        <Link
+          href={routes.dashboardExplore}
+          className="rounded-lg bg-navy px-6 py-3 text-[14px] font-medium text-white hover:bg-navy/90"
+        >
+          Explore Thailand →
+        </Link>
       </div>
-    </article>
+    </div>
   );
 }

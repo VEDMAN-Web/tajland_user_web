@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { routes } from "@/lib/constants/routes";
 import { useAuth } from "@/lib/hooks/useAuth";
+import { toSafeInternalRedirect } from "@/lib/security/redirects";
 
 export function AuthEntryRedirect({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -11,7 +12,8 @@ export function AuthEntryRedirect({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!isLoading && isAuthenticated) {
-      router.replace(routes.dashboard);
+      const nextPath = toSafeInternalRedirect(new URLSearchParams(window.location.search).get("next"));
+      router.replace(nextPath ?? routes.dashboard);
     }
   }, [isAuthenticated, isLoading, router]);
 

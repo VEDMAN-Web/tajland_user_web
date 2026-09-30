@@ -10,12 +10,6 @@ export const metadata: Metadata = createPageMetadata({
   index: false,
 });
 
-export default async function Page({
-  searchParams,
-}: {
-  searchParams: Promise<{ inquiry?: string }>;
-}) {
-  const params = await searchParams;
-
-  return <ContactPage inquiryOpen={params.inquiry === "1"} />;
+export default function Page() {
+  return <ContactPage />;
 }

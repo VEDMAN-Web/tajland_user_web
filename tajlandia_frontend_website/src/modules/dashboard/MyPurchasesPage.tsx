@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { AccountMenu } from "./AccountMenu";
 import { DashboardNavbar } from "./DashboardNavbar";
 import { useAuth } from "@/lib/hooks/useAuth";
@@ -110,6 +110,78 @@ function SortIcon() {
   );
 }
 
+function formatPurchaseDate(value?: string) {
+  if (!value) return "";
+  const date = new Date(`${value}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "long", year: "numeric" }).format(date);
+}
+
+function formatPurchaseAmount(amount?: number) {
+  const value = amount ?? 0;
+  const hasCents = Math.round(value * 100) % 100 !== 0;
+  return `$${value.toLocaleString("en-US", { minimumFractionDigits: hasCents ? 2 : 0, maximumFractionDigits: 2 })}`;
+}
+
+function LayersIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-5 w-5">
+      <path d="M12 3.2 4.2 7.1 12 11l7.8-3.9L12 3.2Z" fill="none" stroke="currentColor" strokeLinejoin="round" strokeWidth="1.6" />
+      <path d="M4.2 12 12 15.9 19.8 12" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.6" />
+      <path d="M4.2 16.4 12 20.3 19.8 16.4" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.6" />
+    </svg>
+  );
+}
+
+function PinIcon({ className = "h-5 w-5" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className={className}>
+      <path d="M12 21s6.2-5.2 6.2-10a6.2 6.2 0 1 0-12.4 0c0 4.8 6.2 10 6.2 10Z" fill="none" stroke="currentColor" strokeLinejoin="round" strokeWidth="1.6" />
+      <circle cx="12" cy="11" r="2" fill="none" stroke="currentColor" strokeWidth="1.6" />
+    </svg>
+  );
+}
+
+function CoinsIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-5 w-5">
+      <ellipse cx="12" cy="7" rx="6.2" ry="2.5" fill="none" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M5.8 7v4.4c0 1.4 2.8 2.5 6.2 2.5s6.2-1.1 6.2-2.5V7" fill="none" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M5.8 11.4v4.2c0 1.4 2.8 2.5 6.2 2.5s6.2-1.1 6.2-2.5v-4.2" fill="none" stroke="currentColor" strokeWidth="1.6" />
+    </svg>
+  );
+}
+
+function PersonIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-5 w-5">
+      <circle cx="12" cy="8" r="3" fill="none" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M5.8 19.2c1-3.1 3.3-4.6 6.2-4.6s5.2 1.5 6.2 4.6" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="1.6" />
+    </svg>
+  );
+}
+
+function GiftIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-5 w-5">
+      <rect x="4" y="10" width="16" height="9.2" rx="1.6" fill="none" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M4 14.2h16M12 10v9.2" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="1.6" />
+      <path d="M12 10c-1.8 0-3.2-1.8-2.1-3.2C11 5.4 12 8.2 12 10c0-1.8 1-4.6 2.1-3.2C15.2 8.2 13.8 10 12 10Z" fill="none" stroke="currentColor" strokeLinejoin="round" strokeWidth="1.6" />
+    </svg>
+  );
+}
+
+function PlotIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-3.5 w-3.5">
+      <rect x="4" y="4" width="7" height="7" rx="1.2" fill="none" stroke="currentColor" strokeWidth="1.6" />
+      <rect x="13" y="4" width="7" height="7" rx="1.2" fill="none" stroke="currentColor" strokeWidth="1.6" />
+      <rect x="4" y="13" width="7" height="7" rx="1.2" fill="none" stroke="currentColor" strokeWidth="1.6" />
+      <rect x="13" y="13" width="7" height="7" rx="1.2" fill="none" stroke="currentColor" strokeWidth="1.6" />
+    </svg>
+  );
+}
+
 export function MyLandPage() {
   const router = useRouter();
   const { isAuthenticated, isLoading } = useAuth();
@@ -119,7 +191,7 @@ export function MyLandPage() {
   const purchases = storedPurchases.length
     ? storedPurchases
     : Array.from({ length: 6 }, (_, index) => ({
-        id: `PH-01234-${index}`,
+        id: "PH-01234",
         name: "Seaview Ridge Plot",
         region: "Phuket City, Phuket · Icon Zone 03",
         latitude: 7.8804 + index * 0.002,
@@ -131,8 +203,20 @@ export function MyLandPage() {
   const [dialog, setDialog] = useState<"sort" | "filter" | null>(null);
   const [sort, setSort] = useState<PurchaseSort>("recommended");
   const [draftSort, setDraftSort] = useState<PurchaseSort>("recommended");
-  const [filterZone, setFilterZone] = useState("Icon");
-  const [draftFilterZone, setDraftFilterZone] = useState("Icon");
+  const [showMyPlots, setShowMyPlots] = useState(false);
+  const [showGifted, setShowGifted] = useState(true);
+  const [draftMyPlots, setDraftMyPlots] = useState(false);
+  const [draftGifted, setDraftGifted] = useState(true);
+  const [zoneFilters, setZoneFilters] = useState<string[]>(["Icon"]);
+  const [draftZones, setDraftZones] = useState<string[]>(["Icon"]);
+  const [minRai, setMinRai] = useState("1");
+  const [maxRai, setMaxRai] = useState("25");
+  const [draftMinRai, setDraftMinRai] = useState("1");
+  const [draftMaxRai, setDraftMaxRai] = useState("25");
+  const [minPrice, setMinPrice] = useState("200");
+  const [maxPrice, setMaxPrice] = useState("1000");
+  const [draftMinPrice, setDraftMinPrice] = useState("200");
+  const [draftMaxPrice, setDraftMaxPrice] = useState("1000");
   const [filtersApplied, setFiltersApplied] = useState(false);
   const filteredPurchases = purchases
     .filter((purchase) =>
@@ -140,12 +224,19 @@ export function MyLandPage() {
         .toLowerCase()
         .includes(query.toLowerCase()),
     )
-    .filter(
-      (purchase) =>
-        !filtersApplied ||
-        filterZone === "All Zones" ||
-        (purchase.zone ?? "Icon") === filterZone,
-    )
+    .filter((purchase) => {
+      if (!filtersApplied) return true;
+      const typeAllowed = (purchase as any).gifted ? showGifted : showMyPlots;
+      const zoneAllowed = zoneFilters.length === 0 || zoneFilters.includes(purchase.zone ?? "Standard");
+      return (
+        typeAllowed &&
+        zoneAllowed &&
+        (purchase.rai ?? 0) >= Number(minRai) &&
+        (purchase.rai ?? 0) <= Number(maxRai) &&
+        (purchase.amount ?? 0) >= Number(minPrice) &&
+        (purchase.amount ?? 0) <= Number(maxPrice)
+      );
+    })
     .sort((a, b) =>
       sort === "price-low"
         ? (a.amount ?? 0) - (b.amount ?? 0)
@@ -155,7 +246,9 @@ export function MyLandPage() {
             ? (a.rai ?? 0) - (b.rai ?? 0)
             : sort === "area-large"
               ? (b.rai ?? 0) - (a.rai ?? 0)
-              : 0,
+              : sort === "newest"
+                ? Date.parse((b as any).createdAt ?? "") - Date.parse((a as any).createdAt ?? "")
+                : 0,
     );
   const totalRai = 250;
   const totalSpent = 15200;
@@ -177,54 +270,48 @@ export function MyLandPage() {
     setDialog("sort");
   }
   function openFilter() {
-    setDraftFilterZone(filterZone);
+    setDraftMyPlots(showMyPlots);
+    setDraftGifted(showGifted);
+    setDraftZones(zoneFilters);
+    setDraftMinRai(minRai);
+    setDraftMaxRai(maxRai);
+    setDraftMinPrice(minPrice);
+    setDraftMaxPrice(maxPrice);
     setDialog("filter");
   }
 
   return (
-    <div className="min-h-[100svh] bg-[#f7fafc] text-navy">
+    <div className="min-h-[100svh] bg-[#f7f9fc] text-navy">
       <DashboardNavbar active="my-land" />
-      <main className="mx-auto w-[92%] max-w-none px-5 pb-16 pt-10 sm:px-8 sm:pt-14">
+      <main className="mx-auto w-full max-w-[1120px] px-5 pb-16 pt-8 sm:px-8">
         <section>
-          <h1 className="text-[27px] font-semibold tracking-[-0.04em] text-[#171717] sm:text-[30px]">
+          <h1 className="font-manrope text-[28px] font-semibold leading-none tracking-[-0.03em] text-navy sm:text-[32px]">
             {t("My Land")}
           </h1>
-          <p className="mt-1 text-[12px] text-[#7b858f]">
+          <p className="mt-2 font-manrope text-[14px] leading-5 text-[#8b939e]">
             {t("Your collection of places across Thailand., all in one place.")}
           </p>
-          <div className="mt-5 grid gap-3 md:grid-cols-3">
-            <Stat
-              icon="/images/dashboard/purchase-map.png"
-              label={t("Total Owned")}
-              value={`${totalRai} Rai`}
-            />
-            <Stat
-              icon="/images/dashboard/purchase-location.png"
-              label={t("Total Lands")}
-              value={`${regions} Location`}
-            />
-            <Stat
-              icon="/images/dashboard/purchase-spent.png"
-              label={t("Total Spent")}
-              value={`$${totalSpent.toLocaleString()}`}
-            />
+          <div className="mt-6 grid gap-3 md:grid-cols-3">
+            <PurchaseStat icon={<LayersIcon />} label={t("Total Owned")} value={`${totalRai} ${t("Rai")}`} />
+            <PurchaseStat icon={<PinIcon />} label={t("Total Lands")} value={`${regions} ${t("Location")}`} />
+            <PurchaseStat icon={<CoinsIcon />} label={t("Total Spent")} value={`$${totalSpent.toLocaleString("de-DE")}`} />
           </div>
           <div className="mt-6 flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
-            <label className="flex h-9 w-full max-w-[295px] items-center gap-2 rounded-[9px] border border-[#e1e7ec] bg-white px-3 text-[10px] text-[#8d98a3] shadow-[0_3px_10px_rgba(11,31,77,0.02)]">
+            <label className="flex h-11 w-full max-w-[420px] items-center gap-2 rounded-[12px] border border-[#e4e9ef] bg-white px-3 font-manrope text-[13px] text-[#8b939e]">
               <SearchIcon />
               <input
                 type="search"
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
                 placeholder={t("Search your plots, provinces, deeds...")}
-                className="min-w-0 flex-1 bg-transparent outline-none placeholder:text-[#aab2bd]"
+                className="min-w-0 flex-1 bg-transparent font-manrope text-[13px] outline-none placeholder:text-[#b0b7c0]"
               />
             </label>
             <div className="flex gap-2">
               <button
                 type="button"
                 onClick={openFilter}
-                className="inline-flex h-9 items-center gap-1.5 rounded-[9px] border border-[#e1e7ec] bg-white px-3 text-[10px] text-[#8d98a3]"
+                className="inline-flex h-11 items-center gap-1.5 rounded-[12px] border border-[#e4e9ef] bg-white px-3 font-manrope text-[13px] font-medium text-[#8b939e]"
               >
                 <FilterIcon />
                 {t("Filter")}
@@ -232,7 +319,7 @@ export function MyLandPage() {
               <button
                 type="button"
                 onClick={openSort}
-                className="inline-flex h-9 items-center gap-1.5 rounded-[9px] border border-[#e1e7ec] bg-white px-3 text-[10px] text-[#8d98a3]"
+                className="inline-flex h-11 items-center gap-1.5 rounded-[12px] border border-[#e4e9ef] bg-white px-3 font-manrope text-[13px] font-medium text-[#8b939e]"
               >
                 <SortIcon />
                 {t("Sort")}
@@ -242,7 +329,7 @@ export function MyLandPage() {
           {filteredPurchases.length ? (
             <div className="mt-5 grid gap-3 md:grid-cols-2 lg:grid-cols-3">
               {filteredPurchases.map((purchase, index) => (
-                <LandCard key={purchase.id ?? index} purchase={purchase} />
+                <LandCard key={`${purchase.id ?? "plot"}-${index}`} purchase={purchase} />
               ))}
             </div>
           ) : (
@@ -268,7 +355,7 @@ export function MyLandPage() {
         </section>
       </main>
       {dialog === "sort" ? (
-        <LandSortPanel
+        <PurchaseSortPanel
           value={draftSort}
           onChange={setDraftSort}
           onClose={() => setDialog(null)}
@@ -279,16 +366,43 @@ export function MyLandPage() {
         />
       ) : null}
       {dialog === "filter" ? (
-        <LandFilterPanel
-          value={draftFilterZone}
-          onChange={setDraftFilterZone}
+        <PurchaseFilterPanel
+          myPlots={draftMyPlots}
+          gifted={draftGifted}
+          zones={draftZones}
+          minRai={draftMinRai}
+          maxRai={draftMaxRai}
+          minPrice={draftMinPrice}
+          maxPrice={draftMaxPrice}
+          onMyPlotsChange={setDraftMyPlots}
+          onGiftedChange={setDraftGifted}
+          onZoneToggle={(zone) =>
+            setDraftZones((current) =>
+              zone === "all" ? [] : current.includes(zone) ? current.filter((item) => item !== zone) : [...current, zone],
+            )
+          }
+          setMinRai={setDraftMinRai}
+          setMaxRai={setDraftMaxRai}
+          setMinPrice={setDraftMinPrice}
+          setMaxPrice={setDraftMaxPrice}
           onClose={() => setDialog(null)}
           onReset={() => {
-            setDraftFilterZone("All Zones");
-            setFiltersApplied(false);
+            setDraftMyPlots(false);
+            setDraftGifted(true);
+            setDraftZones(["Icon"]);
+            setDraftMinRai("1");
+            setDraftMaxRai("25");
+            setDraftMinPrice("200");
+            setDraftMaxPrice("1000");
           }}
           onApply={() => {
-            setFilterZone(draftFilterZone);
+            setShowMyPlots(draftMyPlots);
+            setShowGifted(draftGifted);
+            setZoneFilters(draftZones);
+            setMinRai(draftMinRai);
+            setMaxRai(draftMaxRai);
+            setMinPrice(draftMinPrice);
+            setMaxPrice(draftMaxPrice);
             setFiltersApplied(true);
             setDialog(null);
           }}
@@ -299,57 +413,50 @@ export function MyLandPage() {
 }
 
 function LandCard({ purchase }: { purchase: Purchase }) {
+  const { t } = useDashboardLanguage();
   const plotId = purchase.id ?? "PH-01234";
   const latitude = purchase.latitude ?? 7.8804;
   const longitude = purchase.longitude ?? 98.3923;
   const mapHref = `${routes.dashboardExplore}?plotId=${encodeURIComponent(plotId)}&lat=${latitude}&lng=${longitude}&zoom=16`;
+  const paid = (purchase.amount ?? 25.1).toFixed(2);
 
   return (
-    <article className="overflow-hidden rounded-[14px] bg-white shadow-[0_5px_18px_rgba(11,31,77,0.08)]">
-      <img
-        src="/images/explore/chiang-mai.jpg"
-        alt={purchase.name ?? "Seaview Ridge Plot"}
-        className="h-[170px] w-full object-cover"
-      />
-      <div className="p-4">
-        <div className="flex items-center justify-between text-[8px] uppercase tracking-[0.05em] text-[#8f99a4]">
-          <span>PHUKET · {purchase.id ?? "PH-01234"}</span>
-          <span className="rounded bg-[#fff4c6] px-1.5 py-1 text-[#c19a16]">ICON</span>
+    <article className="overflow-hidden rounded-[16px] border border-[#eef1f4] bg-white shadow-[0_8px_22px_rgba(11,31,77,0.05)]">
+      <img src="/images/explore/chiang-mai.jpg" alt="" className="h-[168px] w-full object-cover" />
+      <div className="px-4 pb-4 pt-3">
+        <div className="flex items-center justify-between gap-2">
+          <span className="font-manrope text-[11px] font-semibold uppercase tracking-[0.06em] text-[#8b939e]">
+            Phuket · {plotId}
+          </span>
+          <span className="rounded-full bg-[#fff6d6] px-2 py-0.5 font-manrope text-[10px] font-semibold uppercase tracking-[0.04em] text-[#c4a035]">
+            {purchase.zone ?? "Icon"}
+          </span>
         </div>
-        <h2 className="mt-2 text-[17px] font-semibold text-[#171717]">
-          {purchase.name ?? "Seaview Ridge Plot"}
-        </h2>
-        <p className="mt-1 truncate text-[9px] text-[#b0b7be]">
-          ◉ {purchase.region ?? "Phuket City, Phuket · Icon Zone 03"}
+        <h2 className="mt-2 font-manrope text-[16px] font-semibold leading-5 text-[#1a1a1a]">{t(purchase.name ?? "Seaview Ridge Plot")}</h2>
+        <p className="mt-1 flex items-center gap-1 font-manrope text-[12px] leading-4 text-[#8b939e]">
+          <PinIcon className="h-3.5 w-3.5 shrink-0" />
+          <span className="truncate">{purchase.region ?? "Phuket City, Phuket · Icon Zone 03"}</span>
         </p>
-        <div className="mt-3 grid grid-cols-3 divide-x rounded-[9px] border border-[#e8edf1] py-2 text-center">
+        <div className="mt-3 grid grid-cols-3 divide-x divide-[#e8edf2] rounded-[12px] border border-[#e8edf2] py-2.5 text-center">
           <div>
-            <p className="text-[8px] uppercase text-[#a8b0b9]">Area</p>
-            <strong className="text-[12px] text-[#242b32]">
-              {purchase.rai ?? 25} Rai
-            </strong>
+            <p className="font-manrope text-[10px] font-semibold uppercase tracking-[0.06em] text-[#8b939e]">{t("Area")}</p>
+            <strong className="mt-1 block font-manrope text-[13px] font-semibold text-[#1a1a1a]">{purchase.rai ?? 25} {t("Rai")}</strong>
           </div>
           <div>
-            <p className="text-[8px] uppercase text-[#a8b0b9]">Rate</p>
-            <strong className="text-[12px] text-[#242b32]">$0.10</strong>
+            <p className="font-manrope text-[10px] font-semibold uppercase tracking-[0.06em] text-[#8b939e]">{t("Rate")}</p>
+            <strong className="mt-1 block font-manrope text-[13px] font-semibold text-[#1a1a1a]">$0.10</strong>
           </div>
           <div>
-            <p className="text-[8px] uppercase text-[#a8b0b9]">Amt Paid</p>
-            <strong className="text-[12px] text-[#242b32]">$25.10</strong>
+            <p className="font-manrope text-[10px] font-semibold uppercase tracking-[0.06em] text-[#8b939e]">{t("Amt Paid")}</p>
+            <strong className="mt-1 block font-manrope text-[13px] font-semibold text-[#1a1a1a]">${paid}</strong>
           </div>
         </div>
         <div className="mt-3 grid grid-cols-2 gap-2">
-          <Link
-            href={mapHref}
-            className="flex h-9 items-center justify-center rounded-[8px] bg-navy text-[10px] text-white"
-          >
-            View Map →
+          <Link href={mapHref} className="flex h-11 items-center justify-center rounded-[12px] bg-navy font-manrope text-[13px] font-medium text-white">
+            {t("View Map")} →
           </Link>
-          <Link
-            href={routes.certificates}
-            className="flex h-9 items-center justify-center rounded-[8px] border border-[#e1e7ec] text-[10px] text-navy"
-          >
-            View Certificate
+          <Link href={routes.certificates} className="flex h-11 items-center justify-center rounded-[12px] border border-[#e4e9ef] bg-white font-manrope text-[13px] font-medium text-navy">
+            {t("View Certificate")}
           </Link>
         </div>
       </div>
@@ -357,274 +464,17 @@ function LandCard({ purchase }: { purchase: Purchase }) {
   );
 }
 
-function LandSortPanel({
-  value,
-  onChange,
-  onClose,
-  onApply,
-}: {
-  value: PurchaseSort;
-  onChange: (value: PurchaseSort) => void;
-  onClose: () => void;
-  onApply: () => void;
-}) {
-  const options: Array<[PurchaseSort, string, string]> = [
-    ["recommended", "Recommended", "Curated by premier parcel score"],
-    ["price-low", "Price: Low to High", "$ → $$$"],
-    ["price-high", "Price: High to Low", "$$$ → $"],
-    ["area-small", "Land Area: Small to Large", "1 → 50 Rai"],
-    ["area-large", "Land Area: Large to Small", "50 → 1 Rai"],
-    ["newest", "Newest Added", "Recent"],
-  ];
-  return (
-    <SidePanel>
-      <PanelHeading
-        icon="⇅"
-        title="Sort by"
-        subtitle="Reorder active parcel markers"
-        onClose={onClose}
-      />
-      <div className="space-y-1 px-4 py-3">
-        {options.map(([option, label, detail]) => (
-          <label
-            key={option}
-            className={`flex cursor-pointer items-center gap-3 rounded-[10px] px-3 py-3 ${value === option ? "bg-[#f3f7ff]" : ""}`}
-          >
-            <input
-              type="radio"
-              name="land-sort"
-              checked={value === option}
-              onChange={() => onChange(option)}
-              className="h-5 w-5 accent-[#06245f]"
-            />
-            <span
-              className={`flex-1 text-[13px] ${value === option ? "font-semibold text-navy" : "text-[#8b949e]"}`}
-            >
-              {label}
-            </span>
-            <span
-              className={
-                option === "newest"
-                  ? "rounded bg-[#e7faef] px-2 py-1 text-[10px] text-[#16a05a]"
-                  : "text-[12px] text-[#8b949e]"
-              }
-            >
-              {option === "recommended" ? "DEFAULT" : detail}
-            </span>
-          </label>
-        ))}
-      </div>
-      <PanelActions onReset={onClose} onApply={onApply} />
-    </SidePanel>
-  );
-}
-
-function LandFilterPanel({
-  value,
-  onChange,
-  onClose,
-  onReset,
-  onApply,
-}: {
-  value: string;
-  onChange: (value: string) => void;
-  onClose: () => void;
-  onReset: () => void;
-  onApply: () => void;
-}) {
-  return (
-    <SidePanel>
-      <PanelHeading
-        icon="☷"
-        title="Filter Plots"
-        subtitle="Narrow 1,168 parcels across Thailand"
-        onClose={onClose}
-      />
-      <div className="space-y-5 px-4 py-4">
-        <div>
-          <p className="mb-3 text-[12px] font-semibold uppercase tracking-[0.05em] text-[#8b949e]">
-            Plots
-          </p>
-          <div className="grid grid-cols-2 gap-2">
-            <CheckBox label="My Plots" checked={false} onChange={() => undefined} />
-            <CheckBox label="Gifted Plots" checked={true} onChange={() => undefined} />
-          </div>
-        </div>
-        <div>
-          <p className="mb-3 text-[12px] font-semibold uppercase tracking-[0.05em] text-[#8b949e]">
-            Zone Category
-          </p>
-          <div className="grid grid-cols-2 gap-2">
-            <CheckBox
-              label="All Zones"
-              checked={value === "All Zones"}
-              onChange={() => onChange("All Zones")}
-            />
-            <CheckBox
-              label="Icon"
-              checked={value === "Icon"}
-              onChange={() => onChange("Icon")}
-            />
-            <CheckBox
-              label="Popular"
-              checked={value === "Popular"}
-              onChange={() => onChange("Popular")}
-            />
-            <CheckBox
-              label="Standard"
-              checked={value === "Standard"}
-              onChange={() => onChange("Standard")}
-            />
-          </div>
-        </div>
-        <div className="border-t border-[#edf0f3] pt-4">
-          <div className="flex justify-between text-[12px] font-semibold uppercase text-[#8b949e]">
-            <span>Land Area (Rai)</span>
-            <span className="font-normal normal-case">1 Rai = 1,600 m²</span>
-          </div>
-          <div className="mt-3 grid grid-cols-2 gap-2">
-            <FieldBox value="1" />
-            <FieldBox value="25" />
-          </div>
-        </div>
-        <div className="border-t border-[#edf0f3] pt-4">
-          <div className="flex justify-between text-[12px] font-semibold uppercase text-[#8b949e]">
-            <span>Price Range (USD)</span>
-            <span className="font-normal normal-case">$100 – $2,500</span>
-          </div>
-          <div className="mt-3 grid grid-cols-2 gap-2">
-            <FieldBox value="200" prefix="$" />
-            <FieldBox value="1000" prefix="$" />
-          </div>
-        </div>
-      </div>
-      <div className="flex items-center justify-between bg-[#f7f9fc] px-5 py-4">
-        <button type="button" onClick={onReset} className="text-[13px] text-[#8b949e]">
-          Clear All
-        </button>
-        <div className="flex items-center gap-4">
-          <span className="text-[10px] text-[#8b949e]">77 plots found</span>
-          <button
-            type="button"
-            onClick={onApply}
-            className="rounded-[9px] bg-navy px-4 py-2.5 text-[12px] font-medium text-white"
-          >
-            Apply Filters
-          </button>
-        </div>
-      </div>
-    </SidePanel>
-  );
-}
-
-function SidePanel({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="fixed inset-0 z-[100] flex items-start justify-end bg-transparent p-3 pt-20 sm:p-6 sm:pt-24">
-      <section
-        role="dialog"
-        aria-modal="true"
-        className="w-full max-w-[465px] overflow-hidden rounded-[16px] bg-white shadow-[0_20px_60px_rgba(11,31,77,0.22)]"
-      >
-        {children}
-      </section>
-    </div>
-  );
-}
-function PanelHeading({
-  icon,
-  title,
-  subtitle,
-  onClose,
-}: {
-  icon: string;
-  title: string;
-  subtitle: string;
-  onClose: () => void;
-}) {
-  return (
-    <div className="flex items-start gap-3 border-b border-[#edf0f3] px-5 py-5">
-      <span className="flex h-9 w-9 items-center justify-center rounded-[9px] bg-[#eef2f5] text-xl text-navy">
-        {icon}
-      </span>
-      <div className="flex-1">
-        <h2 className="text-[20px] font-semibold text-navy">{title}</h2>
-        <p className="text-[12px] text-[#8b949e]">{subtitle}</p>
-      </div>
-      <button
-        type="button"
-        onClick={onClose}
-        aria-label="Close"
-        className="text-2xl leading-none text-[#9aa3ad]"
-      >
-        ×
-      </button>
-    </div>
-  );
-}
-function PanelActions({
-  onReset,
-  onApply,
-}: {
-  onReset: () => void;
-  onApply: () => void;
-}) {
-  return (
-    <div className="flex items-center justify-between bg-[#f7f9fc] px-5 py-4">
-      <button type="button" onClick={onReset} className="text-[13px] text-[#8b949e]">
-        Reset
-      </button>
-      <button
-        type="button"
-        onClick={onApply}
-        className="rounded-[10px] bg-navy px-6 py-3 text-[13px] font-medium text-white"
-      >
-        Apply
-      </button>
-    </div>
-  );
-}
-function CheckBox({
-  label,
-  checked,
-  onChange,
-}: {
-  label: string;
-  checked: boolean;
-  onChange: (value: boolean) => void;
-}) {
-  return (
-    <label className="flex cursor-pointer items-center gap-2 rounded-[10px] border border-[#e1e7ec] px-3 py-2.5 text-[13px] text-[#8b949e]">
-      <input
-        type="checkbox"
-        checked={checked}
-        onChange={(event) => onChange(event.target.checked)}
-        className="h-5 w-5 accent-[#06245f]"
-      />
-      {label}
-    </label>
-  );
-}
-function FieldBox({ value, prefix }: { value: string; prefix?: string }) {
-  return (
-    <div className="flex h-11 items-center gap-2 rounded-[10px] border border-[#e1e7ec] px-3 text-[13px] text-navy">
-      {prefix ? <span className="text-[#8b949e]">{prefix}</span> : null}
-      <span>{value}</span>
-      <span className="ml-auto text-[11px] font-semibold text-[#8b949e]">
-        {prefix ? "" : "RAI"}
-      </span>
-    </div>
-  );
-}
 
 export function MyPurchasesPage() {
   const router = useRouter();
   const { isAuthenticated, isLoading } = useAuth();
+  const { t } = useDashboardLanguage();
   const storedPurchases = getPurchases();
   const purchases = storedPurchases.length ? storedPurchases : defaultPurchases;
   const [dialog, setDialog] = useState<"sort" | "filter" | null>(null);
   const [sort, setSort] = useState<PurchaseSort>("recommended");
   const [draftSort, setDraftSort] = useState<PurchaseSort>("recommended");
-  const [showMyPlots, setShowMyPlots] = useState(true);
+  const [showMyPlots, setShowMyPlots] = useState(false);
   const [showGifted, setShowGifted] = useState(true);
   const [draftMyPlots, setDraftMyPlots] = useState(true);
   const [draftGifted, setDraftGifted] = useState(true);
@@ -664,7 +514,7 @@ export function MyPurchasesPage() {
             : sort === "area-large"
               ? (b.rai ?? 0) - (a.rai ?? 0)
               : sort === "newest"
-                ? Date.parse(b.createdAt ?? "") - Date.parse(a.createdAt ?? "")
+                ? Date.parse((b as any).createdAt ?? "") - Date.parse((a as any).createdAt ?? "")
                 : 0,
     );
   const totalRai = 250;
@@ -673,8 +523,8 @@ export function MyPurchasesPage() {
 
   if (isLoading)
     return (
-      <main className="flex min-h-[100svh] items-center justify-center bg-[#f7fafc] text-sm text-muted">
-        Loading purchases...
+      <main className="flex min-h-[100svh] items-center justify-center bg-[#f7f9fc] text-sm text-muted">
+        {t("Loading purchases...")}
       </main>
     );
   if (!isAuthenticated) {
@@ -697,54 +547,40 @@ export function MyPurchasesPage() {
     setDialog("filter");
   }
   return (
-    <div className="min-h-[100svh] bg-[#f7fafc] text-navy">
+    <div className="min-h-[100svh] bg-[#f7f9fc] text-navy">
       <DashboardNavbar active="none" />
-      <main className="mx-auto grid w-[92%] max-w-none gap-8 px-5 pb-12 pt-10 sm:px-8 lg:grid-cols-[256px_minmax(0,1fr)] lg:gap-7 lg:pt-14">
+      <main className="mx-auto grid w-full max-w-[1180px] gap-6 px-5 pb-14 pt-8 sm:px-8 lg:grid-cols-[240px_minmax(0,1fr)] lg:items-start lg:gap-7">
         <AccountMenu active="purchases" />
         <section className="min-w-0">
-          <div className="border-b border-[#e1e8ed] pb-4">
-            <h1 className="text-[30px] font-semibold tracking-[-0.04em] text-[#171717] sm:text-[32px]">
-              My Purchases
-            </h1>
-            <p className="mt-1 text-[12px] text-[#7b858f]">
-              View your plots and purchase details in one place.
-            </p>
+          <h1 className="font-manrope text-[28px] font-semibold leading-none tracking-[-0.03em] text-navy sm:text-[32px]">
+            {t("My Purchases")}
+          </h1>
+          <p className="mt-2 font-manrope text-[14px] leading-5 text-[#8b939e]">
+            {t("View your plots and purchase details in one place.")}
+          </p>
+          <div className="mt-6 grid gap-3 sm:grid-cols-3">
+            <PurchaseStat icon={<LayersIcon />} label={t("Total Owned")} value={`${totalRai} ${t("Rai")}`} />
+            <PurchaseStat icon={<PinIcon />} label={t("Regions")} value={`${String(regions).padStart(2, "0")} ${t("Location")}`} />
+            <PurchaseStat icon={<CoinsIcon />} label={t("Total Spent")} value={`$${totalSpent.toFixed(2)}`} />
           </div>
-          <div className="mt-5 grid gap-3 sm:grid-cols-3">
-            <Stat
-              icon="/images/dashboard/purchase-map.png"
-              label="Total Owned"
-              value={`${totalRai} Rai`}
-            />
-            <Stat
-              icon="/images/dashboard/purchase-location.png"
-              label="Regions"
-              value={`${String(regions).padStart(2, "0")} Location`}
-            />
-            <Stat
-              icon="/images/dashboard/purchase-spent.png"
-              label="Total Spent"
-              value={`$${totalSpent.toFixed(2)}`}
-            />
-          </div>
-          <div className="mt-7 flex items-center justify-between">
-            <h2 className="text-[17px] font-semibold text-navy">All Purchases</h2>
+          <div className="mt-7 flex flex-wrap items-center justify-between gap-3">
+            <h2 className="font-manrope text-[16px] font-semibold text-navy">{t("All Purchases")}</h2>
             <div className="flex gap-2">
               <button
                 type="button"
                 onClick={openFilter}
-                className="inline-flex h-9 items-center gap-1.5 rounded-[9px] border border-[#e1e7ec] bg-white px-3 text-[10px] text-[#8d98a3]"
+                className="inline-flex h-9 items-center gap-1.5 rounded-[10px] border border-[#e4e9ef] bg-white px-3 font-manrope text-[12px] font-medium text-[#8b939e]"
               >
                 <FilterIcon />
-                Filter
+                {t("Filter")}
               </button>
               <button
                 type="button"
                 onClick={openSort}
-                className="inline-flex h-9 items-center gap-1.5 rounded-[9px] border border-[#e1e7ec] bg-white px-3 text-[10px] text-[#8d98a3]"
+                className="inline-flex h-9 items-center gap-1.5 rounded-[10px] border border-[#e4e9ef] bg-white px-3 font-manrope text-[12px] font-medium text-[#8b939e]"
               >
                 <SortIcon />
-                Sort
+                {t("Sort")}
               </button>
             </div>
           </div>
@@ -755,8 +591,8 @@ export function MyPurchasesPage() {
               ))}
             </div>
           ) : (
-            <div className="mt-5 rounded-[14px] bg-white p-8 text-center text-[12px] text-[#8f99a4]">
-              No purchases match the selected filters.
+            <div className="mt-3 rounded-[16px] bg-white p-8 text-center font-manrope text-[13px] text-[#8b939e]">
+              {t("No purchases match the selected filters.")}
             </div>
           )}
         </section>
@@ -824,53 +660,67 @@ export function MyPurchasesPage() {
   );
 }
 
-function PurchaseRow({ purchase }: { purchase: Purchase }) {
+function PurchaseStat({ icon, label, value }: { icon: ReactNode; label: string; value: string }) {
   return (
-    <article className="flex flex-col gap-3 rounded-[14px] bg-white p-4 shadow-[0_5px_18px_rgba(11,31,77,0.08)] sm:flex-row sm:items-center">
-      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px] bg-[#eaf3ff] text-[18px] text-navy">
-        {purchase.gifted ? "♔" : "♟"}
+    <div className="rounded-[16px] border border-[#e8edf2] bg-white px-4 py-4 shadow-[0_6px_18px_rgba(11,31,77,0.04)]">
+      <div className="flex items-center gap-3">
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[12px] bg-[#edf3ff] text-navy">
+          {icon}
+        </span>
+        <div className="min-w-0">
+          <p className="font-manrope text-[11px] font-semibold uppercase tracking-[0.08em] text-[#8b939e]">{label}</p>
+          <strong className="mt-1 block font-manrope text-[20px] font-semibold leading-6 text-[#1a1a1a]">{value}</strong>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PurchaseRow({ purchase }: { purchase: Purchase }) {
+  const { t } = useDashboardLanguage();
+  const purchasedOn = formatPurchaseDate(purchase.createdAt);
+
+  return (
+    <article className="flex flex-col gap-4 rounded-[16px] border border-[#e8edf2] bg-white px-4 py-4 shadow-[0_8px_22px_rgba(11,31,77,0.05)] sm:flex-row sm:items-center">
+      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[12px] bg-[#edf3ff] text-navy">
+        {purchase.gifted ? <GiftIcon /> : <PersonIcon />}
       </span>
       <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-center gap-2 text-[12px] font-semibold text-[#242b32]">
-          <span>{purchase.name}</span>
-          <span className="rounded-full bg-[#e7faef] px-2 py-1 text-[9px] font-medium text-[#16a05a]">
-            Completed
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+          <p className="font-manrope text-[14px] font-semibold leading-5 text-[#1a1a1a]">{purchase.name}</p>
+          <span className="rounded-full bg-[#e7f8ee] px-2 py-0.5 font-manrope text-[11px] font-semibold leading-4 text-[#16a34a]">
+            {t("Completed")}
           </span>
-          <span className="text-[10px] font-normal text-[#9aa3ad]">
-            • Purchased 26 August 2026
-          </span>
+          {purchasedOn ? (
+            <span className="font-manrope text-[12px] leading-4 text-[#9aa3ad]">
+              • {t("Purchased")} {purchasedOn}
+            </span>
+          ) : null}
         </div>
-        <p className="mt-1 text-[9px] text-[#697586]">
-          <Image
-            src="/images/dashboard/purchase-map.png"
-            alt=""
-            width={10}
-            height={10}
-            className="mr-1 inline-block h-2.5 w-2.5 object-contain align-[-1px]"
-          />{" "}
-          LAND SIZE: <strong>{purchase.rai} Rai</strong> &nbsp;{" "}
-          <Image
-            src="/images/dashboard/purchase-location.png"
-            alt=""
-            width={10}
-            height={10}
-            className="mr-1 inline-block h-2.5 w-2.5 object-contain align-[-1px]"
-          />{" "}
-          LOCATION: <strong>{purchase.region}</strong>
+        <p className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 font-manrope text-[12px] leading-4 text-[#8b939e]">
+          <span className="inline-flex items-center gap-1.5">
+            <PlotIcon />
+            {t("LAND SIZE:")} <strong className="font-semibold text-[#1a1a1a]">{purchase.rai} {t("Rai")}</strong>
+          </span>
+          <span aria-hidden="true">•</span>
+          <span className="inline-flex items-center gap-1.5">
+            <PinIcon className="h-3.5 w-3.5" />
+            {t("LOCATION:")} <strong className="font-semibold text-[#1a1a1a]">{purchase.region}</strong>
+          </span>
         </p>
       </div>
       <div className="flex items-center justify-between gap-4 sm:justify-end">
         <div className="text-right">
-          <p className="text-[8px] uppercase text-[#9aa3ad]">Amount</p>
-          <strong className="text-[16px] text-[#171717]">
-            ${purchase.amount?.toLocaleString()}
+          <p className="font-manrope text-[10px] font-semibold uppercase tracking-[0.08em] text-[#9aa3ad]">{t("Amount")}</p>
+          <strong className="mt-0.5 block font-manrope text-[18px] font-semibold leading-6 text-[#1a1a1a]">
+            {formatPurchaseAmount(purchase.amount)}
           </strong>
         </div>
         <Link
           href={`/dashboard/purchases/${purchase.id ?? "1234"}`}
-          className="inline-flex h-10 items-center rounded-[9px] bg-navy px-5 text-[10px] text-white"
+          className="inline-flex h-10 items-center rounded-[10px] bg-navy px-4 font-manrope text-[13px] font-medium text-white"
         >
-          View Details →
+          {t("View Details")} →
         </Link>
       </div>
     </article>
@@ -888,53 +738,41 @@ function PurchaseSortPanel({
   onClose: () => void;
   onApply: () => void;
 }) {
+  const { t } = useDashboardLanguage();
   const options: Array<[PurchaseSort, string, string]> = [
-    ["recommended", "Recommended", "Curated by premier parcel score"],
-    ["price-low", "Price: Low to High", "$ → $$$"],
-    ["price-high", "Price: High to Low", "$$$ → $"],
-    ["area-small", "Land Area: Small to Large", "1 → 50 Rai"],
-    ["area-large", "Land Area: Large to Small", "50 → 1 Rai"],
-    ["newest", "Newest Added", "Recent"],
+    ["recommended", t("Recommended"), t("Curated by premier parcel score")],
+    ["price-low", t("Price: Low to High"), "$ → $$$"],
+    ["price-high", t("Price: High to Low"), "$$$ → $"],
+    ["area-small", t("Land Area: Small to Large"), `1 → 50 ${t("Rai")}`],
+    ["area-large", t("Land Area: Large to Small"), `50 → 1 ${t("Rai")}`],
+    ["newest", t("Newest Added"), t("Recent")],
   ];
   return (
     <PurchasePanel>
-      <PanelHeader
-        icon="⇅"
-        title="Sort by"
-        subtitle="Reorder active parcel markers"
-        onClose={onClose}
-      />
-      <div className="space-y-1 px-4 py-3">
-        {options.map(([option, label, detail]) => (
-          <label
-            key={option}
-            className={`flex cursor-pointer items-center gap-3 rounded-[10px] px-3 py-3 ${value === option ? "bg-[#f3f7ff]" : ""}`}
-          >
-            <input
-              type="radio"
-              name="purchase-sort"
-              checked={value === option}
-              onChange={() => onChange(option)}
-              className="h-5 w-5 accent-[#06245f]"
-            />
-            <span
-              className={`flex-1 text-[13px] ${value === option ? "font-semibold text-navy" : "text-[#8b949e]"}`}
-            >
-              {label}
-            </span>
-            <span
-              className={
-                option === "newest"
-                  ? "rounded bg-[#e7faef] px-2 py-1 text-[10px] text-[#16a05a]"
-                  : "text-[12px] text-[#8b949e]"
-              }
-            >
-              {option === "recommended" ? "DEFAULT" : detail}
-            </span>
-          </label>
-        ))}
+      <PanelHeader icon={<SortIcon />} title={t("Sort by")} subtitle={t("Reorder active parcel markers")} onClose={onClose} />
+      <div className="space-y-0.5 px-3 py-2">
+        {options.map(([option, label, detail]) => {
+          const selected = value === option;
+          return (
+            <label key={option} className={`flex cursor-pointer items-center gap-3 rounded-[12px] px-3 py-2.5 ${selected ? "bg-[#f3f7ff]" : ""}`}>
+              <input type="radio" name="purchase-sort" checked={selected} onChange={() => onChange(option)} className="sr-only" />
+              <ChoiceMark checked={selected} />
+              <span className="min-w-0 flex-1">
+                <span className={`block font-manrope text-[14px] leading-5 ${selected ? "font-semibold text-navy" : "font-medium text-[#8b939e]"}`}>{label}</span>
+                {option === "recommended" ? <span className="mt-0.5 block font-manrope text-[12px] leading-4 font-normal text-[#8b939e]">{detail}</span> : null}
+              </span>
+              {option === "recommended" ? (
+                <span className="rounded-full bg-[#e7eefc] px-2 py-1 font-manrope text-[10px] font-semibold tracking-[0.04em] text-[#3b5ccc]">{t("DEFAULT")}</span>
+              ) : option === "newest" ? (
+                <span className="rounded-full bg-[#e7f8ee] px-2 py-0.5 font-manrope text-[11px] font-semibold text-[#16a34a]">{detail}</span>
+              ) : (
+                <span className="font-manrope text-[12px] text-[#9aa3ad]">{detail}</span>
+              )}
+            </label>
+          );
+        })}
       </div>
-      <PanelFooter onReset={onClose} onApply={onApply} />
+      <PanelFooter onReset={() => onChange("recommended")} onApply={onApply} />
     </PurchasePanel>
   );
 }
@@ -976,52 +814,32 @@ function PurchaseFilterPanel({
   onReset: () => void;
   onApply: () => void;
 }) {
+  const { t } = useDashboardLanguage();
   return (
     <PurchasePanel>
-      <PanelHeader
-        icon="☷"
-        title="Filter Plots"
-        subtitle="Narrow 1,168 parcels across Thailand"
-        onClose={onClose}
-      />
-      <div className="space-y-5 px-4 py-4">
-        <FilterGroup title="Plots">
+      <PanelHeader icon={<FilterIcon />} title={t("Filter Plots")} subtitle={t("Narrow 1,168 parcels across Thailand")} onClose={onClose} />
+      <div className="space-y-5 px-5 py-4">
+        <FilterGroup title={t("Plots")}>
           <div className="grid grid-cols-2 gap-2">
-            <Check label="My Plots" checked={myPlots} onChange={onMyPlotsChange} />
-            <Check label="Gifted Plots" checked={gifted} onChange={onGiftedChange} />
+            <Check label={t("My Plots")} checked={myPlots} onChange={onMyPlotsChange} />
+            <Check label={t("Gifted Plots")} checked={gifted} onChange={onGiftedChange} />
           </div>
         </FilterGroup>
-        <FilterGroup title="Zone Category">
+        <FilterGroup title={t("Zone Category")}>
           <div className="grid grid-cols-2 gap-2">
-            <Check
-              label="All Zones"
-              checked={zones.length === 0}
-              onChange={() => onZoneToggle("all")}
-            />
-            <Check
-              label="Icon"
-              checked={zones.includes("Icon")}
-              onChange={() => onZoneToggle("Icon")}
-            />
-            <Check
-              label="Popular"
-              checked={zones.includes("Popular")}
-              onChange={() => onZoneToggle("Popular")}
-            />
-            <Check
-              label="Standard"
-              checked={zones.includes("Standard")}
-              onChange={() => onZoneToggle("Standard")}
-            />
+            <Check label={t("All Zones")} checked={zones.length === 0} onChange={() => onZoneToggle("all")} />
+            <Check label="Icon" checked={zones.includes("Icon")} onChange={() => onZoneToggle("Icon")} />
+            <Check label={t("Popular")} checked={zones.includes("Popular")} onChange={() => onZoneToggle("Popular")} />
+            <Check label={t("Standard")} checked={zones.includes("Standard")} onChange={() => onZoneToggle("Standard")} />
           </div>
         </FilterGroup>
-        <FilterGroup title="Land Area (Rai)" detail="1 Rai = 1,600 m²">
+        <FilterGroup title={t("Land Area (Rai)")} detail={t("1 Rai = 1,600 m²")}>
           <div className="grid grid-cols-2 gap-2">
             <Field value={minRai} onChange={setMinRai} suffix="RAI" />
             <Field value={maxRai} onChange={setMaxRai} suffix="RAI" />
           </div>
         </FilterGroup>
-        <FilterGroup title="Price Range (USD)" detail="$100 – $2,500">
+        <FilterGroup title={t("Price Range (USD)")} detail={t("$100 – $2,500")}>
           <div className="grid grid-cols-2 gap-2">
             <Field value={minPrice} onChange={setMinPrice} prefix="$" />
             <Field value={maxPrice} onChange={setMaxPrice} prefix="$" />
@@ -1029,19 +847,15 @@ function PurchaseFilterPanel({
         </FilterGroup>
       </div>
       <div className="flex items-center justify-between bg-[#f7f9fc] px-5 py-4">
-        <button type="button" onClick={onReset} className="text-[12px] text-[#8b949e]">
-          Clear All
+        <button type="button" onClick={onReset} className="font-manrope text-[13px] text-[#8b939e]">
+          {t("Clear All")}
         </button>
-        <div className="flex items-center gap-4">
-          <span className="text-[10px] text-[#8b949e]">
-            {filteredCount(zones)} plots found
+        <div className="flex items-center gap-3">
+          <span className="font-manrope text-[12px] text-[#8b939e]">
+            {filteredCount(zones)} {t("plots found")}
           </span>
-          <button
-            type="button"
-            onClick={onApply}
-            className="rounded-[9px] bg-navy px-4 py-2.5 text-[12px] font-medium text-white"
-          >
-            Apply Filters
+          <button type="button" onClick={onApply} className="rounded-[10px] bg-navy px-4 py-2.5 font-manrope text-[13px] font-medium text-white">
+            {t("Apply Filters")}
           </button>
         </div>
       </div>
@@ -1052,14 +866,18 @@ function PurchaseFilterPanel({
 function filteredCount(zones: string[]) {
   return zones.length ? 77 : 1168;
 }
-function PurchasePanel({ children }: { children: React.ReactNode }) {
+function ChoiceMark({ checked }: { checked: boolean }) {
   return (
-    <div className="fixed inset-0 z-[100] flex items-start justify-end bg-transparent p-3 pt-20 sm:p-6 sm:pt-24">
-      <section
-        role="dialog"
-        aria-modal="true"
-        className="w-full max-w-[465px] overflow-hidden rounded-[16px] bg-white shadow-[0_20px_60px_rgba(11,31,77,0.22)]"
-      >
+    <span className={`flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full border-[1.5px] ${checked ? "border-navy" : "border-[#d5dbe3]"}`}>
+      {checked ? <span className="h-2.5 w-2.5 rounded-full bg-navy" /> : null}
+    </span>
+  );
+}
+
+function PurchasePanel({ children }: { children: ReactNode }) {
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#121417]/45 p-4">
+      <section role="dialog" aria-modal="true" className="max-h-[92svh] w-full max-w-[400px] overflow-y-auto rounded-[18px] bg-white shadow-[0_24px_60px_rgba(11,31,77,0.28)]">
         {children}
       </section>
     </div>
@@ -1071,43 +889,34 @@ function PanelHeader({
   subtitle,
   onClose,
 }: {
-  icon: string;
+  icon: ReactNode;
   title: string;
   subtitle: string;
   onClose: () => void;
 }) {
+  const { t } = useDashboardLanguage();
   return (
-    <div className="flex items-start gap-3 border-b border-[#edf0f3] px-5 py-5">
-      <span className="flex h-9 w-9 items-center justify-center rounded-[9px] bg-[#eef2f5] text-xl text-navy">
-        {icon}
-      </span>
-      <div className="flex-1">
-        <h2 className="text-[20px] font-semibold text-navy">{title}</h2>
-        <p className="text-[12px] text-[#8b949e]">{subtitle}</p>
+    <div className="flex items-start gap-3 px-5 pb-2 pt-5">
+      <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-[#f2f4f7] text-navy">{icon}</span>
+      <div className="min-w-0 flex-1">
+        <h2 className="font-manrope text-[18px] font-semibold leading-6 text-navy">{title}</h2>
+        <p className="font-manrope text-[12px] leading-4 text-[#8b939e]">{subtitle}</p>
       </div>
-      <button
-        type="button"
-        onClick={onClose}
-        aria-label="Close"
-        className="text-2xl leading-none text-[#9aa3ad]"
-      >
+      <button type="button" onClick={onClose} aria-label={t("Close")} className="font-manrope text-[22px] leading-none text-[#9aa3ad]">
         ×
       </button>
     </div>
   );
 }
 function PanelFooter({ onReset, onApply }: { onReset: () => void; onApply: () => void }) {
+  const { t } = useDashboardLanguage();
   return (
-    <div className="flex items-center justify-between bg-[#f7f9fc] px-5 py-4">
-      <button type="button" onClick={onReset} className="text-[13px] text-[#8b949e]">
-        Reset
+    <div className="mt-2 flex items-center justify-between bg-[#f7f9fc] px-5 py-4">
+      <button type="button" onClick={onReset} className="font-manrope text-[13px] text-[#8b939e]">
+        {t("Reset")}
       </button>
-      <button
-        type="button"
-        onClick={onApply}
-        className="rounded-[10px] bg-navy px-6 py-3 text-[13px] font-medium text-white"
-      >
-        Apply
+      <button type="button" onClick={onApply} className="rounded-[10px] bg-navy px-5 py-2.5 font-manrope text-[13px] font-medium text-white">
+        {t("Apply")}
       </button>
     </div>
   );
@@ -1119,15 +928,13 @@ function FilterGroup({
 }: {
   title: string;
   detail?: string;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   return (
-    <div className="border-b border-[#edf0f3] pb-5 last:border-b-0">
-      <div className="mb-3 flex items-center justify-between">
-        <p className="text-[12px] font-semibold uppercase tracking-[0.05em] text-[#8b949e]">
-          {title}
-        </p>
-        {detail ? <span className="text-[11px] text-[#8b949e]">{detail}</span> : null}
+    <div className="border-b border-[#eef1f4] pb-4 last:border-b-0 last:pb-1">
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <p className="font-manrope text-[11px] font-semibold uppercase tracking-[0.08em] text-[#8b939e]">{title}</p>
+        {detail ? <span className="font-manrope text-[11px] text-[#9aa3ad]">{detail}</span> : null}
       </div>
       {children}
     </div>
@@ -1143,14 +950,16 @@ function Check({
   onChange: (value: boolean) => void;
 }) {
   return (
-    <label className="flex cursor-pointer items-center gap-2 rounded-[10px] border border-[#e1e7ec] px-3 py-2.5 text-[13px] text-[#8b949e]">
-      <input
-        type="checkbox"
-        checked={checked}
-        onChange={(event) => onChange(event.target.checked)}
-        className="h-5 w-5 accent-[#06245f]"
-      />
-      {label}
+    <label className="flex h-11 cursor-pointer items-center gap-2.5 rounded-[10px] border border-[#e4e9ef] bg-white px-3">
+      <input type="checkbox" checked={checked} onChange={(event) => onChange(event.target.checked)} className="sr-only" />
+      <span className={`flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-[4px] border ${checked ? "border-navy bg-navy text-white" : "border-[#d5dbe3] bg-white"}`}>
+        {checked ? (
+          <svg viewBox="0 0 16 16" aria-hidden="true" className="h-3 w-3">
+            <path d="M3.5 8.2 6.4 11l6.1-6.2" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" />
+          </svg>
+        ) : null}
+      </span>
+      <span className={`font-manrope text-[13px] ${checked ? "font-medium text-navy" : "text-[#8b939e]"}`}>{label}</span>
     </label>
   );
 }
@@ -1166,16 +975,10 @@ function Field({
   suffix?: string;
 }) {
   return (
-    <label className="flex h-11 items-center gap-2 rounded-[10px] border border-[#e1e7ec] px-3 text-[13px] text-navy">
-      {prefix ? <span className="text-[#8b949e]">{prefix}</span> : null}
-      <input
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        className="min-w-0 flex-1 bg-transparent outline-none"
-      />
-      {suffix ? (
-        <span className="text-[11px] font-semibold text-[#8b949e]">{suffix}</span>
-      ) : null}
+    <label className="flex h-11 items-center gap-2 rounded-[10px] border border-[#e4e9ef] px-3">
+      {prefix ? <span className="font-manrope text-[13px] text-[#8b939e]">{prefix}</span> : null}
+      <input value={value} onChange={(event) => onChange(event.target.value)} className="min-w-0 flex-1 bg-transparent font-manrope text-[14px] text-navy outline-none" />
+      {suffix ? <span className="font-manrope text-[11px] font-semibold tracking-[0.04em] text-[#8b939e]">{suffix}</span> : null}
     </label>
   );
 }

@@ -47,7 +47,7 @@ export function Button({
   );
 
   const shimmer = (
-    <span className="button-shimmer absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-0 group-hover:opacity-20" />
+    <span className="button-shimmer absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-0 group-hover:opacity-20 group-active:opacity-20" />
   );
 
   if ("href" in props && props.href) {

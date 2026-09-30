@@ -85,39 +85,36 @@ export const homePageContent: HomePageContent = {
     },
   },
   howItWorks: {
-    heading: "How it Works",
+    heading: "How It Works",
     steps: [
       {
         id: "discover",
-        title: "Discover the map",
-        description:
-          "Start with a national view of Thailand and find the regions that interest you.",
+        title: "Navigate the Map",
+        description: "Browse available sectors across premium Thai locations.",
         icon: "discover",
         order: 1,
         isActive: true,
       },
       {
         id: "explore",
-        title: "Explore destinations",
-        description:
-          "Open a destination to understand lifestyle, access, and nearby opportunities.",
+        title: "Select Your Plot",
+        description: "Pick the exact digital coordinate that resonates with you.",
         icon: "explore",
         order: 2,
         isActive: true,
       },
       {
         id: "connect",
-        title: "Talk to the team",
-        description: "Share what you are looking for and get a clear, human response.",
+        title: "Secure Ownership",
+        description: "Complete the transaction to lock your unique digital asset.",
         icon: "connect",
         order: 3,
         isActive: true,
       },
       {
         id: "secure",
-        title: "Secure your piece",
-        description:
-          "Move forward with the right land, project, or next step at your own pace.",
+        title: "Receive Certificate",
+        description: "Access your immutable digital certificate of authenticity.",
         icon: "secure",
         order: 4,
         isActive: true,
@@ -137,8 +134,8 @@ export const homePageContent: HomePageContent = {
         image: {
           src: "/images/home/certificate.png",
           alt: "Tajlandia certificate of symbolic ownership",
-          width: 484,
-          height: 608,
+          width: 435,
+          height: 593,
         },
         order: 1,
         isActive: true,

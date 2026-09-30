@@ -19,6 +19,8 @@ export interface AuthUser {
   isEmailVerified?: boolean;
   phone?: string;
   avatarUrl?: string;
+  createdAt?: string;
+  memberSince?: string;
 }
 
 export interface AuthState {

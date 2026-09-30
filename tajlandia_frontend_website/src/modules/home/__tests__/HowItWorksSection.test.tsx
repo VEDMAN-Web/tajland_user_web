@@ -11,10 +11,10 @@ describe("HowItWorksSection", () => {
       screen.getByRole("heading", { name: homePageContent.howItWorks.heading }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("heading", { name: /discover the map/i }),
+      screen.getByRole("heading", { name: /navigate the map/i }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("heading", { name: /secure your piece/i }),
+      screen.getByRole("heading", { name: /receive certificate/i }),
     ).toBeInTheDocument();
   });
 

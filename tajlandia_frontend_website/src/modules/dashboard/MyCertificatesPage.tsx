@@ -23,22 +23,43 @@ const defaultCertificates: Certificate[] = [
   {
     id: "TJ-100293",
     generatedAt: "24 Aug 2024",
-    previewUrl: "/images/dashboard/certificate-preview.png",
     pdfUrl: "/api/certificates/TJ-100293",
   },
   {
     id: "TJ-100293",
     generatedAt: "24 Aug 2024",
-    previewUrl: "/images/dashboard/certificate-preview.png",
     pdfUrl: "/api/certificates/TJ-100293",
   },
   {
     id: "TJ-100293",
     generatedAt: "24 Aug 2024",
-    previewUrl: "/images/dashboard/certificate-preview.png",
     pdfUrl: "/api/certificates/TJ-100293",
   },
 ];
+
+function FilterGlyph() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-3.5 w-3.5">
+      <path d="M7 5v14M12 5v14M17 5v14M4.5 8h5M9.5 15h5M14.5 10h5" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="1.6" />
+    </svg>
+  );
+}
+
+function SortGlyph() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-3.5 w-3.5">
+      <path d="M8 5v14m0 0-3-3m3 3 3-3M16 19V5m0 0-3 3m3-3 3 3" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.6" />
+    </svg>
+  );
+}
+
+function DownloadGlyph() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-3.5 w-3.5">
+      <path d="M12 4v10m0 0 3.2-3.2M12 14 8.8 10.8M5 18.5h14" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.7" />
+    </svg>
+  );
+}
 
 function readCertificates(): Certificate[] {
   try {
@@ -70,15 +91,17 @@ export function MyCertificatesPage() {
   const [dialog, setDialog] = useState<"sort" | "filter" | null>(null);
   const [sort, setSort] = useState<SortOption>("recommended");
   const [draftSort, setDraftSort] = useState<SortOption>("recommended");
-  const [showMyCertificates, setShowMyCertificates] = useState(true);
+  const [showMyCertificates, setShowMyCertificates] = useState(false);
   const [showGifted, setShowGifted] = useState(true);
-  const [draftMyCertificates, setDraftMyCertificates] = useState(true);
+  const [draftMyCertificates, setDraftMyCertificates] = useState(false);
   const [draftGifted, setDraftGifted] = useState(true);
+  const [filtersApplied, setFiltersApplied] = useState(false);
 
   const visibleCertificates = useMemo(() => {
-    const filtered = certificates.filter((certificate) =>
-      certificate.gifted ? showGifted : showMyCertificates,
-    );
+    const filtered = certificates.filter((certificate) => {
+      if (!filtersApplied) return true;
+      return certificate.gifted ? showGifted : showMyCertificates;
+    });
     return [...filtered].sort((a, b) => {
       if (sort === "oldest") return dateValue(a) - dateValue(b);
       if (sort === "newest") return dateValue(b) - dateValue(a);
@@ -86,7 +109,7 @@ export function MyCertificatesPage() {
       if (sort === "id-desc") return (b.id ?? "").localeCompare(a.id ?? "");
       return 0;
     });
-  }, [certificates, showGifted, showMyCertificates, sort]);
+  }, [certificates, filtersApplied, showGifted, showMyCertificates, sort]);
 
   if (isLoading)
     return (
@@ -110,35 +133,35 @@ export function MyCertificatesPage() {
   }
 
   return (
-    <div className="min-h-[100svh] bg-white text-navy">
+    <div className="min-h-[100svh] bg-[#f7f9fc] text-navy">
       <DashboardNavbar active="none" />
-      <main className="mx-auto grid w-[92%] max-w-none gap-8 px-5 pb-12 pt-10 sm:px-8 lg:grid-cols-[256px_minmax(0,1fr)] lg:gap-7 lg:pt-14">
+      <main className="mx-auto grid w-full max-w-[1180px] gap-6 px-5 pb-14 pt-8 sm:px-8 lg:grid-cols-[240px_minmax(0,1fr)] lg:items-start lg:gap-7">
         <AccountMenu active="certificates" />
         <section className="min-w-0">
-          <div className="border-b border-[#e1e8ed] pb-4">
-            <h1 className="text-[30px] font-semibold tracking-[-0.04em] text-[#171717] sm:text-[32px]">
-              {t("My Certificates")}
-            </h1>
-            <p className="mt-1 text-[12px] text-[#7b858f]">
-              {t("View and download your land ownership certificates.")}
-            </p>
-          </div>
-          <div className="mt-5 flex items-center justify-between gap-3">
-            <h2 className="text-[17px] font-semibold text-navy">{t("All Certificates")}</h2>
+          <h1 className="font-manrope text-[28px] font-semibold leading-none tracking-[-0.03em] text-navy sm:text-[32px]">
+            {t("My Certificates")}
+          </h1>
+          <p className="mt-2 font-manrope text-[14px] leading-5 text-[#8b939e]">
+            {t("View and download your land ownership certificates.")}
+          </p>
+          <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
+            <h2 className="font-manrope text-[16px] font-semibold text-navy">{t("All Certificates")}</h2>
             <div className="flex gap-2">
               <button
                 type="button"
                 onClick={openFilter}
-                className="inline-flex items-center gap-1 rounded-[8px] border border-[#e3e8ed] px-3 py-2 text-[10px] text-[#8f99a4]"
+                className="inline-flex h-9 items-center gap-1.5 rounded-[10px] border border-[#e4e9ef] bg-white px-3 font-manrope text-[12px] font-medium text-[#8b939e]"
               >
-                ☷ Filter
+                <FilterGlyph />
+                {t("Filter")}
               </button>
               <button
                 type="button"
                 onClick={openSort}
-                className="inline-flex items-center gap-1 rounded-[8px] border border-[#e3e8ed] px-3 py-2 text-[10px] text-[#8f99a4]"
+                className="inline-flex h-9 items-center gap-1.5 rounded-[10px] border border-[#e4e9ef] bg-white px-3 font-manrope text-[12px] font-medium text-[#8b939e]"
               >
-                ⇅ Sort
+                <SortGlyph />
+                {t("Sort")}
               </button>
             </div>
           </div>
@@ -189,12 +212,13 @@ export function MyCertificatesPage() {
           onGiftedChange={setDraftGifted}
           onClose={() => setDialog(null)}
           onReset={() => {
-            setDraftMyCertificates(true);
+            setDraftMyCertificates(false);
             setDraftGifted(true);
           }}
           onApply={() => {
             setShowMyCertificates(draftMyCertificates);
             setShowGifted(draftGifted);
+            setFiltersApplied(true);
             setDialog(null);
           }}
         />
@@ -219,50 +243,29 @@ function SortDialog({
   onClose: () => void;
   onApply: () => void;
 }) {
+  const { t } = useDashboardLanguage();
   return (
     <ModalShell>
-      <div className="flex items-start gap-3 border-b border-[#edf0f3] px-5 py-4">
-        <span className="flex h-8 w-8 items-center justify-center rounded-[8px] bg-[#edf3ff] text-lg text-navy">
-          ⇅
-        </span>
-        <div className="flex-1">
-          <h2 className="text-[17px] font-semibold text-navy">Sort by</h2>
-          <p className="text-[10px] text-[#8b949e]">Reorder active parcel markers</p>
-        </div>
-        <CloseButton onClick={onClose} />
-      </div>
-      <div className="space-y-1 px-3 py-3">
-        {sortLabels.map((option) => (
-          <label
-            key={option.value}
-            className={`flex cursor-pointer items-center gap-3 rounded-[10px] px-3 py-3 ${value === option.value ? "bg-[#f3f7ff]" : "hover:bg-[#f8fafc]"}`}
-          >
-            <input
-              type="radio"
-              name="certificate-sort"
-              checked={value === option.value}
-              onChange={() => onChange(option.value)}
-              className="h-4 w-4 accent-[#06245f]"
-            />
-            <span className="flex-1 text-[13px] text-[#8b949e]">
-              <strong className={value === option.value ? "text-navy" : "font-normal"}>
-                {option.label}
-              </strong>
-              {option.detail ? (
-                <small className="block text-[10px] text-[#8b949e]">
-                  {option.detail}
-                </small>
-              ) : null}
-            </span>
-            {option.value === "recommended" ? (
-              <span className="rounded-[4px] bg-[#eaf2ff] px-2 py-1 text-[9px] font-semibold text-navy">
-                DEFAULT
+      <DialogHeader icon={<SortGlyph />} title={t("Sort by")} subtitle={t("Reorder active parcel markers")} onClose={onClose} />
+      <div className="space-y-0.5 px-3 py-2">
+        {sortLabels.map((option) => {
+          const selected = value === option.value;
+          return (
+            <label key={option.value} className={`flex cursor-pointer items-center gap-3 rounded-[12px] px-3 py-2.5 ${selected ? "bg-[#f3f7ff]" : ""}`}>
+              <input type="radio" name="certificate-sort" checked={selected} onChange={() => onChange(option.value)} className="sr-only" />
+              <ChoiceMark checked={selected} />
+              <span className="min-w-0 flex-1">
+                <span className={`block font-manrope text-[14px] leading-5 ${selected ? "font-semibold text-navy" : "font-medium text-[#8b939e]"}`}>{t(option.label)}</span>
+                {option.detail ? <span className="mt-0.5 block font-manrope text-[12px] leading-4 font-normal text-[#8b939e]">{t(option.detail)}</span> : null}
               </span>
-            ) : null}
-          </label>
-        ))}
+              {option.value === "recommended" ? (
+                <span className="rounded-full bg-[#e7eefc] px-2 py-1 font-manrope text-[10px] font-semibold tracking-[0.04em] text-[#3b5ccc]">{t("DEFAULT")}</span>
+              ) : null}
+            </label>
+          );
+        })}
       </div>
-      <DialogActions onClose={onClose} onApply={onApply} applyLabel="Apply" />
+      <DialogActions onReset={() => onChange("recommended")} onApply={onApply} applyLabel={t("Apply")} resetLabel={t("Reset")} />
     </ModalShell>
   );
 }
@@ -284,51 +287,38 @@ function FilterDialog({
   onReset: () => void;
   onApply: () => void;
 }) {
+  const { t } = useDashboardLanguage();
+  const found = myCertificates || gifted ? 77 : 0;
   return (
     <ModalShell>
-      <div className="flex items-start gap-3 border-b border-[#edf0f3] px-5 py-4">
-        <span className="flex h-8 w-8 items-center justify-center rounded-[8px] bg-[#eef2f5] text-lg text-navy">
-          ☷
-        </span>
-        <div className="flex-1">
-          <h2 className="text-[17px] font-semibold text-navy">Filter Plots</h2>
-          <p className="text-[10px] text-[#8b949e]">
-            Narrow certificates across Thailand
-          </p>
-        </div>
-        <CloseButton onClick={onClose} />
-      </div>
-      <div className="px-5 py-4">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[#8b949e]">
-          Certificates
-        </p>
+      <DialogHeader icon={<FilterGlyph />} title={t("Filter Plots")} subtitle={t("Narrow 1,168 parcels across Thailand")} onClose={onClose} />
+      <div className="border-b border-[#eef1f4] px-5 py-4">
+        <p className="font-manrope text-[11px] font-semibold uppercase tracking-[0.08em] text-[#8b939e]">{t("Certificates")}</p>
         <div className="mt-3 grid grid-cols-2 gap-2">
-          <CheckOption
-            label="My Certificates"
-            checked={myCertificates}
-            onChange={onMyCertificatesChange}
-          />
-          <CheckOption label="Gifted" checked={gifted} onChange={onGiftedChange} />
+          <CheckOption label={t("My Certificates")} checked={myCertificates} onChange={onMyCertificatesChange} />
+          <CheckOption label={t("Gifted")} checked={gifted} onChange={onGiftedChange} />
         </div>
       </div>
       <div className="flex items-center justify-between bg-[#f7f9fc] px-5 py-4">
-        <button type="button" onClick={onReset} className="text-[12px] text-[#8b949e]">
-          Clear All
+        <button type="button" onClick={onReset} className="font-manrope text-[13px] text-[#8b939e]">
+          {t("Clear All")}
         </button>
-        <div className="flex items-center gap-4">
-          <span className="text-[10px] text-[#8b949e]">
-            {myCertificates || gifted ? "Certificates found" : "0 certificates found"}
-          </span>
-          <button
-            type="button"
-            onClick={onApply}
-            className="rounded-[9px] bg-navy px-4 py-2.5 text-[12px] font-medium text-white"
-          >
-            Apply Filters
+        <div className="flex items-center gap-3">
+          <span className="font-manrope text-[12px] text-[#8b939e]">{found} {t("plots found")}</span>
+          <button type="button" onClick={onApply} className="rounded-[10px] bg-navy px-4 py-2.5 font-manrope text-[13px] font-medium text-white">
+            {t("Apply Filters")}
           </button>
         </div>
       </div>
     </ModalShell>
+  );
+}
+
+function ChoiceMark({ checked }: { checked: boolean }) {
+  return (
+    <span className={`flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full border-[1.5px] ${checked ? "border-navy" : "border-[#d5dbe3]"}`}>
+      {checked ? <span className="h-2.5 w-2.5 rounded-full bg-navy" /> : null}
+    </span>
   );
 }
 
@@ -342,64 +332,82 @@ function CheckOption({
   onChange: (value: boolean) => void;
 }) {
   return (
-    <label className="flex cursor-pointer items-center gap-2 rounded-[9px] border border-[#e3e8ed] px-3 py-2.5 text-[11px] text-[#8b949e]">
-      <input
-        type="checkbox"
-        checked={checked}
-        onChange={(event) => onChange(event.target.checked)}
-        className="h-4 w-4 accent-[#06245f]"
-      />
-      {label}
+    <label className="flex h-11 cursor-pointer items-center gap-2.5 rounded-[10px] border border-[#e4e9ef] bg-white px-3">
+      <input type="checkbox" checked={checked} onChange={(event) => onChange(event.target.checked)} className="sr-only" />
+      <span className={`flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-[4px] border ${checked ? "border-navy bg-navy text-white" : "border-[#d5dbe3] bg-white"}`}>
+        {checked ? (
+          <svg viewBox="0 0 16 16" aria-hidden="true" className="h-3 w-3">
+            <path d="M3.5 8.2 6.4 11l6.1-6.2" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" />
+          </svg>
+        ) : null}
+      </span>
+      <span className={`truncate font-manrope text-[13px] ${checked ? "font-medium text-navy" : "text-[#8b939e]"}`}>{label}</span>
     </label>
   );
 }
 
 function ModalShell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="fixed inset-0 z-[100] flex items-start justify-end bg-transparent p-3 pt-20 sm:p-6 sm:pt-24">
-      <section
-        role="dialog"
-        aria-modal="true"
-        className="w-full max-w-[420px] overflow-hidden rounded-[14px] bg-white shadow-[0_20px_60px_rgba(11,31,77,0.22)]"
-      >
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#121417]/45 p-4">
+      <section role="dialog" aria-modal="true" className="max-h-[92svh] w-full max-w-[400px] overflow-y-auto rounded-[18px] bg-white shadow-[0_24px_60px_rgba(11,31,77,0.28)]">
         {children}
       </section>
     </div>
   );
 }
 
-function CloseButton({ onClick }: { onClick: () => void }) {
+function DialogHeader({
+  icon,
+  title,
+  subtitle,
+  onClose,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  subtitle: string;
+  onClose: () => void;
+}) {
+  const { t } = useDashboardLanguage();
   return (
-    <button
-      type="button"
-      aria-label="Close"
-      onClick={onClick}
-      className="text-xl leading-none text-[#9aa3ad]"
-    >
+    <div className="flex items-start gap-3 px-5 pb-2 pt-5">
+      <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-[#f2f4f7] text-navy">{icon}</span>
+      <div className="min-w-0 flex-1">
+        <h2 className="font-manrope text-[18px] font-semibold leading-6 text-navy">{title}</h2>
+        <p className="font-manrope text-[12px] leading-4 text-[#8b939e]">{subtitle}</p>
+      </div>
+      <button type="button" onClick={onClose} aria-label={t("Close")} className="font-manrope text-[22px] leading-none text-[#9aa3ad]">
+        ×
+      </button>
+    </div>
+  );
+}
+
+function CloseButton({ onClick }: { onClick: () => void }) {
+  const { t } = useDashboardLanguage();
+  return (
+    <button type="button" aria-label={t("Close")} onClick={onClick} className="font-manrope text-[22px] leading-none text-[#9aa3ad]">
       ×
     </button>
   );
 }
 
 function DialogActions({
-  onClose,
+  onReset,
   onApply,
   applyLabel,
+  resetLabel,
 }: {
-  onClose: () => void;
+  onReset: () => void;
   onApply: () => void;
   applyLabel: string;
+  resetLabel: string;
 }) {
   return (
-    <div className="flex items-center justify-between bg-[#f7f9fc] px-5 py-4">
-      <button type="button" onClick={onClose} className="text-[12px] text-[#8b949e]">
-        Reset
+    <div className="mt-2 flex items-center justify-between bg-[#f7f9fc] px-5 py-4">
+      <button type="button" onClick={onReset} className="font-manrope text-[13px] text-[#8b939e]">
+        {resetLabel}
       </button>
-      <button
-        type="button"
-        onClick={onApply}
-        className="rounded-[9px] bg-navy px-5 py-2.5 text-[12px] font-medium text-white"
-      >
+      <button type="button" onClick={onApply} className="rounded-[10px] bg-navy px-5 py-2.5 font-manrope text-[13px] font-medium text-white">
         {applyLabel}
       </button>
     </div>
@@ -425,39 +433,37 @@ function PdfViewer({ src, onClose }: { src: string; onClose: () => void }) {
   );
 }
 
+const certificatePreview = "/images/certificates/my-certificates.png";
+
 function CertificateCard({ certificate }: { certificate: Certificate }) {
-  const pdfUrl =
-    certificate.pdfUrl ?? `/api/certificates/${certificate.id ?? "certificate"}`;
+  const { t } = useDashboardLanguage();
+  const pdfUrl = certificate.pdfUrl ?? `/api/certificates/${certificate.id ?? "certificate"}`;
   return (
-    <article className="rounded-[14px] bg-white p-3 shadow-[0_5px_18px_rgba(11,31,77,0.08)]">
-      <div className="flex h-[145px] items-center justify-center overflow-hidden rounded-[8px] border border-[#edf0f3] bg-[#fafbfc]">
-        <img
-          src={certificate.previewUrl ?? "/images/dashboard/certificate-preview.png"}
-          alt="Certificate preview"
-          className="h-full w-full object-contain"
-        />
-      </div>
-      <p className="mt-3 text-[10px] text-[#7b858f]">
-        Generated on {certificate.generatedAt ?? "date unavailable"}
+    <article className="rounded-[16px] border border-[#eef1f4] bg-white px-4 pb-4 pt-5 shadow-[0_10px_28px_rgba(11,31,77,0.06)]">
+      <img src={certificate.previewUrl || certificatePreview} alt="" className="mx-auto block h-auto w-[68%] max-w-[210px]" />
+      <p className="mt-4 font-manrope text-[12px] leading-4 text-[#8b939e]">
+        {t("Generated on")} {certificate.generatedAt ?? ""}
       </p>
-      <h3 className="mt-1 text-[11px] font-semibold text-navy">
-        Certificate ID: {certificate.id ?? "Unavailable"}
+      <h3 className="mt-1 font-manrope text-[14px] font-semibold leading-5 text-[#1a1a1a]">
+        {t("Certificate ID")}: <strong className="font-bold">{certificate.id ?? ""}</strong>
       </h3>
-      <div className="mt-3 grid grid-cols-2 gap-2">
+      <div className="mt-4 grid grid-cols-2 gap-2.5">
         <Link
           href={`/dashboard/certificates/${certificate.id ?? "certificate"}`}
-          className="flex h-11 items-center justify-center rounded-[8px] bg-navy text-[10px] text-white"
+          className="flex h-11 items-center justify-center rounded-[12px] bg-navy font-manrope text-[13px] font-medium text-white"
         >
-          View →
+          {t("View →")}
         </Link>
         <a
           href={pdfUrl}
           download
-          className="flex h-11 items-center justify-center rounded-[8px] bg-[#f5f8fc] text-[10px] text-navy"
+          className="inline-flex h-11 items-center justify-center gap-1.5 rounded-[12px] border border-[#e6ebf0] bg-[#f7f9fc] font-manrope text-[13px] font-medium text-navy"
         >
-          ⇩ Download
+          <DownloadGlyph />
+          {t("Download")}
         </a>
       </div>
     </article>
   );
 }
+

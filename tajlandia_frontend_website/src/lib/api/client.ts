@@ -36,6 +36,28 @@ function resolveApiUrl(baseUrl: string, path: string): URL {
   return url;
 }
 
+const SAFE_API_MESSAGE = /^[\w\s.,'!?:()-]{1,180}$/;
+
+async function readSafeErrorMessage(response: Response): Promise<string> {
+  try {
+    const json: unknown = await response.json();
+
+    if (!json || typeof json !== "object" || !("message" in json)) {
+      return "The request failed";
+    }
+
+    const message = json.message;
+
+    if (typeof message !== "string" || !SAFE_API_MESSAGE.test(message.trim())) {
+      return "The request failed";
+    }
+
+    return message.trim();
+  } catch {
+    return "The request failed";
+  }
+}
+
 export async function apiGet<T>(
   path: string,
   schema: ZodType<T>,
@@ -152,7 +174,7 @@ export async function apiPost<T>(
   }
 
   if (!response.ok) {
-    throw new ApiError("The request failed", response.status, "API_REQUEST_FAILED");
+    throw new ApiError(await readSafeErrorMessage(response), response.status, "API_REQUEST_FAILED");
   }
 
   const json: unknown = await response.json();

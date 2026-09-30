@@ -9,7 +9,7 @@ type CtaSectionProps = {
 
 export function CtaSection({ content }: CtaSectionProps) {
   return (
-    <section className="bg-gradient-to-b from-[#f8fafb] to-white pb-[60px] lg:pb-[80px] pt-[40px]">
+    <section className="bg-white pb-[60px] pt-[40px] lg:pb-[80px]">
       <Container>
         <ScrollAnimatedElement
           animation="fade-in-scale"
