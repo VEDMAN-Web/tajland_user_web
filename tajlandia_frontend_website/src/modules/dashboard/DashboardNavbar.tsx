@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { BrandLogo } from "@/components/ui/BrandLogo";
 import { routes } from "@/lib/constants/routes";
@@ -13,20 +13,50 @@ type DashboardNavbarProps = {
   overlay?: boolean;
 };
 
+const controlHeight = "h-11";
+const controlShadow = "shadow-[0_6px_20px_rgba(11,31,77,0.08)]";
+
 function Icon({
   children,
   active = false,
+  badge,
 }: {
   children: React.ReactNode;
   active?: boolean;
+  badge?: number;
 }) {
   return (
     <span
-      className={`box-border flex h-9 w-9 items-center justify-center rounded-full p-2 shadow-[0_5px_20px_rgba(11,31,77,0.08)] ${active ? "bg-navy" : "bg-white"}`}
+      className={`relative box-border flex ${controlHeight} w-11 items-center justify-center rounded-full ${controlShadow} ${active ? "bg-navy" : "bg-white"}`}
     >
       {children}
+      {badge && badge > 0 ? (
+        <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#e11d2e] px-1 font-manrope text-[10px] font-semibold leading-none text-white">
+          {badge}
+        </span>
+      ) : null}
     </span>
   );
+}
+
+function useCartCount() {
+  const [count, setCount] = useState(0);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("tajlandia_cart");
+      if (stored === null) {
+        setCount(4);
+        return;
+      }
+      const parsed: unknown = JSON.parse(stored);
+      setCount(Array.isArray(parsed) ? parsed.length : 0);
+    } catch {
+      setCount(0);
+    }
+  }, []);
+
+  return count;
 }
 
 export function DashboardNavbar({ active, overlay = false }: DashboardNavbarProps) {
@@ -34,6 +64,7 @@ export function DashboardNavbar({ active, overlay = false }: DashboardNavbarProp
   const { language, setLanguage, t } = useDashboardLanguage();
   const [isLanguageOpen, setIsLanguageOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const cartCount = useCartCount();
   const isCartActive = pathname === routes.cart;
   const accountMenuRoutes = [
     routes.profile,
@@ -53,30 +84,27 @@ export function DashboardNavbar({ active, overlay = false }: DashboardNavbarProp
 
   return (
     <header
-      className={`relative ${navClass} ${overlay ? "bg-transparent" : "bg-white"} pt-6`}
+      className={`relative ${navClass} ${overlay ? "bg-transparent" : "bg-[#f7f9fc]"}`}
     >
-      <div className="mx-auto flex h-[54px] w-[92%] max-w-none items-center justify-between px-5 sm:px-8">
+      <div className="mx-auto flex h-16 w-full max-w-[1180px] items-center justify-between px-5 sm:px-8">
         <BrandLogo compact href={routes.dashboard} />
         <div className="flex items-center gap-3">
-          <nav className="hidden h-10 items-center gap-1 rounded-full bg-white p-1 shadow-[0_5px_20px_rgba(11,31,77,0.1)] lg:flex">
+          <nav className={`hidden ${controlHeight} items-center gap-0.5 rounded-full bg-white p-1 ${controlShadow} lg:flex`}>
             <Link
               href={routes.dashboard}
-              className={`inline-flex h-8 items-center rounded-full px-4 text-[14px] font-medium ${isHomeActive ? activeClass : "hover:bg-[#f5f7fa]"}`}
-              style={{ fontFamily: "var(--font-manrope)" }}
+              className={`inline-flex h-9 items-center rounded-full px-4 font-manrope text-[14px] font-medium leading-none ${isHomeActive ? activeClass : "text-navy"}`}
             >
               {t("Home")}
             </Link>
             <Link
               href="/dashboard/explore"
-              className={`inline-flex h-8 items-center rounded-full px-4 text-[14px] font-medium ${active === "explore" ? activeClass : "hover:bg-[#f5f7fa]"}`}
-              style={{ fontFamily: "var(--font-manrope)" }}
+              className={`inline-flex h-9 items-center rounded-full px-4 font-manrope text-[14px] font-medium leading-none ${active === "explore" ? activeClass : "text-navy"}`}
             >
               {t("Explore Map")}
             </Link>
             <Link
               href={routes.land}
-              className={`inline-flex h-8 items-center rounded-full px-4 text-[14px] font-medium ${active === "my-land" ? activeClass : "hover:bg-[#f5f7fa]"}`}
-              style={{ fontFamily: "var(--font-manrope)" }}
+              className={`inline-flex h-9 items-center rounded-full px-4 font-manrope text-[14px] font-medium leading-none ${active === "my-land" ? activeClass : "text-navy"}`}
             >
               {t("My Land")}
             </Link>
@@ -86,7 +114,7 @@ export function DashboardNavbar({ active, overlay = false }: DashboardNavbarProp
             aria-label="Open dashboard menu"
             aria-expanded={isMobileMenuOpen}
             onClick={() => setIsMobileMenuOpen((open) => !open)}
-            className="flex h-9 w-9 flex-col items-center justify-center gap-1.5 rounded-full bg-white shadow-[0_5px_20px_rgba(11,31,77,0.08)] lg:hidden"
+            className={`flex ${controlHeight} w-11 flex-col items-center justify-center gap-1.5 rounded-full bg-white ${controlShadow} lg:hidden`}
           >
             <span className="h-0.5 w-4 rounded-full bg-navy" />
             <span className="h-0.5 w-4 rounded-full bg-navy" />
@@ -98,7 +126,7 @@ export function DashboardNavbar({ active, overlay = false }: DashboardNavbarProp
                 type="button"
                 aria-expanded={isLanguageOpen}
                 onClick={() => setIsLanguageOpen((open) => !open)}
-                className="flex h-9 min-w-20 items-center justify-center gap-2 rounded-full bg-white px-3 text-[10px] shadow-[0_5px_20px_rgba(11,31,77,0.08)]"
+                className={`flex ${controlHeight} items-center gap-2 rounded-full bg-white px-3.5 font-manrope text-[14px] font-medium leading-none text-navy ${controlShadow}`}
               >
                 <Image
                   src={
@@ -111,21 +139,15 @@ export function DashboardNavbar({ active, overlay = false }: DashboardNavbarProp
                   alt=""
                   width={20}
                   height={14}
-                  className="h-[14px] w-5 object-cover"
-                />{" "}
-                <span
-                  className="text-[15px] font-medium"
-                  style={{ fontFamily: "'Rethink Sans', sans-serif" }}
-                >
-                  {language}
-                </span>
-                <span
-                  aria-hidden="true"
-                  className="ml-1 inline-block h-2 w-2 -translate-y-0.5 rotate-45 border-b-2 border-r-2 border-navy"
+                  className="h-3.5 w-5 rounded-[2px] object-cover"
                 />
+                <span>{language}</span>
+                <svg viewBox="0 0 12 12" aria-hidden="true" className="h-2.5 w-2.5">
+                  <path d="M2.5 4.25 6 7.75l3.5-3.5" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
               </button>
               {isLanguageOpen ? (
-                <div className="absolute right-0 top-10 z-20 w-40 rounded-xl bg-white p-1 text-[10px] shadow-[0_8px_24px_rgba(11,31,77,0.14)]">
+                <div className="absolute right-0 top-12 z-20 w-40 rounded-xl bg-white p-1 text-[12px] shadow-[0_8px_24px_rgba(11,31,77,0.14)]">
                   <button
                     type="button"
                     onClick={() => {
@@ -178,8 +200,8 @@ export function DashboardNavbar({ active, overlay = false }: DashboardNavbarProp
                 </div>
               ) : null}
             </div>
-            <Link href={routes.cart} aria-label="Cart">
-              <Icon active={isCartActive}>
+            <Link href={routes.cart} aria-label={cartCount > 0 ? `Cart, ${cartCount} items` : "Cart"} className="inline-flex">
+              <Icon active={isCartActive} badge={cartCount}>
                 <img
                   src={
                     isCartActive
@@ -191,7 +213,7 @@ export function DashboardNavbar({ active, overlay = false }: DashboardNavbarProp
                 />
               </Icon>
             </Link>
-            <Link href={routes.profile} aria-label="Profile">
+            <Link href={routes.profile} aria-label="Profile" className="inline-flex">
               <Icon active={isProfileActive}>
                 <img
                   src={

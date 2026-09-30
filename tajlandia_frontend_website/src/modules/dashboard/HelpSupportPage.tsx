@@ -1,11 +1,12 @@
 "use client";
 
+import Image from "next/image";
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import { routes } from "@/lib/constants/routes";
+import { useAuth } from "@/lib/hooks/useAuth";
 import { AccountMenu } from "./AccountMenu";
 import { DashboardNavbar } from "./DashboardNavbar";
-import { useAuth } from "@/lib/hooks/useAuth";
-import { routes } from "@/lib/constants/routes";
 import { useDashboardLanguage } from "./DashboardLanguageContext";
 
 const faqs = [
@@ -31,18 +32,27 @@ function wordCount(value: string) {
   return value.trim() ? value.trim().split(/\s+/).length : 0;
 }
 
+function ChevronIcon({ open }: { open: boolean }) {
+  return (
+    <svg viewBox="0 0 16 16" aria-hidden="true" className={`h-4 w-4 shrink-0 text-[#66717c] transition-transform ${open ? "rotate-180" : ""}`}>
+      <path d="M4 6.2 8 10.2 12 6.2" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 export function HelpSupportPage() {
   const router = useRouter();
   const { isAuthenticated, isLoading } = useAuth();
   const { t } = useDashboardLanguage();
   const [openFaq, setOpenFaq] = useState(0);
   const [message, setMessage] = useState("");
-  const [hasInteracted, setHasInteracted] = useState(false);
+  const [error, setError] = useState("");
   const [sent, setSent] = useState(false);
-  const count = wordCount(message);
-  const hasEnoughWords = count >= 20;
 
-  if (isLoading) return <main className="flex min-h-[100svh] items-center justify-center bg-[#f7fafc] text-sm text-muted">{t("Loading support...")}</main>;
+  if (isLoading) {
+    return <main className="flex min-h-[100svh] items-center justify-center bg-[#f7f9fc] text-sm text-muted">{t("Loading support...")}</main>;
+  }
+
   if (!isAuthenticated) {
     router.replace(routes.login);
     return null;
@@ -50,59 +60,141 @@ export function HelpSupportPage() {
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setHasInteracted(true);
-    if (!hasEnoughWords) return;
+    if (wordCount(message) < 20) {
+      setSent(false);
+      setError("Please enter at least 20 words.");
+      return;
+    }
+
+    setError("");
     setSent(true);
+    setMessage("");
+  }
+
+  function cancel() {
+    setMessage("");
+    setError("");
+    setSent(false);
   }
 
   return (
-    <div className="min-h-[100svh] bg-[#f7fafc] text-navy">
+    <div className="min-h-[100svh] bg-[#f7f9fc] text-navy">
       <DashboardNavbar active="home" />
-      <main className="mx-auto grid w-[92%] max-w-none gap-8 px-5 pb-12 pt-10 sm:px-8 lg:grid-cols-[256px_minmax(0,1fr)] lg:gap-7 lg:pt-14">
+      <main className="mx-auto grid w-full max-w-[1180px] gap-6 px-5 pb-14 pt-8 sm:px-8 lg:grid-cols-[240px_minmax(0,1fr)] lg:items-start lg:gap-7">
         <AccountMenu active="help" />
 
         <section className="min-w-0">
-          <div className="border-b border-[#e1e8ed] pb-4">
-            <h1 className="text-[30px] font-semibold tracking-[-0.04em] text-navy sm:text-[32px]">{t("Help & Support")}</h1>
-            <p className="mt-1 font-manrope text-[12px] font-normal text-[#7b858f]">{t("Need help? We're here for you.")}</p>
-          </div>
+          <h1 className="font-manrope text-[28px] font-semibold leading-none tracking-[-0.03em] text-navy sm:text-[32px]">
+            {t("Help & Support")}
+          </h1>
+          <p className="font-manrope mt-2 text-[14px] leading-5 text-[#8b939e]">
+            {t("Need help? We're here for you.")}
+          </p>
 
-          <div className="mt-5 space-y-2">
+          <div className="mt-5 grid gap-2.5">
             {faqs.map((faq, index) => {
               const isOpen = openFaq === index;
               return (
-                <div key={faq.question + index} className={`overflow-hidden rounded-[10px] bg-white shadow-[0_5px_18px_rgba(11,31,77,0.07)] ${isOpen ? "border-l-2 border-brand-red" : "border-l-2 border-transparent"}`}>
-                  <button type="button" aria-expanded={isOpen} onClick={() => setOpenFaq(isOpen ? -1 : index)} className="flex min-h-14 w-full items-center justify-between gap-4 px-3.5 py-3 text-left font-manrope text-[14px] font-bold text-navy sm:px-4">
-                    <span>{t(faq.question)}</span>
-                    <span aria-hidden="true" className={`text-[16px] font-normal transition-transform ${isOpen ? "rotate-180" : ""}`}>⌄</span>
+                <div key={faq.question} className={`overflow-hidden rounded-[12px] bg-white shadow-[0_8px_28px_rgba(11,31,77,0.06)] ${isOpen ? "border-l-[3px] border-l-[#e11d2e]" : ""}`}>
+                  <button
+                    type="button"
+                    aria-expanded={isOpen}
+                    onClick={() => setOpenFaq(isOpen ? -1 : index)}
+                    className="flex min-h-[52px] w-full items-center justify-between gap-4 px-4 text-left"
+                  >
+                    <span className="font-manrope text-[14px] font-semibold leading-5 text-navy">{t(faq.question)}</span>
+                    <ChevronIcon open={isOpen} />
                   </button>
-                  {isOpen ? <p className="border-t border-[#edf0f3] px-3.5 py-2.5 font-manrope text-[12px] font-normal leading-5 text-[#8b949e] sm:px-4">{t(faq.answer)}</p> : null}
+                  {isOpen ? (
+                    <p className="border-t border-[#eef2f6] px-4 py-3 font-manrope text-[13px] leading-5 text-[#8b939e]">
+                      {t(faq.answer)}
+                    </p>
+                  ) : null}
                 </div>
               );
             })}
           </div>
 
-          <form onSubmit={submit} className="mt-5">
-            <label htmlFor="support-message" className="font-manrope text-[14px] font-bold text-navy">{t("Other")}</label>
-            <textarea id="support-message" value={message} onChange={(event) => { setMessage(event.target.value); setHasInteracted(true); setSent(false); }} placeholder={t("Send your Queries...")} className="mt-1.5 h-[76px] w-full resize-none rounded-[10px] border border-[#e3e8ed] bg-white px-3 py-3 text-[10px] text-[#242b32] outline-none placeholder:text-[#c6cbd0] focus:border-[#9aaabd] focus:ring-1 focus:ring-[#d9e1e8]" aria-describedby="support-message-help" />
-            <div className="mt-1.5 flex items-center justify-between gap-3">
-              <p id="support-message-help" className={`text-[10px] ${hasInteracted && !hasEnoughWords ? "text-[#c81e1e]" : "text-[#9aa3ad]"}`}>
-                {hasInteracted && !hasEnoughWords ? `Please enter at least 20 words. Current count: ${count}.` : `${count}/20 words`}
+          <form onSubmit={submit} className="mt-5" noValidate>
+            <label htmlFor="support-message" className="font-manrope text-[14px] font-semibold leading-5 text-navy">
+              {t("Other")}
+            </label>
+            <textarea
+              id="support-message"
+              value={message}
+              onChange={(event) => {
+                setMessage(event.target.value);
+                setError("");
+                setSent(false);
+              }}
+              placeholder={t("Send your Queries...")}
+              aria-invalid={Boolean(error)}
+              aria-describedby={error ? "support-message-error" : undefined}
+              className={`font-manrope mt-2 h-[88px] w-full resize-none rounded-[12px] border bg-white px-4 py-3 text-[14px] leading-5 text-[#1a1a1a] outline-none placeholder:text-[#b0b7be] ${error ? "border-[#f3c3c8] bg-[#fff1f2]" : "border-[#e4e9ef] focus:border-navy"}`}
+            />
+            {error ? (
+              <p id="support-message-error" className="font-manrope mt-1.5 text-[12px] leading-4 text-[#d52b35]">
+                {t(error)}
               </p>
-              {sent ? <p role="status" className="text-[10px] text-[#198b55]">{t("Message sent successfully.")}</p> : null}
-            </div>
-            <div className="mt-4 flex flex-col items-start justify-between gap-4 border-t border-[#e1e8ed] pt-4 sm:flex-row sm:items-center">
-              <p className="text-[10px] text-[#b0b7be]">● All changes verified under 256-bit Cadastral Escrow protocol.</p>
-              <div className="flex gap-3">
-                <button type="button" onClick={() => router.back()} className="rounded-[9px] border border-[#e1e5e9] bg-white px-6 py-3 text-[12px] text-[#68727c]">{t("Cancel")}</button>
-                <button type="submit" disabled={!hasEnoughWords} className="rounded-[9px] bg-navy px-6 py-3 text-[12px] font-medium text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-45">{t("Send Message →")}</button>
+            ) : null}
+            {sent ? (
+              <p role="status" className="font-manrope mt-1.5 text-[12px] leading-4 text-[#1aae6f]">
+                {t("Message sent successfully.")}
+              </p>
+            ) : null}
+
+            <div className="mt-5 flex flex-col gap-4 border-t border-[#e4e9ef] pt-4 sm:flex-row sm:items-center sm:justify-between">
+              <p className="font-manrope flex items-center gap-2 text-[12px] leading-4 text-[#8b939e]">
+                <Image src="/images/profile/ic_privacy.svg" alt="" width={14} height={14} className="h-3.5 w-3.5 shrink-0" />
+                <span>{t("All changes verified under 256-bit Cadastral Escrow protocol.")}</span>
+              </p>
+              <div className="flex items-center justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={cancel}
+                  className="inline-flex h-11 items-center justify-center rounded-[12px] border border-[#e4e9ef] bg-white px-5 font-manrope text-[14px] font-medium leading-none text-[#3d4650] transition hover:bg-[#f7f9fc]"
+                >
+                  {t("Cancel")}
+                </button>
+                <button
+                  type="submit"
+                  className="inline-flex h-11 items-center justify-center rounded-[12px] bg-navy px-5 font-manrope text-[14px] font-medium leading-none text-white transition hover:bg-navy-deep"
+                >
+                  {t("Send Message →")}
+                </button>
               </div>
             </div>
           </form>
 
-          <div className="mt-8 flex flex-col items-start justify-between gap-4 rounded-[15px] bg-white px-6 py-5 shadow-[0_5px_24px_rgba(11,31,77,0.06)] sm:flex-row sm:items-center">
-            <div><h2 className="font-manrope text-[14px] font-bold text-[#242b32]">Still need help? <span className="ml-1 rounded-full bg-[#edf3ff] px-2 py-1 text-[9px] font-medium text-navy">● Within 24 hours</span></h2><p className="mt-1 max-w-[300px] font-manrope text-[12px] font-normal leading-4 text-[#8f99a4]">Our cadastral survey and registry team is standing by to resolve custom requests.</p></div>
-            <div className="flex items-center gap-3"><span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#edf3ff] text-navy">✉</span><div><p className="font-manrope text-[12px] font-normal uppercase tracking-[0.08em] text-[#8f99a4]">Direct mail</p><p className="font-manrope text-[12px] font-normal text-[#242b32]">support@tajlandia.com</p></div></div>
+          <div className="mt-5 flex flex-col gap-4 rounded-[16px] bg-white px-5 py-5 shadow-[0_8px_28px_rgba(11,31,77,0.06)] sm:flex-row sm:items-center sm:justify-between sm:px-6">
+            <div className="min-w-0">
+              <h2 className="font-manrope flex flex-wrap items-center gap-2 text-[16px] font-semibold leading-5 text-[#1a1a1a]">
+                <span>{t("Still need help?")}</span>
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-[#edf3ff] px-2.5 py-1 font-manrope text-[11px] font-medium leading-none text-navy">
+                  <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-navy" />
+                  {t("Within 24 hours")}
+                </span>
+              </h2>
+              <p className="font-manrope mt-2 max-w-[460px] text-[13px] leading-5 text-[#8b939e]">
+                {t("Our cadastral survey and registry team is standing by to resolve custom requests.")}
+              </p>
+            </div>
+            <a href="mailto:support@tajlandia.com" className="flex shrink-0 items-center gap-3">
+              <span className="flex h-10 w-10 items-center justify-center rounded-[10px] bg-[#edf3ff] text-navy">
+                <svg viewBox="0 0 24 24" aria-hidden="true" className="h-5 w-5">
+                  <rect x="3.5" y="5.5" width="17" height="13" rx="2" fill="none" stroke="currentColor" strokeWidth="1.6" />
+                  <path d="m4.5 7 7.5 6 7.5-6" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </span>
+              <span>
+                <span className="block font-manrope text-[11px] font-medium uppercase tracking-[0.08em] text-[#8b939e]">
+                  {t("Direct mail")}
+                </span>
+                <span className="mt-0.5 block font-manrope text-[14px] font-medium leading-5 text-[#1a1a1a]">
+                  support@tajlandia.com
+                </span>
+              </span>
+            </a>
           </div>
         </section>
       </main>

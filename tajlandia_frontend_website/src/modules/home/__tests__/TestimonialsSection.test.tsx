@@ -8,12 +8,12 @@ describe("TestimonialsSection", () => {
     render(<TestimonialsSection content={homePageContent.testimonials} />);
 
     expect(
-      screen.getByRole("heading", { name: /something worth trusting/i }),
+      screen.getByRole("heading", { name: /something worth keeping/i }),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(/the map made thailand feel understandable/i),
+      screen.getByText(/a digital keepsake, issued the moment you claim your fragment/i),
     ).toBeInTheDocument();
-    expect(screen.getByText(/4\.9/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /get yours/i })).toBeInTheDocument();
   });
 
   it("renders nothing without testimonials", () => {

@@ -1,7 +1,7 @@
 "use server";
 
 import { apiPost, isApiError } from "@/lib/api/client";
-import { verifyOtpResponseSchema, registerResponseSchema, loginResponseSchema } from "@/lib/api/auth.schemas";
+import { verifyOtpResponseSchema, requestOtpResponseSchema, registerResponseSchema, loginResponseSchema } from "@/lib/api/auth.schemas";
 import type { SignupFormValues } from "@/modules/signup/schemas/signup.schema";
 
 export type VerifyOtpActionResult =
@@ -16,8 +16,9 @@ export async function verifyOtpAction(email: string, otp: string): Promise<Verif
   try {
     const response = await apiPost(
       "/auth/verify-otp",
-      { email, otp },
+      { email: email.trim(), otp: otp.trim() },
       verifyOtpResponseSchema,
+      { timeoutMs: 20_000 },
     );
 
     if (!response.success) {
@@ -31,6 +32,10 @@ export async function verifyOtpAction(email: string, otp: string): Promise<Verif
     };
   } catch (error) {
     if (isApiError(error)) {
+      if (error.message !== "The request failed") {
+        return { ok: false, message: error.message };
+      }
+
       if (error.status === 400) {
         return { ok: false, message: "Invalid OTP. Please check and try again." };
       }
@@ -60,8 +65,9 @@ export async function requestOtpAction(email: string): Promise<RequestOtpActionR
   try {
     const response = await apiPost(
       "/auth/request-otp",
-      { email },
-      verifyOtpResponseSchema,
+      { email: email.trim() },
+      requestOtpResponseSchema,
+      { timeoutMs: 20_000 },
     );
 
     if (!response.success) {
@@ -71,6 +77,10 @@ export async function requestOtpAction(email: string): Promise<RequestOtpActionR
     return { ok: true };
   } catch (error) {
     if (isApiError(error)) {
+      if (error.message !== "The request failed") {
+        return { ok: false, message: error.message };
+      }
+
       if (error.status === 400) {
         return { ok: false, message: "Please enter a valid email address." };
       }
@@ -179,8 +189,9 @@ export async function resendOtpAction(email: string): Promise<ResendOtpActionRes
   try {
     const response = await apiPost(
       "/auth/resend-otp",
-      { email },
-      verifyOtpResponseSchema,
+      { email: email.trim() },
+      requestOtpResponseSchema,
+      { timeoutMs: 20_000 },
     );
 
     if (!response.success) {
@@ -190,6 +201,10 @@ export async function resendOtpAction(email: string): Promise<ResendOtpActionRes
     return { ok: true };
   } catch (error) {
     if (isApiError(error)) {
+      if (error.message !== "The request failed") {
+        return { ok: false, message: error.message };
+      }
+
       if (error.status === 400) {
         return { ok: false, message: "Please enter a valid email address." };
       }

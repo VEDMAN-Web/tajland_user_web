@@ -11,6 +11,7 @@ export type BlogPost = {
   author: string;
   description: string;
   image: string;
+  imagePosition?: string;
   alt: string;
   sections: readonly BlogSection[];
   relatedSlugs: readonly string[];
@@ -56,12 +57,39 @@ export const blogPosts: readonly BlogPost[] = [
     date: "Sep 03, 2026",
     author: "Tajlandia.pl",
     description: "Phuket is more than turquoise water and beautiful beaches. From quiet coastal landscapes and vibrant local communities to world-famous destinations, the island brings together many different sides of Thailand in one place. Whether you are visiting for the first time or returning again, Phuket has a way of making familiar places feel new.",
-    image: "/images/blog/blog-03.jpg",
-    alt: "Mountain temple at sunset",
+    image: "/images/blog/blog-01.jpg",
+    imagePosition: "center 82%",
+    alt: "Temple grounds in Thailand under a bright blue sky",
     sections: [
-      { heading: "More than a beach destination", paragraphs: ["Phuket’s appeal begins with its coastline, but it does not end there. The island moves naturally between lively waterfronts, quiet viewpoints, historic streets, and neighbourhoods where daily life continues away from the crowds.", "That contrast gives Phuket a sense of scale. One day can include a sunrise by the sea, a long lunch in the old town, and a late afternoon looking across the hills."] },
-      { heading: "The rhythm of the coast", paragraphs: ["The best coastal experiences are rarely rushed. Find a quieter stretch of shore, watch the light change across the water, and make space for the small details that turn a visit into a memory.", "Local food, longtail boats, and the changing colours of the Andaman Sea all add layers to the island’s story."] },
-      { heading: "A place worth returning to", paragraphs: ["Phuket rewards repeat visits because the island changes with the season, the time of day, and the route you take through it. Its familiar landmarks become starting points for discovering something new."] },
+      {
+        heading: "What makes Phuket special?",
+        paragraphs: [
+          "Phuket has become one of Thailand's most recognisable destinations, but its appeal goes beyond tourism. The island combines natural beauty, culture, food, history and a relaxed coastal lifestyle.",
+          "Its landscapes change quickly. A busy town can lead to a quiet beach, while a short drive inland can reveal green hills, viewpoints and smaller communities.",
+          "That variety is part of what makes Phuket so interesting to explore.",
+        ],
+      },
+      {
+        heading: "1. Its coastline is unforgettable",
+        paragraphs: [
+          "Long stretches of sandy beaches, small bays and clear Andaman Sea waters create landscapes that feel completely different depending on where you are on the island.",
+          "Popular destinations such as Patong offer energy, restaurants and nightlife, while places around Kamala, Nai Harn and other quieter coastal areas can provide a much slower experience.",
+          "The best part is that you don't have to choose just one version of Phuket. You can experience several of them within the same journey.",
+        ],
+      },
+      {
+        heading: "2. Phuket has a rich local character",
+        paragraphs: [
+          "Phuket Old Town is one of the best places to experience this side of the island. Colourful historic buildings, local cafés, markets and small streets create an atmosphere very different from the resort areas.",
+          "Walking through the old streets gives you a glimpse into a Phuket that existed long before it became an international destination.",
+        ],
+      },
+      {
+        heading: "3. Every area feels different",
+        paragraphs: [
+          "One of the most interesting things about exploring Phuket is how quickly the atmosphere changes from one area to another.",
+        ],
+      },
     ],
     relatedSlugs: ["your-journey-through-thailand-starts-here", "most-beautiful-places-in-thailand"],
   },

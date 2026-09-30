@@ -7,6 +7,6 @@ describe("BlogPage", () => {
     render(<BlogPage />);
     expect(screen.getByRole("heading", { name: "Blog" })).toBeInTheDocument();
     expect(screen.getAllByRole("article")).toHaveLength(6);
-    expect(screen.getByRole("button", { name: "Show More" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Show More" })).not.toBeInTheDocument();
   });
 });

@@ -1,9 +1,11 @@
 "use client";
 
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import React, { useState } from "react";
 import Link from "next/link";
 import { routes } from "@/lib/constants/routes";
+import { toSafeInternalRedirect } from "@/lib/security/redirects";
 import { ScrollAnimatedElement } from "@/components/animations/ScrollAnimatedElement";
 import { setAuthToken, setAuthUser } from "@/lib/api/auth.utils";
 import { getRememberedLogin, saveRememberedLogin } from "@/lib/api/remember-me.utils";
@@ -115,8 +117,8 @@ export function LoginPage() {
         if (actionResult.user) {
           setAuthUser(actionResult.user, rememberMe);
         }
-        // Redirect to dashboard
-        router.push(routes.dashboard);
+        const nextPath = toSafeInternalRedirect(new URLSearchParams(window.location.search).get("next"));
+        router.push(nextPath ?? routes.dashboard);
       } else {
         setApiError(actionResult.message);
       }
@@ -127,35 +129,43 @@ export function LoginPage() {
     }
   }
 
+  const fieldClass = "h-12 w-full rounded-[12px] border border-[#e6e8ee] bg-white px-3.5 text-[14px] text-[#1c1c1c] outline-none transition placeholder:text-[#c5c9d1] focus:border-navy focus:ring-2 focus:ring-navy/10 aria-[invalid=true]:border-[#d52b35]";
+
   return (
-    <section className="flex flex-1 items-center bg-white px-4 py-8 sm:px-8 lg:px-10 lg:py-10">
-      <div className="mx-auto grid w-full max-w-[1080px] overflow-hidden rounded-[1.75rem] bg-white shadow-[0_18px_55px_rgba(11,31,77,0.06)] lg:min-h-[660px] lg:grid-cols-[1.02fr_1fr] lg:shadow-none">
-        <div className="relative min-h-[330px] overflow-hidden rounded-[1.75rem] bg-[#071d52] px-8 py-10 text-white sm:px-10 lg:min-h-0 lg:px-9 lg:py-10">
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_12%_72%,rgba(212,232,246,0.95)_0%,rgba(125,177,225,0.8)_18%,transparent_43%),radial-gradient(ellipse_at_88%_76%,rgba(255,146,147,0.95)_0%,rgba(241,105,126,0.7)_18%,transparent_43%),linear-gradient(180deg,#061b4d_0%,#0d397e_36%,#5b95d0_67%,#e9bfd1_100%)]" />
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_100%,rgba(255,255,255,0.24),transparent_42%)] opacity-80" />
-          <div className="relative z-10 max-w-[300px]">
-            <h1 className="text-[25px] leading-[1.18] tracking-[-0.03em] sm:text-[27px]">
-              Your little piece of
-              <br />
-              <span className="font-display text-[30px] italic leading-none sm:text-[32px]">Thailand</span> awaits.
+    <section className="flex flex-1 items-center bg-white px-4 py-8 sm:px-8 lg:px-12 lg:py-10">
+      <div className="mx-auto grid w-full max-w-[1080px] items-center gap-8 lg:grid-cols-[1.05fr_0.95fr] lg:gap-14">
+        <div className="relative min-h-[420px] overflow-hidden rounded-[28px] bg-[#0b1f4d] text-white sm:min-h-[520px] lg:min-h-[640px]">
+          <Image
+            src="/images/auth/img_login.png"
+            alt=""
+            fill
+            priority
+            sizes="(max-width: 1024px) 100vw, 540px"
+            className="object-cover object-center"
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-transparent" />
+          <div className="relative z-10 px-7 py-8 [text-shadow:0_1px_10px_rgba(0,0,0,0.35)] sm:px-8 sm:py-9">
+            <h1 className="text-[26px] font-semibold leading-[1.15] tracking-[-0.03em] text-white sm:text-[30px]">
+              <span className="block">Your little piece of</span>
+              <span className="mt-1 block">
+                <span className="font-display text-[1.08em] font-medium italic">Thailand</span>
+                <span className="ml-1.5">awaits.</span>
+              </span>
             </h1>
-            <p className="mt-3 text-[13px] leading-5 text-white/80">
+            <p className="mt-3 text-[13px] font-normal leading-5 text-white sm:text-[14px]">
               Explore. Choose. Claim. Make a memory yours.
             </p>
           </div>
         </div>
 
-        <div className="flex items-center px-4 py-12 sm:px-12 lg:px-[76px] lg:py-16">
-          <ScrollAnimatedElement animation="slide-in-right" duration={600} className="w-full max-w-[410px] lg:mx-auto">
-            <Link href="/" className="mb-4 inline-flex text-[12px] font-medium text-muted transition hover:text-navy">
-              ← Back to Home
-            </Link>
-            <h2 className="text-[27px] font-semibold tracking-[-0.03em] text-navy">Welcome back</h2>
-            <p className="mt-2 text-[12px] text-muted">Sign in to continue your Tajlandia journey.</p>
+        <div className="flex items-center px-1 py-2 sm:px-4">
+          <ScrollAnimatedElement animation="slide-in-right" duration={600} className="mx-auto w-full max-w-[420px]">
+            <h2 className="text-[28px] font-semibold tracking-[-0.03em] text-navy sm:text-[30px]">Welcome back</h2>
+            <p className="mt-2 text-[14px] text-[#8b939e]">Sign in to continue your Tajlandia journey.</p>
 
-            <form className="mt-9" noValidate onSubmit={handleSubmit}>
+            <form className="mt-8" noValidate onSubmit={handleSubmit}>
               <div>
-                <label htmlFor="login-email" className="text-[12px] font-medium text-foreground">Email</label>
+                <label htmlFor="login-email" className="text-[14px] font-medium text-[#1c1c1c]">Email</label>
                 <input
                   id="login-email"
                   name="email"
@@ -166,13 +176,13 @@ export function LoginPage() {
                   onChange={(event) => updateField("email", event.target.value)}
                   aria-invalid={Boolean(errors.email)}
                   aria-describedby={errors.email ? "login-email-error" : undefined}
-                  className="mt-2 h-10 w-full rounded-[9px] border border-[#e5e7eb] px-3 text-[12px] text-foreground outline-none transition placeholder:text-[#c6c7ca] focus:border-navy focus:ring-2 focus:ring-navy/10 aria-[invalid=true]:border-[#d52b35]"
+                  className={`mt-2 ${fieldClass}`}
                 />
-                {errors.email ? <p id="login-email-error" className="mt-1.5 text-[11px] text-[#d52b35]">{errors.email}</p> : null}
+                {errors.email ? <p id="login-email-error" className="mt-1.5 text-[12px] text-[#d52b35]">{errors.email}</p> : null}
               </div>
 
               <div className="mt-5">
-                <label htmlFor="login-password" className="text-[12px] font-medium text-foreground">Password</label>
+                <label htmlFor="login-password" className="text-[14px] font-medium text-[#1c1c1c]">Password</label>
                 <div className="relative mt-2">
                   <input
                     id="login-password"
@@ -184,61 +194,61 @@ export function LoginPage() {
                     onChange={(event) => updateField("password", event.target.value)}
                     aria-invalid={Boolean(errors.password)}
                     aria-describedby={errors.password ? "login-password-error" : undefined}
-                    className="h-10 w-full rounded-[9px] border border-[#e5e7eb] px-3 pr-10 text-[12px] text-foreground outline-none focus:outline-none focus-visible:outline-none transition placeholder:text-[#c6c7ca] focus:border-navy focus:ring-2 focus:ring-navy/10 aria-[invalid=true]:border-[#d52b35]"
+                    className={`${fieldClass} pr-11`}
                   />
                   <button
                     type="button"
                     aria-label={showPassword ? "Hide password" : "Show password"}
                     onMouseDown={(event) => event.preventDefault()}
                     onClick={() => setShowPassword((current) => !current)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 rounded-sm text-[#b7b8bb] outline-none focus:outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9aaabd] focus-visible:ring-offset-1"
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 cursor-pointer rounded-sm text-[#b7b8bb] outline-none focus-visible:ring-2 focus-visible:ring-[#9aaabd]"
                   >
                     <EyeIcon hidden={!showPassword} />
                   </button>
                 </div>
-                {errors.password ? <p id="login-password-error" className="mt-1.5 text-[11px] text-[#d52b35]">{errors.password}</p> : null}
+                {errors.password ? <p id="login-password-error" className="mt-1.5 text-[12px] text-[#d52b35]">{errors.password}</p> : null}
               </div>
 
-              <div className="mt-4 flex items-center justify-between gap-4 text-[11px]">
-                <label className="flex items-center gap-2 text-[#b8b9bd]">
+              <div className="mt-4 flex items-center justify-between gap-4 text-[13px]">
+                <label className="flex cursor-pointer items-center gap-2 text-[#9aa3ad]">
                   <input
                     type="checkbox"
                     checked={rememberMe}
                     onChange={(event) => setRememberMe(event.target.checked)}
-                    className="h-3.5 w-3.5 rounded border-[#d7d8da] accent-navy"
+                    className="h-4 w-4 rounded border-[#d7d8da] accent-navy"
                   />
                   Remember me
                 </label>
-                <Link href="/forgot-password" className="font-medium text-[#d9272e] hover:underline">Forgot password?</Link>
+                <Link href="/forgot-password" className="font-medium text-[#e11d2e] hover:underline">Forgot password?</Link>
               </div>
 
               {apiError ? (
-                <p role="alert" className="mt-5 text-center text-[12px] text-[#d52b35]">
+                <p role="alert" className="mt-4 text-center text-[13px] text-[#d52b35]">
                   {apiError}
                 </p>
               ) : null}
-              <button type="submit" disabled={isSubmitting} className="mt-6 h-11 w-full rounded-[9px] bg-navy text-[12px] font-medium text-white shadow-[0_3px_5px_rgba(11,31,77,0.18)] transition hover:bg-navy-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy disabled:cursor-not-allowed disabled:opacity-60">
+              <button type="submit" disabled={isSubmitting} className="mt-5 h-12 w-full cursor-pointer rounded-[12px] bg-navy text-[15px] font-medium text-white transition hover:bg-navy-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy disabled:cursor-not-allowed disabled:opacity-60">
                 {isSubmitting ? "Logging in..." : "Log In"}
               </button>
             </form>
 
-            <div className="my-7 flex items-center gap-3 text-[9px] text-[#c5c6c9]">
+            <div className="my-6 flex items-center gap-3 text-[11px] tracking-[0.08em] text-[#c5c8ce]">
               <span className="h-px flex-1 bg-[#ececee]" />
               <span>OR CONTINUE WITH</span>
               <span className="h-px flex-1 bg-[#ececee]" />
             </div>
 
-            <div className="grid grid-cols-2 gap-2">
-              <button type="button" className="flex h-10 items-center justify-center gap-2 rounded-[9px] bg-[#f8f8f8] text-[11px] text-foreground transition hover:bg-[#f1f1f1] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy">
+            <div className="grid grid-cols-2 gap-3">
+              <button type="button" className="flex h-11 cursor-pointer items-center justify-center gap-2 rounded-[12px] bg-[#f4f5f7] text-[13px] text-[#1c1c1c] transition hover:bg-[#eceef1] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy">
                 <AppleIcon /> Continue with Apple
               </button>
-              <button type="button" className="flex h-10 items-center justify-center gap-2 rounded-[9px] bg-[#f8f8f8] text-[11px] text-foreground transition hover:bg-[#f1f1f1] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy">
+              <button type="button" className="flex h-11 cursor-pointer items-center justify-center gap-2 rounded-[12px] bg-[#f4f5f7] text-[13px] text-[#1c1c1c] transition hover:bg-[#eceef1] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy">
                 <GoogleIcon /> Continue with Google
               </button>
             </div>
 
-            <p className="mt-8 text-center text-[11px] text-foreground">
-              Don&apos;t have an account? <a href="/signup" className="font-medium text-[#d9272e] hover:underline">Create Account</a>
+            <p className="mt-7 text-center text-[14px] text-[#1c1c1c]">
+              Don&apos;t have an account? <Link href="/signup" className="font-medium text-[#e11d2e] hover:underline">Create Account</Link>
             </p>
           </ScrollAnimatedElement>
         </div>

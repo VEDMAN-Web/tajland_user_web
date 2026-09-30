@@ -47,13 +47,6 @@ export function ResetPasswordForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const email = searchParams.get("email") ?? "";
-  const otp = searchParams.get("otp") ?? "";
-
-  React.useEffect(() => {
-    console.log("[ResetPasswordForm] Email from URL:", email, "Type:", typeof email, "Length:", email.length);
-    console.log("[ResetPasswordForm] OTP from URL:", otp, "Type:", typeof otp, "Length:", otp.length);
-    console.log("[ResetPasswordForm] Raw search params:", searchParams.toString());
-  }, [email, otp, searchParams]);
 
   const [values, setValues] = useState<ResetPasswordFormValues>(initialValues);
   const [errors, setErrors] = useState<ResetPasswordErrors>({});
@@ -74,16 +67,8 @@ export function ResetPasswordForm() {
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    // Validate URL parameters first
     if (!email || email.trim() === "") {
-      console.error("[ResetPasswordForm] Email missing from URL");
       setApiError("Email is required. Please start the password reset process from the forgot password page.");
-      return;
-    }
-
-    if (!otp || otp.trim() === "") {
-      console.error("[ResetPasswordForm] OTP missing from URL");
-      setApiError("OTP is missing. Please complete the OTP verification first.");
       return;
     }
 
@@ -109,29 +94,20 @@ export function ResetPasswordForm() {
     setIsSubmitting(true);
 
     try {
-      console.log("[ResetPasswordForm] Submitting with email:", email, "otp:", otp);
-      console.log("[ResetPasswordForm] Passwords match:", result.data.newPassword === result.data.confirmPassword);
-
-      const actionResult = await resetPasswordAction(email, otp, result.data);
-      console.log("[ResetPasswordForm] Action result:", JSON.stringify(actionResult, null, 2));
+      const actionResult = await resetPasswordAction(email, result.data);
 
       if (actionResult.ok) {
-        console.log("[ResetPasswordForm] Password reset successful!");
-        setSuccessMessage(actionResult.message || "Password reset successfully! Redirecting to login...");
+        setSuccessMessage(actionResult.message || "Password reset successfully. You can now log in with your new password.");
         setApiError("");
 
-        // Redirect to login after a short delay
         setTimeout(() => {
-          console.log("[ResetPasswordForm] Redirecting to login...");
           router.push(routes.login);
         }, 2000);
       } else {
-        console.log("[ResetPasswordForm] Password reset failed:", actionResult.message);
         setApiError(actionResult.message || "Failed to reset password. Please try again.");
         setSuccessMessage("");
       }
-    } catch (error) {
-      console.error("[ResetPasswordForm] Exception:", error);
+    } catch {
       setApiError("Unable to reset password right now. Please try again.");
       setSuccessMessage("");
     } finally {
@@ -140,42 +116,41 @@ export function ResetPasswordForm() {
   }
 
   function inputClass(hasError: boolean) {
-    return `mt-2 h-10 w-full rounded-[9px] border px-3 pr-10 text-[12px] text-foreground outline-none focus:outline-none focus-visible:outline-none transition placeholder:text-[#c6c7ca] focus:border-navy focus:ring-2 focus:ring-navy/10 ${hasError ? "border-[#d52b35]" : "border-[#e5e7eb]"}`;
+    return `h-12 w-full rounded-[12px] border bg-white px-3.5 pr-11 text-[14px] text-[#1c1c1c] outline-none transition placeholder:text-[#c5c9d1] focus:border-navy focus:ring-2 focus:ring-navy/10 ${hasError ? "border-[#d52b35]" : "border-[#e6e8ee]"}`;
   }
 
   return (
-    <div className="flex flex-col px-4 py-12 sm:px-12 lg:px-[74px] lg:py-16">
-      <ScrollAnimatedElement animation="slide-in-right" duration={600} className="w-full max-w-[365px] lg:mx-auto">
-        <Link href={routes.login} className="text-[10px] text-foreground hover:underline">← Back to Login</Link>
-        <h2 className="mt-9 text-[24px] font-semibold tracking-[-0.03em] text-navy">Reset your password</h2>
-        <p className="mt-2 text-[11px] leading-5 text-muted">Create a new password for your account.</p>
+    <div className="flex min-h-[640px] flex-col px-1 py-2 sm:px-4">
+      <ScrollAnimatedElement animation="slide-in-right" duration={600} className="mx-auto flex w-full max-w-[420px] flex-1 flex-col">
+        <Link href={routes.login} className="text-[13px] text-[#6b7280] hover:text-navy hover:underline">← Back to Login</Link>
+        <h2 className="mt-8 text-[28px] font-semibold tracking-[-0.03em] text-navy sm:text-[30px]">Reset your password</h2>
+        <p className="mt-2 text-[14px] leading-6 text-[#8b939e]">Create a new password for your account.</p>
 
         <form className="mt-7" noValidate onSubmit={handleSubmit}>
           <div>
-            <label htmlFor="reset-new-password" className="text-[12px] font-medium text-foreground">New password</label>
+            <label htmlFor="reset-new-password" className="text-[14px] font-medium text-[#1c1c1c]">New password</label>
             <div className="relative mt-2">
               <input id="reset-new-password" name="newPassword" type={showNewPassword ? "text" : "password"} autoComplete="new-password" placeholder="hello@example.com" value={values.newPassword} onChange={(event) => updateField("newPassword", event.target.value)} aria-invalid={Boolean(errors.newPassword)} aria-describedby={errors.newPassword ? "reset-new-password-error" : "reset-password-strength"} className={inputClass(Boolean(errors.newPassword))} />
-              <button type="button" aria-label={showNewPassword ? "Hide new password" : "Show new password"} onMouseDown={(event) => event.preventDefault()} onClick={() => setShowNewPassword((current) => !current)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#b7b8bb] focus-visible:rounded focus-visible:outline-2 focus-visible:outline-navy"><EyeIcon hidden={!showNewPassword} /></button>
+              <button type="button" aria-label={showNewPassword ? "Hide new password" : "Show new password"} onMouseDown={(event) => event.preventDefault()} onClick={() => setShowNewPassword((current) => !current)} className="absolute right-3.5 top-1/2 -translate-y-1/2 cursor-pointer text-[#b7b8bb] focus-visible:rounded focus-visible:outline-2 focus-visible:outline-navy"><EyeIcon hidden={!showNewPassword} /></button>
             </div>
-            <div id="reset-password-strength" className="mt-4 flex items-center gap-1" aria-live="polite" style={{ "--strength-width": strength.width, "--strength-color": strength.color } as React.CSSProperties}>
-              <div className="h-[3px] flex-1 overflow-hidden bg-[#e5e7eb]"><div className="strength-bar h-full transition-all" /></div>
-              <span className="strength-label ml-1 min-w-[34px] text-right text-[10px]">{strength.label}</span>
+            <div id="reset-password-strength" className="mt-3 flex items-center gap-2" aria-live="polite" style={{ "--strength-width": strength.width, "--strength-color": strength.color } as React.CSSProperties}>
+              <div className="h-1 flex-1 overflow-hidden rounded-full bg-[#e5e7eb]"><div className="strength-bar h-full rounded-full transition-all" /></div>
+              <span className="strength-label min-w-[52px] text-right text-[12px] font-medium">{strength.label}</span>
             </div>
             {errors.newPassword ? <p id="reset-new-password-error" className="mt-1.5 text-[11px] text-[#d52b35]">{errors.newPassword}</p> : null}
           </div>
 
           <div className="mt-5">
-            <label htmlFor="reset-confirm-password" className="text-[12px] font-medium text-foreground">Confirm password</label>
+            <label htmlFor="reset-confirm-password" className="text-[14px] font-medium text-[#1c1c1c]">Confirm password</label>
             <div className="relative mt-2">
               <input id="reset-confirm-password" name="confirmPassword" type={showConfirmPassword ? "text" : "password"} autoComplete="new-password" placeholder="hello@example.com" value={values.confirmPassword} onChange={(event) => updateField("confirmPassword", event.target.value)} aria-invalid={Boolean(errors.confirmPassword)} aria-describedby={errors.confirmPassword ? "reset-confirm-password-error" : undefined} className={inputClass(Boolean(errors.confirmPassword))} />
-              <button type="button" aria-label={showConfirmPassword ? "Hide confirm password" : "Show confirm password"} onMouseDown={(event) => event.preventDefault()} onClick={() => setShowConfirmPassword((current) => !current)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#b7b8bb] focus-visible:rounded focus-visible:outline-2 focus-visible:outline-navy"><EyeIcon hidden={!showConfirmPassword} /></button>
+              <button type="button" aria-label={showConfirmPassword ? "Hide confirm password" : "Show confirm password"} onMouseDown={(event) => event.preventDefault()} onClick={() => setShowConfirmPassword((current) => !current)} className="absolute right-3.5 top-1/2 -translate-y-1/2 cursor-pointer text-[#b7b8bb] focus-visible:rounded focus-visible:outline-2 focus-visible:outline-navy"><EyeIcon hidden={!showConfirmPassword} /></button>
             </div>
             {errors.confirmPassword ? <p id="reset-confirm-password-error" className="mt-1.5 text-[11px] text-[#d52b35]">{errors.confirmPassword}</p> : null}
           </div>
 
-          {successMessage ? <p role="status" className="mt-4 text-center text-[12px] font-medium text-green-600">{successMessage}</p> : null}
           {successMessage ? (
-            <p role="status" className="mt-5 text-center text-[12px] font-medium text-green-600">
+            <p role="status" className="mt-4 text-center text-[13px] font-medium text-green-600">
               {successMessage}
             </p>
           ) : null}
@@ -184,14 +159,14 @@ export function ResetPasswordForm() {
               {apiError}
             </p>
           ) : null}
-          <button type="submit" disabled={isSubmitting} className="mt-6 h-11 w-full rounded-[9px] bg-navy text-[12px] font-medium text-white shadow-[0_3px_5px_rgba(11,31,77,0.18)] transition hover:bg-navy-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy disabled:cursor-not-allowed disabled:opacity-60">
+          <button type="submit" disabled={isSubmitting} className="mt-6 h-12 w-full cursor-pointer rounded-[12px] bg-navy text-[15px] font-medium text-white transition hover:bg-navy-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy disabled:cursor-not-allowed disabled:opacity-60">
             {isSubmitting ? "Resetting Password..." : "Reset Password"}
           </button>
         </form>
 
-        <div className="mt-auto pt-16 text-center text-[10px] text-[#8e8e91]">
+        <div className="mt-auto pt-16 text-center text-[12px] text-[#8e8e91]">
           <div className="flex justify-center gap-4"><Link href={routes.privacy} className="hover:underline">Privacy Policy</Link><Link href={routes.terms} className="hover:underline">Terms of Service</Link><Link href={routes.contact} className="hover:underline">Contact Support</Link></div>
-          <p className="mt-4 text-[9px] text-foreground">© 2026 Tajlandia.pl. All rights reserved.</p>
+          <p className="mt-4 text-[12px] text-[#1c1c1c]">© 2026 Tajlandia.pl. All rights reserved.</p>
         </div>
       </ScrollAnimatedElement>
     </div>

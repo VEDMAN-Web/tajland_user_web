@@ -17,6 +17,48 @@ export type MapboxMapHandle = {
   searchAndFlyTo: (query: string) => Promise<"success" | "not-found" | "error">;
 };
 
+type GeocodeFeature = {
+  center?: [number, number];
+  text?: string;
+  place_name?: string;
+  place_type?: string[];
+  properties?: { short_code?: string };
+  context?: Array<{ id?: string; short_code?: string }>;
+};
+
+const thailandBounds = { west: 97.3, south: 5.6, east: 105.7, north: 20.5 };
+
+function isInsideThailand(center: [number, number]) {
+  const [lng, lat] = center;
+  return (
+    lng >= thailandBounds.west &&
+    lng <= thailandBounds.east &&
+    lat >= thailandBounds.south &&
+    lat <= thailandBounds.north
+  );
+}
+
+function isThailandFeature(feature: GeocodeFeature) {
+  const country = feature.context?.find((item) => item.id?.startsWith("country."));
+  if (country?.short_code?.toLowerCase() === "th") return true;
+  if (
+    feature.place_type?.includes("country") &&
+    feature.properties?.short_code?.toLowerCase() === "th"
+  ) {
+    return true;
+  }
+  if (feature.place_name?.toLowerCase().includes("thailand")) return true;
+  return feature.center ? isInsideThailand(feature.center) : false;
+}
+
+function zoomForPlace(placeType?: string) {
+  if (placeType === "region") return 8;
+  if (placeType === "district") return 9.5;
+  if (placeType === "place") return 11;
+  if (placeType === "locality") return 12.5;
+  return 14;
+}
+
 type MapboxMapProps = {
   className?: string;
   initialCenter?: [number, number];
@@ -160,9 +202,9 @@ export const MapboxMap = forwardRef<MapboxMapHandle, MapboxMapProps>(function Ma
             access_token: accessToken,
             country: "th",
             bbox: "97.3,5.6,105.7,20.5",
-            limit: "1",
+            limit: "5",
             language: "en",
-            types: "country,region,place,locality,poi,address",
+            types: "region,district,place,locality,poi",
           });
           const response = await fetch(
             `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(normalizedQuery)}.json?${params}`,
@@ -170,21 +212,15 @@ export const MapboxMap = forwardRef<MapboxMapHandle, MapboxMapProps>(function Ma
           if (!response.ok) return "error";
 
           const data = (await response.json()) as {
-            features?: Array<{
-              center?: [number, number];
-              properties?: { short_code?: string };
-              context?: Array<{ short_code?: string }>;
-            }>;
+            features?: GeocodeFeature[];
           };
-          const feature = data.features?.[0];
-          const countryCode =
-            feature?.properties?.short_code ??
-            feature?.context?.find((item) => item.short_code?.startsWith("th"))
-              ?.short_code;
+          const feature = data.features?.find(
+            (item) => item.center && isThailandFeature(item),
+          );
           const center = feature?.center;
 
-          if (!center || countryCode?.toLowerCase() !== "th") return "not-found";
-          focusLocation(center, 13, normalizedQuery);
+          if (!feature || !center) return "not-found";
+          focusLocation(center, zoomForPlace(feature.place_type?.[0]), feature.text || normalizedQuery);
           return "success";
         } catch {
           return "error";
