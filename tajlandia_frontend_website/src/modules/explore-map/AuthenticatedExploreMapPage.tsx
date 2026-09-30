@@ -2,21 +2,13 @@
 
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useRef, useState, useCallback } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { routes } from "@/lib/constants/routes";
 import { useAuth } from "@/lib/hooks/useAuth";
-import { addToCart } from "@/lib/utils/cart.utils";
-import { addItemToCart } from "@/lib/api/cart.service";
-import { toPlotFeatureCollection } from "@/lib/api/explore.schemas";
 import { DashboardNavbar } from "@/modules/dashboard/DashboardNavbar";
-import { MapboxMap, type MapboxMapHandle, type PlotMarker } from "@/components/maps/MapboxMap";
+import { MapboxMap, type MapboxMapHandle } from "@/components/maps/MapboxMap";
+import { destinations } from "./ExploreMapPage";
 import { useDashboardLanguage } from "@/modules/dashboard/DashboardLanguageContext";
-import { useExploreMap } from "./hooks/useExploreMap";
-import { useExploreSearch } from "./hooks/useExploreSearch";
-import { useViewportLoader } from "./hooks/useViewportLoader";
-import { PlotDetailSidebar } from "./components/PlotDetailSidebar";
-import { PlotSidebarCard } from "./components/PlotSidebarCard";
-import type { PlotStatus } from "@/lib/api/explore.schemas";
 
 function SearchIcon() {
   return (
@@ -62,53 +54,28 @@ export function AuthenticatedExploreMapPage() {
   const searchAreaRef = useRef<HTMLDivElement>(null);
   const { isAuthenticated, isLoading } = useAuth();
   const { t } = useDashboardLanguage();
-
-  // Hooks
-  const exploreMap = useExploreMap();
-  const exploreSearch = useExploreSearch();
-  
-  // Viewport loader with tile caching
-  const viewportLoader = useViewportLoader({
-    mapRef,
-    filters: exploreMap.activeFilters,
-    onPlotsLoaded: (plots) => {
-      console.log("[AuthExploreMap] Viewport plots loaded:", plots.length);
-      // Update BOTH mapPlots (for polygons) and plots (for list)
-      // Now PlotListItem includes geometry field from bbox queries!
-      exploreMap.updateMapPlots(plots);
-      exploreMap.updatePlots(plots);
-    },
-  });
-
-  // UI state
+  const [search, setSearch] = useState("");
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [isSortOpen, setIsSortOpen] = useState(false);
-  const [statusFilter, setStatusFilter] = useState<PlotStatus | "all">("all");
+  const [filter, setFilter] = useState<"all" | "ICON" | "POPULAR" | "STANDARD">("all");
+  const [sort, setSort] = useState<"recent" | "name" | "locations">("recent");
   const [showAllHistory, setShowAllHistory] = useState(false);
-  const [selectedPlotId, setSelectedPlotId] = useState<string | null>(null);
-  
-  // Handle viewport changes (pan/zoom)
-  const handleViewportChange = useCallback(() => {
-    console.log("[AuthExploreMap] Viewport changed, loading tiles...");
-    void viewportLoader.loadViewport();
-  }, [viewportLoader]);
-  
-  // Convert mapPlots (from /explore/map with geometry) to GeoJSON polygons for MapboxMap
-  // Note: Markers (dots) are NOT used since all plots have polygon geometry
-  const plotPolygons = useMemo(() => {
-    const myPlotIds = new Set(exploreMap.myPlots.map(p => p.id));
-    const featureCollection = toPlotFeatureCollection(exploreMap.mapPlots, myPlotIds);
-    console.log("[AuthExploreMap] 🗺️ Plot polygons updated:", {
-      totalPlots: exploreMap.mapPlots.length,
-      plotsWithGeometry: featureCollection.features.length,
-      myPlotsCount: myPlotIds.size,
-      featureCollection
-    });
-    return featureCollection;
-  }, [exploreMap.mapPlots, exploreMap.myPlots]);
-
-  // URL-driven plot selection (deep link support)
+  const [historyNames, setHistoryNames] = useState<string[]>(() => {
+    if (typeof window === "undefined")
+      return destinations.map((destination) => destination.name);
+    try {
+      const stored = JSON.parse(
+        window.localStorage.getItem("tajlandia.explore-history") ?? "null",
+      );
+      return Array.isArray(stored)
+        ? stored.filter((name): name is string => typeof name === "string")
+        : destinations.map((destination) => destination.name);
+    } catch {
+      return destinations.map((destination) => destination.name);
+    }
+  });
+  const [searchMessage, setSearchMessage] = useState("");
   const selectedPlot = useMemo(() => {
     const plotId = searchParams.get("plotId");
     const latitude = Number(searchParams.get("lat"));
@@ -152,183 +119,87 @@ export function AuthenticatedExploreMapPage() {
     };
   }, [isSearchExpanded]);
 
-  // Search results visibility
+  const filteredDestinations = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    return [...destinations]
+      .filter((destination) => filter === "all" || destination.badge === filter)
+      .filter(
+        (destination) =>
+          !query ||
+          `${destination.name} ${destination.detail}`.toLowerCase().includes(query),
+      )
+      .sort((first, second) => {
+        if (sort === "name") return first.name.localeCompare(second.name);
+        if (sort === "locations")
+          return (
+            Number.parseInt(second.locations, 10) - Number.parseInt(first.locations, 10)
+          );
+        return 0;
+      });
+  }, [filter, search, sort]);
+  const historyDestinations = useMemo(() => {
+    const available = new Map<string, (typeof destinations)[number]>(
+      filteredDestinations.map((destination) => [destination.name, destination]),
+    );
+    return [
+      ...historyNames
+        .map((name) => available.get(name))
+        .filter((destination): destination is (typeof destinations)[number] =>
+          Boolean(destination),
+        ),
+      ...filteredDestinations.filter(
+        (destination) => !historyNames.includes(destination.name),
+      ),
+    ];
+  }, [filteredDestinations, historyNames]);
   const visibleHistory = showAllHistory
-    ? exploreSearch.recentSearches
-    : exploreSearch.recentSearches.slice(0, 6);
+    ? historyDestinations
+    : historyDestinations.slice(0, 6);
 
-  // Handle clear all search history
-  async function handleClearHistory() {
-    if (!confirm("Clear all search history?")) return;
-    try {
-      await exploreSearch.clearHistory();
-    } catch (err) {
-      console.error("Failed to clear history:", err);
-      alert("Failed to clear history. Please try again.");
-    }
+  function rememberLocation(name: string) {
+    setHistoryNames((current) => {
+      const next = [name, ...current.filter((item) => item !== name)];
+      window.localStorage.setItem("tajlandia.explore-history", JSON.stringify(next));
+      return next;
+    });
   }
 
-  async function handleSearchSubmit() {
-    if (!exploreSearch.query.trim()) {
-      console.log("[Search] Empty query, skipping");
+  async function selectLocation(destination: (typeof destinations)[number]) {
+    setSearchMessage("");
+    setIsSearchExpanded(false);
+    setIsFilterOpen(false);
+    setIsSortOpen(false);
+    setShowAllHistory(false);
+    const result = await mapRef.current?.searchAndFlyTo(destination.name);
+    if (result === "success") {
+      rememberLocation(destination.name);
       return;
     }
-    
-    console.log("[Search] Starting search for:", exploreSearch.query);
-    
-    // Perform search to get results
-    await exploreSearch.performSearch();
-    
-    console.log("[Search] Results received:", exploreSearch.results);
-    
-    // If we have search results, handle based on type
-    if (exploreSearch.results.length > 0) {
-      const firstResult = exploreSearch.results[0];
-      
-      if (!firstResult) {
-        console.log("[Search] No first result found");
-      } else {
-        console.log("[Search] First result:", firstResult);
-        
-        // Filter map based on search result type
-        if (firstResult.type === "REGION" && firstResult.id) {
-          console.log("[Search] Filtering by region:", firstResult.id);
-          exploreMap.setFilters({ regionId: firstResult.id });
-        } else if (firstResult.type === "CITY" && firstResult.id) {
-          console.log("[Search] Filtering by city:", firstResult.id);
-          exploreMap.setFilters({ cityId: firstResult.id });
-        } else if (firstResult.type === "ZONE" && firstResult.id) {
-          console.log("[Search] Filtering by zone:", firstResult.id);
-          exploreMap.setFilters({ zoneId: firstResult.id });
-        }
-        
-        // Use Mapbox geocoding to fly to the location name
-        console.log("[Search] Flying to location:", firstResult.name);
-        const result = await mapRef.current?.searchAndFlyTo(firstResult.name);
-        console.log("[Search] Mapbox result:", result);
-        
-        if (result === "success") {
-          setIsSearchExpanded(false);
-          return;
-        }
-      }
-    }
-    
-    // Fall back to Mapbox geocoding with the raw query
-    console.log("[Search] Falling back to raw query geocoding");
-    const result = await mapRef.current?.searchAndFlyTo(exploreSearch.query);
-    console.log("[Search] Fallback result:", result);
-    
+    mapRef.current?.flyToCoordinates(destination.coordinates, 13, destination.name);
+    rememberLocation(destination.name);
+  }
+
+  async function searchLocation() {
+    const result = await mapRef.current?.searchAndFlyTo(search);
     if (result === "success") {
+      setSearchMessage("");
       setIsSearchExpanded(false);
     } else if (result === "not-found") {
-      console.log("[Search] Location not found");
-      exploreSearch.setQuery(exploreSearch.query); // Keep the query
-    }
-  }
-
-  function handlePlotClick(plotId: string) {
-    setSelectedPlotId(plotId);
-  }
-
-  async function handleAddToCart(plotId: string) {
-    try {
-      // Fetch plot details to ensure we have the latest status
-      const plot = exploreMap.mapPlots.find(p => p.id === plotId);
-      
-      if (!plot) {
-        alert("Plot not found. Please try again.");
-        return;
-      }
-
-      // Check if plot is available for purchase
-      if (plot.status !== "AVAILABLE") {
-        alert(`This plot is ${plot.status.toLowerCase()} and cannot be added to cart.`);
-        return;
-      }
-
-      // Call API to add item to cart
-      await addItemToCart(plotId);
-      
-      console.log("[Cart] Added plot to cart via API:", plotId);
-      
-      // Refresh plot data to update isInCart status
-      await exploreMap.refetchAll();
-      
-      // Show success message (you can add toast notification here)
-      alert("Plot added to cart successfully!");
-    } catch (error) {
-      console.error("[Cart] Failed to add plot to cart:", error);
-      const errorMessage = error instanceof Error ? error.message : "Failed to add plot to cart";
-      alert(`Error: ${errorMessage}`);
-    }
-  }
-
-  function applyStatusFilter(status: PlotStatus | "all") {
-    setStatusFilter(status);
-    if (status === "all") {
-      exploreMap.setFilters({ status: undefined });
+      setSearchMessage("Please search for locations within Thailand.");
     } else {
-      // LOCKED status causes backend 500 error - map to AVAILABLE temporarily
-      const mappedStatus = status === "LOCKED" ? "AVAILABLE" : status;
-      exploreMap.setFilters({ status: mappedStatus });
-      
-      if (status === "LOCKED") {
-        console.warn("[Filter] LOCKED status has backend issue, showing AVAILABLE instead");
-      }
+      setSearchMessage("Unable to search right now. Please try again.");
     }
-    setIsFilterOpen(false);
   }
 
-  // Auth guard
-  useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      router.replace(routes.login);
-    }
-  }, [isAuthenticated, isLoading, router]);
-
-  // Show error notification if map fails to load
-  useEffect(() => {
-    if (exploreMap.error) {
-      console.error("[ExploreMap] Error:", exploreMap.error);
-    }
-  }, [exploreMap.error]);
-
-  // Load initial viewport when map is ready
-  useEffect(() => {
-    if (!exploreMap.isLoadingMap && exploreMap.mapConfig && mapRef.current) {
-      console.log("[AuthExploreMap] Map ready, loading initial viewport");
-      // Give map time to render, then load viewport
-      const timer = setTimeout(() => {
-        void viewportLoader.loadViewport();
-      }, 500);
-      return () => clearTimeout(timer);
-    }
-  }, [exploreMap.isLoadingMap, exploreMap.mapConfig, viewportLoader]);
-
-  if (isLoading || exploreMap.isLoadingMap) {
+  if (isLoading)
     return (
       <main className="flex min-h-[100svh] items-center justify-center bg-white text-sm text-muted">
         {t("Loading map...")}
       </main>
     );
-  }
-
-  if (!isAuthenticated) return null;
-
-  // Show error state if critical error occurred
-  if (exploreMap.error && !exploreMap.mapConfig) {
-    return (
-      <main className="flex min-h-[100svh] flex-col items-center justify-center gap-4 bg-white px-4 text-center">
-        <p className="text-sm text-red-600">{exploreMap.error}</p>
-        <button
-          onClick={() => exploreMap.refetchAll()}
-          className="rounded-lg bg-navy px-4 py-2 text-sm text-white hover:bg-navy/90"
-        >
-          Retry
-        </button>
-      </main>
-    );
+  if (!isAuthenticated) {
+    router.replace(routes.login);
+    return null;
   }
 
   return (
@@ -336,56 +207,51 @@ export function AuthenticatedExploreMapPage() {
       <MapboxMap
         ref={mapRef}
         className="absolute inset-0"
-        initialCenter={
-          exploreMap.mapConfig
-            ? [exploreMap.mapConfig.center.lng, exploreMap.mapConfig.center.lat]
-            : undefined
-        }
         selectedLocation={selectedPlot}
-        plotPolygons={plotPolygons}
-        onPlotClick={handlePlotClick}
-        onViewportChange={handleViewportChange}
       />
 
       <DashboardNavbar active="explore" overlay />
 
-      <div className="absolute left-5 top-20 z-20 sm:left-8 sm:top-24">
-        <div
-          ref={searchAreaRef}
-          className="flex flex-col items-start gap-2"
-          onMouseEnter={() => setIsSearchExpanded(true)}
-          onMouseLeave={() => setIsSearchExpanded(false)}
+      <div
+        ref={searchAreaRef}
+        className="absolute left-5 top-20 z-20 flex items-start gap-2 sm:left-8 sm:top-24"
+        onMouseEnter={() => setIsSearchExpanded(true)}
+      >
+        <label
+          className={`flex h-11 items-center gap-2 rounded-[10px] bg-white/95 px-4 text-[12px] text-[#aab2bd] shadow-[0_3px_12px_rgba(11,31,77,0.12)] transition-[width] duration-300 ${isSearchExpanded ? "w-[300px]" : "w-[150px]"}`}
         >
-          <div className="flex items-start gap-2">
-            <label
-              className="flex h-11 w-[300px] items-center gap-2 rounded-[20px] bg-white/95 px-4 text-[12px] text-[#aab2bd] shadow-[0_3px_12px_rgba(11,31,77,0.12)]"
+          <span className="sr-only">Search Maps</span>
+          <input
+            type="search"
+            value={search}
+            onFocus={() => setIsSearchExpanded(true)}
+            onChange={(event) => {
+              setSearchMessage("");
+              setSearch(event.target.value);
+            }}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.preventDefault();
+                void searchLocation();
+              }
+            }}
+            placeholder="Search Maps"
+            className="min-w-0 flex-1 bg-transparent outline-none placeholder:text-[#aab2bd]"
+          />
+          <SearchIcon />
+          {search ? (
+            <button
+              type="button"
+              aria-label="Clear search"
+              onClick={() => setSearch("")}
+              className="text-lg leading-none text-[#8c96a3]"
             >
-              <span className="sr-only">Search Maps</span>
-              <input
-                type="search"
-                value={exploreSearch.query}
-                onChange={(event) => exploreSearch.setQuery(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter") {
-                    event.preventDefault();
-                    void handleSearchSubmit();
-                  }
-                }}
-                placeholder="Search Maps"
-                className="min-w-0 flex-1 bg-transparent outline-none placeholder:text-[#aab2bd]"
-              />
-              <SearchIcon />
-              {exploreSearch.query ? (
-                <button
-                  type="button"
-                  aria-label="Clear search"
-                  onClick={() => exploreSearch.clearSearch()}
-                  className="text-lg leading-none text-[#8c96a3]"
-                >
-                  ×
-                </button>
-              ) : null}
-            </label>
+              ×
+            </button>
+          ) : null}
+        </label>
+        {isSearchExpanded ? (
+          <>
             <div className="relative">
               <button
                 type="button"
@@ -394,27 +260,25 @@ export function AuthenticatedExploreMapPage() {
                   setIsFilterOpen((open) => !open);
                   setIsSortOpen(false);
                 }}
-                className="flex h-11 items-center gap-1 rounded-[20px] bg-white/95 px-3 text-[12px] text-[#6d7784] shadow-[0_3px_12px_rgba(11,31,77,0.12)]"
+                className="flex h-11 items-center gap-1 rounded-[10px] bg-white/95 px-3 text-[12px] text-[#6d7784] shadow-[0_3px_12px_rgba(11,31,77,0.12)]"
               >
                 ☷ Filter
               </button>
               {isFilterOpen ? (
-                <div className="absolute left-0 top-12 w-36 rounded-[16px] bg-white p-2 text-[11px] shadow-[0_5px_18px_rgba(11,31,77,0.16)]">
-                  <button
-                    type="button"
-                    onClick={() => applyStatusFilter("all")}
-                    className={`block w-full rounded-md px-2 py-1.5 text-left ${statusFilter === "all" ? "bg-[#edf3ff] text-navy" : "text-[#6d7784] hover:bg-[#f5f7fa]"}`}
-                  >
-                    All plots
-                  </button>
-                  {exploreMap.filterOptions?.statuses.map((status) => (
+                <div className="absolute left-0 top-12 w-36 rounded-[10px] bg-white p-2 text-[11px] shadow-[0_5px_18px_rgba(11,31,77,0.16)]">
+                  {(["all", "ICON", "POPULAR", "STANDARD"] as const).map((option) => (
                     <button
-                      key={status}
+                      key={option}
                       type="button"
-                      onClick={() => applyStatusFilter(status as PlotStatus)}
-                      className={`block w-full rounded-md px-2 py-1.5 text-left ${statusFilter === status ? "bg-[#edf3ff] text-navy" : "text-[#6d7784] hover:bg-[#f5f7fa]"}`}
+                      onClick={() => {
+                        setFilter(option);
+                        setIsFilterOpen(false);
+                      }}
+                      className={`block w-full rounded-md px-2 py-1.5 text-left ${filter === option ? "bg-[#edf3ff] text-navy" : "text-[#6d7784] hover:bg-[#f5f7fa]"}`}
                     >
-                      {status[0] + status.slice(1).toLowerCase()}
+                      {option === "all"
+                        ? "All plots"
+                        : option[0] + option.slice(1).toLowerCase()}
                     </button>
                   ))}
                 </div>
@@ -426,205 +290,93 @@ export function AuthenticatedExploreMapPage() {
                 aria-expanded={isSortOpen}
                 onClick={() => {
                   setIsSortOpen((open) => !open);
+                  setIsFilterOpen(false);
                 }}
-                className="flex h-11 items-center gap-1 rounded-[20px] bg-white/95 px-3 text-[12px] text-[#6d7784] shadow-[0_3px_12px_rgba(11,31,77,0.12)]"
+                className="flex h-11 items-center gap-1 rounded-[10px] bg-white/95 px-3 text-[12px] text-[#6d7784] shadow-[0_3px_12px_rgba(11,31,77,0.12)]"
               >
                 ↕ Sort
               </button>
               {isSortOpen ? (
-                <div className="absolute left-0 top-12 w-48 rounded-[16px] bg-white p-2 text-[11px] shadow-[0_5px_18px_rgba(11,31,77,0.16)]">
-                  {exploreMap.sortOptions.map((option) => (
+                <div className="absolute left-0 top-12 w-36 rounded-[10px] bg-white p-2 text-[11px] shadow-[0_5px_18px_rgba(11,31,77,0.16)]">
+                  {(["recent", "name", "locations"] as const).map((option) => (
                     <button
-                      key={option.id}
+                      key={option}
                       type="button"
                       onClick={() => {
-                        exploreMap.setFilters({ sortBy: option.id });
+                        setSort(option);
                         setIsSortOpen(false);
                       }}
-                      className={`block w-full rounded-md px-2 py-1.5 text-left ${exploreMap.activeFilters.sortBy === option.id ? "bg-[#edf3ff] text-navy" : "text-[#6d7784] hover:bg-[#f5f7fa]"}`}
+                      className={`block w-full rounded-md px-2 py-1.5 text-left ${sort === option ? "bg-[#edf3ff] text-navy" : "text-[#6d7784] hover:bg-[#f5f7fa]"}`}
                     >
-                      {option.name}
+                      {option === "recent"
+                        ? "Recently viewed"
+                        : option === "name"
+                          ? "Name"
+                          : "Most locations"}
                     </button>
                   ))}
                 </div>
               ) : null}
             </div>
-          </div>
+          </>
+        ) : null}
+      </div>
 
-          {/* Search Dropdown - Shows on hover with full UI */}
-          {isSearchExpanded && (
-            <section className="flex max-h-[calc(100svh-12rem)] w-[300px] flex-col overflow-hidden rounded-[18px] bg-white/95 p-4 shadow-[0_5px_20px_rgba(11,31,77,0.14)]">
-              <div className="min-h-0 overflow-y-auto pr-1">
-                {exploreSearch.error ? (
-                  <p className="px-2 py-3 text-center text-[11px] text-[#b42318]">
-                    {exploreSearch.error}
-                  </p>
-                ) : null}
-                {exploreSearch.isFetchingSuggestions ? (
-                  <p className="px-2 py-3 text-center text-[11px] text-[#8d97a3]">
-                    Loading suggestions...
-                  </p>
-                ) : exploreSearch.suggestions.length > 0 ? (
-                  exploreSearch.suggestions.map((suggestion, idx) => {
-                    const name = typeof suggestion === "string" ? suggestion : suggestion.name;
-                    return (
-                      <button
-                        key={idx}
-                        type="button"
-                        onClick={async () => {
-                          // Fly to location using Mapbox geocoding
-                          const mapboxResult = await mapRef.current?.searchAndFlyTo(name);
-                          
-                          if (mapboxResult === "success") {
-                            console.log("[Search] ✅ Flew to location:", name);
-                            
-                            // Save to search history
-                            await exploreSearch.saveSearch(name, "LOCATION");
-                            
-                            // Note: viewport loader will be triggered automatically by moveend event
-                          } else {
-                            console.log("[Search] ❌ Location not found:", name);
-                            alert(`Location "${name}" not found on map.`);
-                          }
-                        }}
-                        className="flex w-full items-center gap-3 rounded-[10px] border border-[#edf0f3] p-3 text-left hover:border-navy hover:bg-[#f5f7fa]"
-                      >
-                        {/* Location thumbnail */}
-                        <div className="h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-gray-100">
-                          <img
-                            src={`/images/explore/${name.toLowerCase().replace(/\s+/g, '-')}.jpg`}
-                            alt={name}
-                            className="h-full w-full object-cover"
-                            onError={(e) => {
-                              e.currentTarget.src = '/images/explore/phuket.jpg';
-                            }}
-                          />
-                        </div>
-                        
-                        <span className="min-w-0 flex-1">
-                          <strong className="block truncate text-[13px] font-semibold text-navy">
-                            {name}
-                          </strong>
-                          <span className="block text-[11px] text-[#8d97a3]">
-                            3 Zones · 128 Plots
-                          </span>
-                        </span>
-                        
-                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-navy">
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5">
-                            <path d="M5 12h14M12 5l7 7-7 7"/>
-                          </svg>
-                        </div>
-                      </button>
-                    );
-                  })
-                ) : visibleHistory.length ? (
-                  visibleHistory.map((search) => (
-                    <button
-                      key={search.id}
-                      type="button"
-                      onClick={async () => {
-                        // Fly to location
-                        const mapboxResult = await mapRef.current?.searchAndFlyTo(search.query);
-                        
-                        if (mapboxResult === "success") {
-                          console.log("[Search] ✅ Flew to recent search:", search.query);
-                          
-                          // Re-save search to move it to top of history
-                          await exploreSearch.saveSearch(search.query, (search.type as "ZONE" | "PLOT" | "LOCATION") || "LOCATION");
-                          
-                          // Note: viewport loader will be triggered automatically by moveend event
-                        } else {
-                          console.log("[Search] ❌ Location not found:", search.query);
-                        }
-                        
-                        // Close dropdown after selection
-                        setIsSearchExpanded(false);
-                      }}
-                      className="flex w-full items-center gap-3 rounded-[10px] p-2 text-left hover:bg-[#f5f7fa]"
-                    >
-                      <span className="min-w-0 flex-1">
-                        <strong className="block truncate text-[12px] font-medium text-navy">
-                          {search.query}
-                        </strong>
-                        <span className="block text-[10px] text-[#8d97a3]">
-                          {new Date(search.createdAt).toLocaleDateString()}
-                        </span>
-                      </span>
-                      <span className="text-[#aab2bd]">›</span>
-                    </button>
-                  ))
-                ) : (
-                  <p className="px-2 py-8 text-center text-[11px] text-[#8d97a3]">
-                    {exploreSearch.isLoadingHistory
-                      ? "Loading history..."
-                      : "No recent searches"}
-                  </p>
-                )}
-              </div>
-              
-              {/* Footer: "More from recent history" (expand) OR "Clear All" */}
-              {visibleHistory.length > 0 && (
-                <div className="mt-3 flex shrink-0 items-center justify-between pt-3">
-                  {visibleHistory.length < exploreSearch.recentSearches.length ? (
-                    <button
-                      type="button"
-                      onClick={() => setShowAllHistory((show) => !show)}
-                      className="text-[13px] text-navy hover:underline"
-                    >
-                      {showAllHistory ? "Show less" : "More from recent history"}
-                    </button>
-                  ) : (
-                    <span className="text-[13px] text-navy">More from recent history</span>
-                  )}
-                  <button
-                    onClick={handleClearHistory}
-                    className="text-[13px] font-medium text-[#8f99a4] hover:text-brand-red"
-                  >
-                    Clear All
-                  </button>
-                </div>
-              )}
-            </section>
+      {isSearchExpanded ? (
+        <section className="absolute left-5 top-32 z-10 flex max-h-[calc(100svh-12rem)] w-[304px] flex-col overflow-hidden rounded-[18px] bg-white/95 p-4 shadow-[0_5px_20px_rgba(11,31,77,0.14)] sm:left-8 sm:top-36">
+          <div className="min-h-0 overflow-y-auto pr-1">
+            {searchMessage ? (
+              <p className="px-2 py-3 text-center text-[11px] text-[#b42318]">
+                {searchMessage}
+              </p>
+            ) : null}
+            {visibleHistory.length ? (
+              visibleHistory.map((destination) => (
+                <button
+                  key={destination.name}
+                  type="button"
+                  onClick={() => void selectLocation(destination)}
+                  className="flex w-full items-center gap-3 rounded-[10px] p-2 text-left hover:bg-[#f5f7fa]"
+                >
+                  <Image
+                    src={destination.image}
+                    alt=""
+                    width={34}
+                    height={34}
+                    className="h-[34px] w-[34px] rounded-[7px] object-cover"
+                  />
+                  <span className="min-w-0 flex-1">
+                    <strong className="block truncate text-[12px] font-medium text-navy">
+                      {destination.name}
+                    </strong>
+                    <span className="block text-[10px] text-[#8d97a3]">
+                      {destination.locations}
+                    </span>
+                  </span>
+                  <span className="text-[#aab2bd]">›</span>
+                </button>
+              ))
+            ) : (
+              <p className="px-2 py-8 text-center text-[11px] text-[#8d97a3]">
+                No places match your search.
+              </p>
+            )}
+          </div>
+          {visibleHistory.length < historyDestinations.length ? (
+            <button
+              type="button"
+              onClick={() => setShowAllHistory((show) => !show)}
+              className="mt-3 shrink-0 border-t border-[#edf0f3] pt-3 text-center text-[11px] text-navy"
+            >
+              {showAllHistory ? "Show less" : "More from recent history"}
+            </button>
+          ) : (
+            <p className="mt-3 shrink-0 border-t border-[#edf0f3] pt-3 text-center text-[11px] text-navy">
+              More from recent history
+            </p>
           )}
-        </div>
-      </div>
-
-      {/* Desktop: Sidebar Card (≥1024px) - Moved up 20px */}
-      <div className="hidden lg:block">
-        {selectedPlotId && (
-          <div className="fixed left-5 top-[160px] z-20 lg:left-8">
-            <PlotSidebarCard
-              plotId={selectedPlotId}
-              onClose={() => setSelectedPlotId(null)}
-              onAddToCart={handleAddToCart}
-              cartRai={0}
-              minimumRai={100}
-              isInCart={false}
-            />
-          </div>
-        )}
-      </div>
-
-      {/* Mobile/Tablet: Plot Detail Sidebar (<1024px) */}
-      <div className="lg:hidden">
-        <PlotDetailSidebar
-          plotId={selectedPlotId}
-          onClose={() => setSelectedPlotId(null)}
-          onAddToCart={handleAddToCart}
-          onFocusPlot={(plotId) => {
-            // Fly to plot location
-            const plot = exploreMap.mapPlots.find(p => p.id === plotId);
-            if (plot?.coordinates && mapRef.current) {
-              mapRef.current.flyToCoordinates(
-                [plot.coordinates.lng, plot.coordinates.lat],
-                16,
-                plot.name || plot.plotNumber || "Plot"
-              );
-            }
-          }}
-        />
-      </div>
+        </section>
+      ) : null}
 
       <div className="absolute bottom-9 left-5 flex max-w-[calc(100%-6rem)] flex-wrap items-center gap-3 rounded-md bg-white/95 px-3 py-2 text-[9px] text-[#273044] shadow-[0_3px_12px_rgba(11,31,77,0.12)] sm:bottom-10 sm:left-8 sm:max-w-none">
         <span className="font-medium uppercase tracking-wide">Plot Status</span>
