@@ -34,7 +34,16 @@ const LINE_STAGGER = 0.012;
 
 type FrameStore = (HTMLImageElement | null)[];
 
+// Last style written per overlay element, so unchanged layers (e.g. blocks
+// still waiting off stage) are not restyled every frame.
+const appliedStyles = new WeakMap<HTMLElement, string>();
+
 function applyStyle(element: HTMLElement, style: ReturnType<typeof motionToStyle>) {
+  const key = `${style.opacity}|${style.transform}|${style.filter}|${style.visibility}`;
+  if (appliedStyles.get(element) === key) {
+    return;
+  }
+  appliedStyles.set(element, key);
   element.style.opacity = style.opacity;
   element.style.transform = style.transform;
   element.style.filter = style.filter;
@@ -124,13 +133,27 @@ export function HeroFilm({ film, poster, finale, children, className }: HeroFilm
     let drawnKey = "";
     let painted = false;
     let stickyTop = 0;
+    let overlaysAt = -1;
+    // Natural size of the frames, known once the first one has loaded.
+    let sourceWidth = 0;
+    let sourceHeight = 0;
 
     // ---- Canvas sizing -------------------------------------------------
     const resize = () => {
       stickyTop = parseFloat(getComputedStyle(stage).top) || 0;
       const ratio = Math.min(window.devicePixelRatio || 1, compact ? 1.5 : 2);
-      const width = Math.round(stage.clientWidth * ratio);
-      const height = Math.round(stage.clientHeight * ratio);
+      let width = stage.clientWidth * ratio;
+      let height = stage.clientHeight * ratio;
+      // Never hold more pixels than the frames have: past that the canvas only
+      // upscales them, which the browser does just as well when it scales the
+      // canvas to the stage, at a fraction of the drawing cost.
+      const cover = sourceWidth ? Math.max(width / sourceWidth, height / sourceHeight) : 1;
+      if (cover > 1) {
+        width /= cover;
+        height /= cover;
+      }
+      width = Math.round(width);
+      height = Math.round(height);
       if (width && height && (canvas.width !== width || canvas.height !== height)) {
         canvas.width = width;
         canvas.height = height;
@@ -215,6 +238,9 @@ export function HeroFilm({ film, poster, finale, children, className }: HeroFilm
     };
 
     const tick = (time: number) => {
+      // Measured here rather than in the scroll handler: once per frame, and
+      // before this frame writes any styles, so it never forces a layout.
+      readTarget();
       const dt = lastTime ? Math.min(time - lastTime, 64) : FRAME_MS;
       lastTime = time;
       const ease = reducedMotion ? 1 : 1 - Math.pow(1 - SCROLL_EASE, dt / FRAME_MS);
@@ -225,7 +251,11 @@ export function HeroFilm({ film, poster, finale, children, className }: HeroFilm
         current = target;
       }
       draw(current);
-      animateOverlays(current);
+      // Scrolling the rest of the page leaves the film at rest: skip the overlays.
+      if (current !== overlaysAt) {
+        overlaysAt = current;
+        animateOverlays(current);
+      }
 
       if (settled) {
         rafId = 0;
@@ -242,13 +272,12 @@ export function HeroFilm({ film, poster, finale, children, className }: HeroFilm
     };
 
     const onScroll = () => {
-      readTarget();
       requestTick();
     };
 
     const onResize = () => {
       resize();
-      onScroll();
+      requestTick();
     };
 
     // ---- Frame loading (coarse-to-fine, limited concurrency) -----------
@@ -259,6 +288,11 @@ export function HeroFilm({ film, poster, finale, children, className }: HeroFilm
         image.src = frameUrl(frameSet.framePath, index);
         const done = () => {
           if (!disposed && image.naturalWidth) {
+            if (!sourceWidth) {
+              sourceWidth = image.naturalWidth;
+              sourceHeight = image.naturalHeight;
+              resize();
+            }
             frames[index] = image;
             drawnKey = "";
             requestTick();
@@ -285,6 +319,7 @@ export function HeroFilm({ film, poster, finale, children, className }: HeroFilm
     resize();
     readTarget();
     current = target;
+    overlaysAt = current;
     animateOverlays(current);
 
     // First frame alone, then stream the rest so it never competes with LCP.
