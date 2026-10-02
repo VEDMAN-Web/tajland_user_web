@@ -7,20 +7,22 @@ import { routes } from "@/lib/constants/routes";
 
 export function SiteHeader() {
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-line/80 bg-white/95 backdrop-blur-md">
+    // `site-header*` classes are styling hooks: pages with a full-screen hero
+    // (see .hero-film in globals.css) restyle the header without coupling to it.
+    <header className="site-header sticky top-0 z-40 w-full border-b border-line/80 bg-white/95 backdrop-blur-md">
       <Container className="grid h-[4.5rem] grid-cols-[auto_1fr_auto] items-center gap-3 sm:h-20 lg:grid-cols-[1fr_auto_1fr] lg:gap-6">
-        <BrandLogo />
-        <MainNav />
+        <BrandLogo className="site-header-brand" />
+        <MainNav className="site-header-nav" />
         <div className="flex items-center justify-end gap-2 sm:gap-3">
           <Button
             href={routes.signup}
             variant="inverse"
             size="sm"
-            className="hidden shadow-[0_8px_24px_rgba(11,31,77,0.12)] lg:inline-flex"
+            className="site-header-action hidden shadow-[0_8px_24px_rgba(11,31,77,0.12)] lg:inline-flex"
           >
             Sign Up
           </Button>
-          <Button href={routes.login} variant="inverse" size="sm" className="hidden shadow-[0_8px_24px_rgba(11,31,77,0.12)] lg:inline-flex">
+          <Button href={routes.login} variant="inverse" size="sm" className="site-header-action hidden shadow-[0_8px_24px_rgba(11,31,77,0.12)] lg:inline-flex">
             Login
           </Button>
           <MobileNav />

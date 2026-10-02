@@ -10,8 +10,13 @@ describe("FeatureSection", () => {
     expect(
       screen.getByRole("heading", { name: homePageContent.features.heading }),
     ).toBeInTheDocument();
+    // The subtitle is split across a <br>, so compare the paragraph text without whitespace.
+    const subtitle = (homePageContent.features.subtitle as string).replace(/\s+/g, "");
     expect(
-      screen.getByText(homePageContent.features.subtitle as string),
+      screen.getByText(
+        (_, element) =>
+          element?.tagName === "P" && element.textContent?.replace(/\s+/g, "") === subtitle,
+      ),
     ).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /explore map/i })).toHaveAttribute(
       "href",

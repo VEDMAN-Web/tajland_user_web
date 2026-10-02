@@ -14,7 +14,7 @@ export default async function MarketingLayout({
       <script
         nonce={nonce}
         dangerouslySetInnerHTML={{
-          __html: `(() => { try { if (window.location.pathname === "/" && window.localStorage.getItem("tajlandia_auth_token")) { window.location.replace("/dashboard"); } } catch {} })();`,
+          __html: `(() => { try { if ("scrollRestoration" in window.history) { window.history.scrollRestoration = "manual"; } window.scrollTo(0, 0); if (window.location.pathname === "/" && window.localStorage.getItem("tajlandia_auth_token")) { window.location.replace("/dashboard"); } } catch {} })();`,
         }}
       />
       <a

@@ -19,8 +19,7 @@ const animationKeyframes: Record<AnimationType, string> = {
   'slide-in-right': 'slide-in-right',
   'scale-in': 'scale-in',
   'fade-in-scale': 'fade-in-scale',
-  'slide-in-right-dark': 'slide-in-right-dark',
-};
+  'slide-in-right-dark': 'slide-in-right-dark',};
 
 export function ScrollAnimatedElement({
   children,
@@ -63,7 +62,8 @@ export function ScrollAnimatedElement({
 
   const style = isVisible
     ? {
-        animation: `${animationKeyframes[animation]} ${duration}ms ease-out ${delay}ms forwards`,
+        // `both` keeps the element at its first keyframe (hidden) during `delay`.
+        animation: `${animationKeyframes[animation]} ${duration}ms ease-out ${delay}ms both`,
       }
     : { opacity: 0 };
 
