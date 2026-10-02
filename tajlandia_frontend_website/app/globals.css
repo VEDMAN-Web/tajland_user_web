@@ -636,11 +636,11 @@ nextjs-portal {
   opacity: 1;
 }
 
-/* Site header over the hero film (lg+). While the film plays only Sign Up /
-   Login float over it; once it ends (`data-hero-film="done"`, set by
-   HeroFilm.tsx) the header flips in: the white panel unfolds down from the
-   top edge, then the logo and nav links flip in one by one, and the account
-   buttons do a full coin flip. Transitions (not keyframes), so scrolling back
+/* Site header over the hero film (lg+). While the film plays only the logo
+   and Sign Up / Login float over it; once it ends (`data-hero-film="done"`,
+   set by HeroFilm.tsx) the header flips in: the white panel unfolds down from
+   the top edge, the nav links flip in one by one, and the account buttons do a full coin
+   flip. Transitions (not keyframes), so scrolling back
    up folds it away in reverse. `:has()` applies the overlay from the first
    paint, so the page never shifts when JavaScript loads. */
 @media (min-width: 1024px) {
@@ -726,7 +726,6 @@ nextjs-portal {
       opacity 0.3s ease 0.15s;
   }
 
-  html:not([data-hero-film="done"]) body:has(.hero-film) .site-header-brand,
   html:not([data-hero-film="done"]) body:has(.hero-film) .site-header-nav > a {
     opacity: 0;
     visibility: hidden;
