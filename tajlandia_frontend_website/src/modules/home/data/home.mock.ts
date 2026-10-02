@@ -18,6 +18,60 @@ export const homePageContent: HomePageContent = {
       width: 800,
       height: 600,
     },
+    // Demo only: third-party reference frames, git-ignored. Swap for our own
+    // film (same folder layout) before anything ships.
+    film: {
+      desktop: {
+        framePath: "/images/home/hero-film-demo/desktop/frame-{frame}.webp",
+        frameCount: 170,
+      },
+      mobile: {
+        framePath: "/images/home/hero-film-demo/mobile/frame-{frame}.webp",
+        frameCount: 170,
+      },
+      poster: {
+        src: "/images/home/hero-film-demo/desktop/frame-0001.webp",
+        alt: "Aerial view above the clouds over a city skyline",
+        width: 1600,
+        height: 900,
+      },
+    },
+    story: [
+      {
+        id: "discover",
+        eyebrow: "01 — Discover",
+        title: "From above the clouds,",
+        titleAccent: "find your plot.",
+        body: "Explore an interactive map and spot the piece of land that speaks to you.",
+        align: "left",
+        from: 0.11,
+        to: 0.29,
+      },
+      {
+        id: "build",
+        eyebrow: "02 — Build",
+        title: "Watch your collection",
+        titleAccent: "take shape.",
+        body: "Choose plots, add them to your collection and see your digital estate grow.",
+        align: "right",
+        from: 0.36,
+        to: 0.62,
+      },
+      {
+        id: "own",
+        eyebrow: "03 — Own",
+        title: "A digital legacy,",
+        titleAccent: "forever yours.",
+        body: "Every plot comes with a certificate of authenticity you can keep, share or gift.",
+        align: "left",
+        cta: {
+          label: "Explore the Map →",
+          href: routes.explore,
+        },
+        from: 0.72,
+        to: 1,
+      },
+    ],
   },
   features: {
     heading: "What would you like to do?",

@@ -175,6 +175,288 @@ nextjs-portal {
   }
 }
 
+/* Direction-aware section reveals (ScrollDirectionalReveal.tsx): slide in with a blur. */
+@keyframes reveal-left {
+  from {
+    opacity: 0;
+    transform: translateX(-64px);
+    filter: blur(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+    filter: blur(0);
+  }
+}
+
+@keyframes reveal-right {
+  from {
+    opacity: 0;
+    transform: translateX(64px);
+    filter: blur(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+    filter: blur(0);
+  }
+}
+
+/* Map legend chips pop in after the globe → Thailand flight (ThailandMap.tsx). */
+@keyframes legend-pop {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.6);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.legend-pop {
+  animation: legend-pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .legend-pop {
+    animation: fade-in 0.3s ease-out both;
+  }
+}
+
+/* How It Works steps (HowItWorksSection.tsx): the icon pops in with a ripple,
+   then its text rises. `--step-delay` staggers the steps sharing a row. */
+@keyframes step-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.12);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes step-ripple {
+  from {
+    opacity: 0.8;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(1.9);
+  }
+}
+
+@keyframes step-rise {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.step-pop {
+  animation: step-pop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) var(--step-delay, 0ms) both;
+}
+
+/* Hidden until it fires; `forwards` (not `both`) so the delay doesn't show the ring early. */
+.step-ripple {
+  opacity: 0;
+  animation: step-ripple 0.9s ease-out calc(var(--step-delay, 0ms) + 250ms) forwards;
+}
+
+.step-rise {
+  animation: step-rise 0.6s cubic-bezier(0.16, 1, 0.3, 1) calc(var(--step-delay, 0ms) + 180ms) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .step-pop,
+  .step-rise {
+    animation: fade-in 0.3s ease-out both;
+  }
+
+  .step-ripple {
+    animation: none;
+    opacity: 0;
+  }
+}
+
+/* Certificate "issued" entrance (CertificateReveal.tsx): print in from the top,
+   VERIFIED seal stamps on (≈1.3s) with a shake and ring, then a sheen sweeps. */
+@keyframes cert-print {
+  /* Extra room on the sides/bottom so the hover zoom isn't clipped afterwards. */
+  from {
+    clip-path: inset(-6% -6% 100% -6%);
+    transform: translateY(-14px);
+  }
+  to {
+    clip-path: inset(-6% -6% -6% -6%);
+    transform: translateY(0);
+  }
+}
+
+@keyframes cert-stamp {
+  0% {
+    opacity: 0;
+    transform: scale(2.4) rotate(-32deg);
+  }
+  70% {
+    opacity: 1;
+    transform: scale(0.92) rotate(-12deg);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(-12deg);
+  }
+}
+
+@keyframes cert-seal-ring {
+  from {
+    opacity: 0.7;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(1.8);
+  }
+}
+
+@keyframes cert-shake {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  25% {
+    transform: translate(-3px, 2px) rotate(-0.4deg);
+  }
+  50% {
+    transform: translate(2px, -1px) rotate(0.3deg);
+  }
+  75% {
+    transform: translate(-1px, 1px);
+  }
+}
+
+@keyframes cert-sheen {
+  from {
+    transform: translateX(-120%) skewX(-18deg);
+  }
+  to {
+    transform: translateX(260%) skewX(-18deg);
+  }
+}
+
+.cert-unprinted {
+  clip-path: inset(-6% -6% 100% -6%);
+}
+
+.cert-print {
+  animation: cert-print 1.1s cubic-bezier(0.65, 0, 0.35, 1) 0.1s both;
+}
+
+.cert-stamp {
+  animation: cert-stamp 0.45s cubic-bezier(0.5, 0, 0.75, 0) 1.3s both;
+}
+
+/* Hidden until the stamp lands; `forwards` so the delay doesn't show the ring early. */
+.cert-seal-ring {
+  opacity: 0;
+  animation: cert-seal-ring 0.7s ease-out 1.6s forwards;
+}
+
+/* Impact lands as the stamp finishes (1.3s + ~0.32s). */
+.cert-shake {
+  animation: cert-shake 0.28s linear 1.62s;
+}
+
+.cert-sheen-bar {
+  position: absolute;
+  inset-block: -10%;
+  left: 0;
+  width: 35%;
+  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.55), transparent);
+  transform: translateX(-120%) skewX(-18deg);
+}
+
+.cert-sheen {
+  animation: cert-sheen 1.1s cubic-bezier(0.4, 0, 0.2, 1) 1.95s both;
+}
+
+/* "Keeping." writes itself in after its heading reveals (ScrollDirectionalReveal sets data-reveal). */
+@keyframes keeping-ink {
+  from {
+    clip-path: inset(-15% 100% -15% -10%);
+  }
+  to {
+    clip-path: inset(-15% -10% -15% -10%);
+  }
+}
+
+.keeping-ink {
+  display: inline-block;
+}
+
+[data-reveal="hidden"] .keeping-ink {
+  clip-path: inset(-15% 100% -15% -10%);
+}
+
+[data-reveal="from-left"] .keeping-ink,
+[data-reveal="from-right"] .keeping-ink {
+  animation: keeping-ink 0.9s cubic-bezier(0.65, 0, 0.35, 1) 0.55s both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cert-unprinted {
+    clip-path: none;
+    opacity: 0;
+  }
+
+  .cert-print,
+  .cert-stamp {
+    animation: fade-in 0.4s ease-out both;
+  }
+
+  .cert-stamp {
+    transform: rotate(-12deg);
+  }
+
+  .cert-seal-ring,
+  .cert-shake,
+  .cert-sheen {
+    animation: none;
+  }
+
+  [data-reveal] .keeping-ink {
+    animation: none;
+    clip-path: none;
+  }
+}
+
+/* Blinking text caret (WorldSection's typed URL). */
+@keyframes url-caret-blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+.url-caret {
+  animation: url-caret-blink 1s steps(1) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .url-caret {
+    animation: none;
+  }
+}
+
 @keyframes wipeRevealTopToBottom {
   from {
     clip-path: inset(0 0 60% 0);
@@ -234,6 +516,413 @@ nextjs-portal {
     animation: none;
     clip-path: inset(100% 0 0 0);
   }
+
+  /* Inline animations reference this name, so redefine it as a plain fade. */
+  @keyframes reveal-left {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes reveal-right {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+}
+
+/* Hero scroll film (driven by HeroFilm.tsx, which sets --film-progress 0..1). */
+@keyframes hero-film-rise {
+  from {
+    opacity: 0;
+    transform: translateY(28px);
+    filter: blur(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}
+
+.hero-film-rise {
+  animation: hero-film-rise 1.1s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: var(--rise-delay, 0ms);
+}
+
+/* Title lines slide up from behind a mask. */
+@keyframes hero-film-mask {
+  from {
+    transform: translateY(110%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+.hero-film-mask {
+  display: block;
+  overflow: hidden;
+  /* Room for italic descenders without widening line spacing. */
+  padding-bottom: 0.12em;
+  margin-bottom: -0.12em;
+}
+
+.hero-film-mask > span {
+  display: block;
+  animation: hero-film-mask 1.25s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: var(--rise-delay, 0ms);
+}
+
+@keyframes hero-film-rule {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+.hero-film-rule {
+  animation: hero-film-rule 1s cubic-bezier(0.65, 0, 0.35, 1) both;
+  animation-delay: var(--rise-delay, 0ms);
+}
+
+/* Starts slightly close and settles to the full frame, so the finished tower
+   is never cropped at the end of the film. */
+.hero-film-media {
+  transform: scale(calc(1.08 - var(--film-progress, 0) * 0.08));
+  will-change: transform;
+  /* Size queries for the finale fit (.hero-film-finale). */
+  container-type: size;
+}
+
+/* Final still: fades in over the last frames (88% -> 98%) and holds.
+   The demo still is the film's last frame minus its side margins, so it is
+   drawn at the frame's cover-fit height (16:9 source), centred, with feathered
+   edges; it lands exactly on the canvas instead of ghosting. */
+.hero-film-finale {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  height: max(100cqh, 56.25cqw);
+  aspect-ratio: 1920 / 1204;
+  transform: translate(-50%, -50%);
+  opacity: clamp(0, (var(--film-progress, 0) - 0.88) * 10, 1);
+  mask-image: linear-gradient(90deg, transparent 0%, #000 15%, #000 85%, transparent 100%);
+}
+
+.hero-film-intro-scrim {
+  opacity: max(0, 1 - var(--film-progress, 0) * 7);
+}
+
+.hero-film-block-scrim {
+  opacity: var(--block-visible, 0);
+}
+
+/* The canvas stays hidden (poster shows) until its first frame is painted. */
+.hero-film-canvas {
+  opacity: 0;
+  transition: opacity 0.6s ease-out;
+}
+
+.hero-film[data-film-ready="true"] .hero-film-canvas {
+  opacity: 1;
+}
+
+/* Site header over the hero film (lg+). While the film plays only Sign Up /
+   Login float over it; once it ends (`data-hero-film="done"`, set by
+   HeroFilm.tsx) the header flips in: the white panel unfolds down from the
+   top edge, then the logo and nav links flip in one by one, and the account
+   buttons do a full coin flip. Transitions (not keyframes), so scrolling back
+   up folds it away in reverse. `:has()` applies the overlay from the first
+   paint, so the page never shifts when JavaScript loads. */
+@media (min-width: 1024px) {
+  body:has(.hero-film) .site-header {
+    --header-flip-ease: cubic-bezier(0.22, 1.2, 0.36, 1);
+    position: fixed;
+    inset-inline: 0;
+    top: 0;
+    /* The panel lives on ::before so it can rotate without moving the content. */
+    background-color: transparent;
+    border-color: transparent;
+    backdrop-filter: none;
+  }
+
+  body:has(.hero-film) .site-header::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-bottom: 1px solid color-mix(in srgb, var(--color-line) 80%, transparent);
+    background-color: rgb(255 255 255 / 0.95);
+    backdrop-filter: blur(12px);
+    box-shadow: 0 12px 32px rgba(11, 31, 77, 0.08);
+    transform: perspective(1200px) rotateX(0deg);
+    transform-origin: top center;
+    transition:
+      transform 0.75s var(--header-flip-ease),
+      opacity 0.4s ease;
+  }
+
+  body:has(.hero-film) .site-header-brand,
+  body:has(.hero-film) .site-header-nav > a {
+    visibility: visible;
+    transform: perspective(600px) rotateX(0deg);
+    transform-origin: top center;
+    backface-visibility: hidden;
+    transition:
+      transform 0.7s var(--header-flip-ease),
+      opacity 0.45s ease,
+      visibility 0s;
+  }
+
+  /* Staggered flip-in after the panel has mostly unfolded. */
+  body:has(.hero-film) .site-header-brand {
+    transition-delay: 0.22s;
+  }
+
+  body:has(.hero-film) .site-header-nav > a:nth-child(1) {
+    transition-delay: 0.3s;
+  }
+
+  body:has(.hero-film) .site-header-nav > a:nth-child(2) {
+    transition-delay: 0.38s;
+  }
+
+  body:has(.hero-film) .site-header-nav > a:nth-child(3) {
+    transition-delay: 0.46s;
+  }
+
+  body:has(.hero-film) .site-header-nav > a:nth-child(n + 4) {
+    transition-delay: 0.54s;
+  }
+
+  body:has(.hero-film) .site-header-action {
+    transform: perspective(600px) rotateX(0deg);
+    transition:
+      transform 0.8s var(--header-flip-ease),
+      background-color 0.3s ease,
+      color 0.3s ease,
+      border-color 0.3s ease;
+  }
+
+  body:has(.hero-film) .site-header-action:nth-of-type(2) {
+    transition-delay: 0.08s, 0s, 0s, 0s;
+  }
+
+  /* ---- Film still playing: panel folded up, logo and links flipped away. */
+  html:not([data-hero-film="done"]) body:has(.hero-film) .site-header::before {
+    opacity: 0;
+    transform: perspective(1200px) rotateX(-95deg);
+    transition:
+      transform 0.45s ease-in,
+      opacity 0.3s ease 0.15s;
+  }
+
+  html:not([data-hero-film="done"]) body:has(.hero-film) .site-header-brand,
+  html:not([data-hero-film="done"]) body:has(.hero-film) .site-header-nav > a {
+    opacity: 0;
+    visibility: hidden;
+    transform: perspective(600px) rotateX(-90deg);
+    /* Fold away together and quickly; the stagger is only for the entrance. */
+    transition:
+      transform 0.35s ease-in,
+      opacity 0.3s ease,
+      visibility 0s linear 0.35s;
+  }
+
+  /* Frosted-glass account buttons over the film; solid again on hover. The
+     -360deg turn reads as "unchanged" at rest but flips when the state swaps. */
+  html:not([data-hero-film="done"]) body:has(.hero-film) .site-header-action {
+    transform: perspective(600px) rotateX(-360deg);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    background-color: rgba(255, 255, 255, 0.14);
+    color: #ffffff;
+    box-shadow: 0 8px 24px rgba(7, 21, 54, 0.18);
+    backdrop-filter: blur(12px) saturate(140%);
+  }
+
+  html:not([data-hero-film="done"]) body:has(.hero-film) .site-header-action:hover,
+  html:not([data-hero-film="done"]) body:has(.hero-film) .site-header-action:focus-visible {
+    border-color: #ffffff;
+    background-color: #ffffff;
+    color: var(--navy);
+  }
+}
+
+/* Reduced motion: keep the header's fade, drop the 3D flips. */
+@media (min-width: 1024px) and (prefers-reduced-motion: reduce) {
+  body:has(.hero-film) .site-header::before,
+  body:has(.hero-film) .site-header-brand,
+  body:has(.hero-film) .site-header-nav > a,
+  body:has(.hero-film) .site-header-action,
+  html:not([data-hero-film="done"]) body:has(.hero-film) .site-header::before,
+  html:not([data-hero-film="done"]) body:has(.hero-film) .site-header-brand,
+  html:not([data-hero-film="done"]) body:has(.hero-film) .site-header-nav > a,
+  html:not([data-hero-film="done"]) body:has(.hero-film) .site-header-action {
+    transform: none;
+    transition-delay: 0s;
+  }
+}
+
+/* Site footer flip-in, the header's flip mirrored: when the footer scrolls into
+   view (`data-in-view`, set by SiteFooter.tsx) the panel stands up from the
+   bottom edge, then the logo, headings and links flip up in a diagonal wave
+   (`--flip-i`), and the contact icons do a coin flip. Transitions, so leaving
+   the footer folds it away again and the next visit replays it. Items only
+   fade (no `visibility`), so keyboard focus can still reach the links. */
+.site-footer {
+  --footer-flip-ease: cubic-bezier(0.22, 1.2, 0.36, 1);
+}
+
+.site-footer-panel {
+  transform: perspective(1400px) rotateX(0deg);
+  transform-origin: bottom center;
+  transition:
+    transform 0.85s var(--footer-flip-ease),
+    opacity 0.5s ease;
+}
+
+.site-footer-flip {
+  transform: perspective(600px) rotateX(0deg);
+  transform-origin: bottom center;
+  backface-visibility: hidden;
+  transition:
+    transform 0.7s var(--footer-flip-ease),
+    opacity 0.45s ease;
+  transition-delay: calc(0.22s + var(--flip-i, 0) * 0.07s);
+}
+
+.site-footer-icon {
+  transform: perspective(400px) rotateY(0deg);
+  transition: transform 0.8s var(--footer-flip-ease);
+  transition-delay: calc(0.4s + var(--flip-i, 0) * 0.07s);
+}
+
+/* ---- Out of view: panel tipped back, items folded flat. */
+.site-footer[data-in-view="false"] .site-footer-panel {
+  opacity: 0;
+  transform: perspective(1400px) rotateX(55deg);
+  transition:
+    transform 0.45s ease-in,
+    opacity 0.35s ease 0.1s;
+}
+
+.site-footer[data-in-view="false"] .site-footer-flip {
+  opacity: 0;
+  transform: perspective(600px) rotateX(90deg);
+  /* Fold away together and quickly; the stagger is only for the entrance. */
+  transition:
+    transform 0.35s ease-in,
+    opacity 0.3s ease;
+}
+
+.site-footer[data-in-view="false"] .site-footer-icon {
+  transform: perspective(400px) rotateY(-360deg);
+  transition: transform 0.35s ease-in;
+}
+
+/* Reduced motion: keep the fade, drop the 3D flips. */
+@media (prefers-reduced-motion: reduce) {
+  .site-footer-panel,
+  .site-footer-flip,
+  .site-footer-icon,
+  .site-footer[data-in-view="false"] .site-footer-panel,
+  .site-footer[data-in-view="false"] .site-footer-flip,
+  .site-footer[data-in-view="false"] .site-footer-icon {
+    transform: none;
+    transition-delay: 0s;
+  }
+}
+
+/* CTA card text (CtaSection.tsx). The card itself zooms with the scroll; once
+   half of it is in view (`data-in-view`) the lines rise out of a blur one by
+   one (`--reveal-i`) and the button bounces in. Leaving resets it, so the next
+   visit replays it. */
+.cta-reveal {
+  transition:
+    opacity 0.7s ease,
+    transform 0.85s cubic-bezier(0.16, 1, 0.3, 1),
+    filter 0.7s ease;
+  transition-delay: calc(0.15s + var(--reveal-i, 0) * 0.14s);
+}
+
+.cta-card[data-in-view="false"] .cta-reveal {
+  opacity: 0;
+  transform: translateY(26px);
+  filter: blur(8px);
+  transition-duration: 0.3s;
+  transition-delay: 0s;
+}
+
+@keyframes cta-bounce {
+  0% {
+    opacity: 0;
+    transform: translateY(36px) scale(0.6);
+  }
+  45% {
+    opacity: 1;
+    transform: translateY(-10px) scale(1.08);
+  }
+  65% {
+    transform: translateY(4px) scale(0.96);
+  }
+  82% {
+    transform: translateY(-3px) scale(1.02);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.cta-card[data-in-view="true"] .cta-bounce {
+  animation: cta-bounce 0.95s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  animation-delay: calc(0.15s + var(--reveal-i, 0) * 0.14s);
+}
+
+.cta-card[data-in-view="false"] .cta-bounce {
+  opacity: 0;
+}
+
+/* Reduced motion: fade only, no blur, rise or bounce. */
+@media (prefers-reduced-motion: reduce) {
+  .cta-card[data-in-view="false"] .cta-reveal {
+    transform: none;
+    filter: none;
+  }
+
+  .cta-card[data-in-view="true"] .cta-bounce {
+    animation: none;
+  }
+}
+
+.hero-film-progress {
+  transform: scaleX(var(--film-progress, 0));
+}
+
+@keyframes hero-film-cue {
+  from {
+    transform: translateY(-100%);
+  }
+  to {
+    transform: translateY(100%);
+  }
+}
+
+.hero-film-cue::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, transparent, #ffffff, transparent);
+  animation: hero-film-cue 1.8s cubic-bezier(0.65, 0, 0.35, 1) infinite;
 }
 
 /* Stagger animations for sequences */

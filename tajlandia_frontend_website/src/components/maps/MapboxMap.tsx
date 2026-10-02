@@ -15,6 +15,15 @@ export type MapboxMapHandle = {
     label?: string,
   ) => void;
   searchAndFlyTo: (query: string) => Promise<"success" | "not-found" | "error">;
+  /** Camera-only flight (no marker). Waits for the map to load; resolves when the flight ends. */
+  flyToView: (view: {
+    center: [number, number];
+    zoom: number;
+    duration?: number;
+    curve?: number;
+    bearing?: number;
+    pitch?: number;
+  }) => Promise<void>;
 };
 
 type GeocodeFeature = {
@@ -63,6 +72,8 @@ type MapboxMapProps = {
   className?: string;
   initialCenter?: [number, number];
   initialZoom?: number;
+  /** "globe" shows the Earth as a sphere when zoomed out (blends to flat when zoomed in). */
+  projection?: "mercator" | "globe";
   selectedLocation?: {
     id: string;
     coordinates: [number, number];
@@ -71,9 +82,11 @@ type MapboxMapProps = {
 };
 
 export const MapboxMap = forwardRef<MapboxMapHandle, MapboxMapProps>(function MapboxMap(
-  { className, initialCenter, initialZoom, selectedLocation },
+  { className, initialCenter, initialZoom, projection = "mercator", selectedLocation },
   ref,
 ) {
+  const projectionRef = useRef(projection);
+  const loadedRef = useRef(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const selectedMarkerRef = useRef<mapboxgl.Marker | null>(null);
@@ -142,7 +155,7 @@ export const MapboxMap = forwardRef<MapboxMapHandle, MapboxMapProps>(function Ma
       center: initialViewRef.current.center,
       zoom: initialViewRef.current.zoom,
       minZoom: 2,
-      projection: { name: "mercator" },
+      projection: { name: projectionRef.current },
       attributionControl: false,
     });
 
@@ -151,7 +164,10 @@ export const MapboxMap = forwardRef<MapboxMapHandle, MapboxMapProps>(function Ma
     map.addControl(new mapboxgl.AttributionControl({ compact: true }), "bottom-right");
     const resizeObserver = new ResizeObserver(() => map.resize());
     resizeObserver.observe(containerRef.current);
-    map.once("load", () => map.resize());
+    map.once("load", () => {
+      loadedRef.current = true;
+      map.resize();
+    });
     map.once("load", () => {
       if (!selectedLocation) return;
       focusLocation(
@@ -173,6 +189,7 @@ export const MapboxMap = forwardRef<MapboxMapHandle, MapboxMapProps>(function Ma
       resizeObserver.disconnect();
       map.remove();
       mapRef.current = null;
+      loadedRef.current = false;
     };
   }, []);
 
@@ -220,11 +237,33 @@ export const MapboxMap = forwardRef<MapboxMapHandle, MapboxMapProps>(function Ma
           const center = feature?.center;
 
           if (!feature || !center) return "not-found";
-          focusLocation(center, zoomForPlace(feature.place_type?.[0]), feature.text || normalizedQuery);
+          focusLocation(
+            center,
+            zoomForPlace(feature.place_type?.[0]),
+            feature.text || normalizedQuery,
+          );
           return "success";
         } catch {
           return "error";
         }
+      },
+      flyToView: async ({
+        center,
+        zoom,
+        duration = 3000,
+        curve = 1.6,
+        bearing = 0,
+        pitch = 0,
+      }) => {
+        const map = mapRef.current;
+        if (!map) return;
+        if (!loadedRef.current) {
+          await new Promise<void>((resolve) => map.once("load", () => resolve()));
+        }
+        await new Promise<void>((resolve) => {
+          map.once("moveend", () => resolve());
+          map.flyTo({ center, zoom, duration, curve, bearing, pitch, essential: true });
+        });
       },
       locate: () => {
         if (!mapRef.current || !navigator.geolocation) return;

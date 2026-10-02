@@ -1,5 +1,5 @@
 import { Container } from "@/components/ui/Container";
-import { ScrollAnimatedElement } from "@/components/animations/ScrollAnimatedElement";
+import { ScrollDirectionalReveal } from "@/components/animations/ScrollDirectionalReveal";
 import { FeatureCard } from "../components/FeatureCard";
 import type { HomePageContent } from "../types/home.types";
 
@@ -9,6 +9,9 @@ type FeatureSectionProps = {
 
 const headingAccent = "like to do?";
 const descriptionBreakAfter = "digital";
+
+// Title → paragraph → cards slide in one after another (direction follows the scroll).
+const REVEAL_STAGGER = 150;
 
 function splitFeatureHeading(heading: string) {
   const accentIndex = heading.lastIndexOf(headingAccent);
@@ -47,8 +50,8 @@ export function FeatureSection({ content }: FeatureSectionProps) {
   return (
     <section className="bg-white pb-[60px]">
       <Container>
-        <ScrollAnimatedElement animation="fade-in" duration={600}>
-          <div className="mx-auto mt-12 mb-12 max-w-[760px] text-center md:mb-14">
+        <div className="mx-auto mt-12 mb-12 max-w-[760px] text-center md:mb-14">
+          <ScrollDirectionalReveal reverseDelay={REVEAL_STAGGER}>
             <h2 className="font-[family-name:var(--font-playfair-display)] text-[42px] font-semibold leading-[1.08] tracking-[-0.03em] text-navy sm:text-[52px] lg:text-[56px]">
               {heading.lead}
               {heading.accent ? (
@@ -58,7 +61,9 @@ export function FeatureSection({ content }: FeatureSectionProps) {
                 </>
               ) : null}
             </h2>
-            {descriptionLines.length > 0 ? (
+          </ScrollDirectionalReveal>
+          {descriptionLines.length > 0 ? (
+            <ScrollDirectionalReveal delay={REVEAL_STAGGER} reverseDelay={0}>
               <p className="mx-auto mt-4 font-[family-name:var(--font-manrope)] text-[15px] font-normal leading-[1.55] text-[#718096] sm:mt-5 sm:text-[17px]">
                 {descriptionLines[0]}
                 {descriptionLines.slice(1).map((line) => (
@@ -68,19 +73,20 @@ export function FeatureSection({ content }: FeatureSectionProps) {
                   </span>
                 ))}
               </p>
-            ) : null}
-          </div>
-        </ScrollAnimatedElement>
+            </ScrollDirectionalReveal>
+          ) : null}
+        </div>
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {content.items.map((item, index) => (
-            <ScrollAnimatedElement
+            <ScrollDirectionalReveal
               key={item.id}
-              animation="fade-in-scale"
-              duration={600}
-              delay={index * 100}
+              // Scrolling down: after heading + paragraph, left to right.
+              // Scrolling up: cards enter first, right to left.
+              delay={REVEAL_STAGGER * (index + 2)}
+              reverseDelay={REVEAL_STAGGER * (content.items.length - 1 - index)}
             >
               <FeatureCard item={item} />
-            </ScrollAnimatedElement>
+            </ScrollDirectionalReveal>
           ))}
         </div>
       </Container>

@@ -188,7 +188,7 @@ export function MyLandPage() {
   const { t } = useDashboardLanguage();
   const [query, setQuery] = useState("");
   const storedPurchases = getPurchases();
-  const purchases = storedPurchases.length
+  const purchases: Purchase[] = storedPurchases.length
     ? storedPurchases
     : Array.from({ length: 6 }, (_, index) => ({
         id: "PH-01234",
