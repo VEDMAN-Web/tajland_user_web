@@ -75,7 +75,10 @@ export function ExploreThailandMap({ mapRef }: ExploreThailandMapProps) {
   }, [mapRef]);
 
   return (
-    <div ref={frameRef} className="aspect-[1217/580] w-full overflow-hidden rounded-[1.35rem]">
+    <div
+      ref={frameRef}
+      className="aspect-[1217/580] w-full overflow-hidden rounded-[1.35rem]"
+    >
       <MapboxMap
         ref={mapRef}
         className="h-full min-h-0"
@@ -92,7 +95,10 @@ export function ExploreThailandMap({ mapRef }: ExploreThailandMapProps) {
         {legend.map((item, index) => (
           <span
             key={item.label}
-            className={cn("flex items-center gap-1.5", landed ? "legend-pop" : "opacity-0")}
+            className={cn(
+              "flex items-center gap-1.5",
+              landed ? "legend-pop" : "opacity-0",
+            )}
             // The pill pops first, then each chip in turn.
             style={landed ? { animationDelay: `${150 + index * 120}ms` } : undefined}
           >

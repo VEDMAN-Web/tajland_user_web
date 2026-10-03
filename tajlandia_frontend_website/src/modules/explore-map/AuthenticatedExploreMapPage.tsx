@@ -1,14 +1,109 @@
 "use client";
 
-import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { isAbortError } from "@/lib/api/browser-client";
+import { isApiError } from "@/lib/api/errors";
 import { routes } from "@/lib/constants/routes";
+import { logError } from "@/lib/logging/logger";
 import { useAuth } from "@/lib/hooks/useAuth";
 import { DashboardNavbar } from "@/modules/dashboard/DashboardNavbar";
-import { MapboxMap, type MapboxMapHandle } from "@/components/maps/MapboxMap";
-import { destinations } from "./ExploreMapPage";
+import {
+  MapboxMap,
+  type MapboxMapHandle,
+  type MapboxMapStatus,
+  type MapPlot,
+} from "@/components/maps/MapboxMap";
 import { useDashboardLanguage } from "@/modules/dashboard/DashboardLanguageContext";
+import { FilterPlotsPanel } from "./components/FilterPlotsPanel";
+import { MapErrorDialog } from "./components/MapErrorDialog";
+import { MapUnavailableState } from "./components/MapUnavailableState";
+import { PlotCard } from "./components/PlotCard";
+import { PlotDetailPanel } from "./components/PlotDetailPanel";
+import { RecentSearchRow } from "./components/RecentSearchRow";
+import { SearchResultRow } from "./components/SearchResultRow";
+import { SortPlotsPanel } from "./components/SortPlotsPanel";
+import { DEFAULT_PLOT_FILTERS, DEFAULT_PLOT_SORT } from "./constants/explore-filters";
+import { plotColor } from "./constants/plot-status";
+import { exploreFiltersMock } from "./data/explore-filters.mock";
+import { plotDetailMock } from "./data/plot-detail.mock";
+import {
+  clearRecentSearches,
+  deleteRecentSearch,
+  getExploreMap,
+  getRecentSearches,
+  saveRecentSearch,
+  getSearchSuggestions,
+  MIN_SUGGESTION_QUERY_LENGTH,
+  getPlotsInArea,
+  searchPlaces,
+  type PlotScope,
+} from "./services/explore-map.client";
+import type { PlotFilters, PlotSortOption } from "./types/explore-filters.types";
+import type {
+  ExplorePlot,
+  MapBounds,
+  RecentSearch,
+  SearchResult,
+  SearchSuggestion,
+} from "./types/explore-map.types";
+
+// Slim, rounded, arrow-less scrollbar for the search panel lists.
+// `scrollbar-*` covers Firefox and current Chrome; the `::-webkit-` rules cover Safari.
+const SLIM_SCROLLBAR =
+  "[scrollbar-width:thin] [scrollbar-color:#d9e1ea_transparent] [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-[#d9e1ea] [&::-webkit-scrollbar-track]:bg-transparent";
+
+// Used until `/explore/map` returns the real bounds.
+const THAILAND_BOUNDS: MapBounds = { north: 20.5, south: 5.6, east: 105.6, west: 97.3 };
+const SUGGESTION_DEBOUNCE_MS = 300;
+// Search runs as the user types. Each call is saved to their recent searches,
+// so wait for a longer pause than the autocomplete does.
+const SEARCH_DEBOUNCE_MS = 500;
+// Recent searches shown before "More from recent history".
+const RECENT_PREVIEW_COUNT = 6;
+// How close to zoom in for each place type (search uses lowercase, suggestions uppercase).
+const PLACE_ZOOM: Record<string, number> = { REGION: 10, CITY: 12, ZONE: 13 };
+
+/** Search result types map to the plots API's area filters. */
+function plotScopeFor(place: { type: string; id: string }): PlotScope | null {
+  const type = place.type.toUpperCase();
+  if (type === "REGION") return { param: "regionId", id: place.id };
+  if (type === "CITY") return { param: "cityId", id: place.id };
+  if (type === "ZONE") return { param: "zoneId", id: place.id };
+  return null;
+}
+
+/** Box around the plots (padded so one plot isn't zoomed to street level). */
+function plotsBounds(plots: ExplorePlot[]): MapBounds | null {
+  if (!plots.length) return null;
+  const lats = plots.map((plot) => plot.coordinates.lat);
+  const lngs = plots.map((plot) => plot.coordinates.lng);
+  const padding = 0.05;
+  return {
+    north: Math.max(...lats) + padding,
+    south: Math.min(...lats) - padding,
+    east: Math.max(...lngs) + padding,
+    west: Math.min(...lngs) - padding,
+  };
+}
+
+function toMapPlot(plot: ExplorePlot): MapPlot {
+  return {
+    id: plot.id,
+    color: plotColor(plot.status, plot.isOwned),
+    center: [plot.coordinates.lng, plot.coordinates.lat],
+    polygon: plot.geometry?.coordinates,
+    label: plot.plotNumber,
+  };
+}
+
+/** The rest of the suggestion after what was typed, or "" if it doesn't start with it. */
+function inlineCompletion(typed: string, suggestion: string | undefined) {
+  if (!typed || !suggestion || typed.trimStart() !== typed) return "";
+  return suggestion.toLowerCase().startsWith(typed.toLowerCase())
+    ? suggestion.slice(typed.length)
+    : "";
+}
 
 function SearchIcon() {
   return (
@@ -52,30 +147,73 @@ export function AuthenticatedExploreMapPage() {
   const searchParams = useSearchParams();
   const mapRef = useRef<MapboxMapHandle>(null);
   const searchAreaRef = useRef<HTMLDivElement>(null);
+  const searchPanelRef = useRef<HTMLElement>(null);
   const { isAuthenticated, isLoading } = useAuth();
   const { t } = useDashboardLanguage();
   const [search, setSearch] = useState("");
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [isSortOpen, setIsSortOpen] = useState(false);
-  const [filter, setFilter] = useState<"all" | "ICON" | "POPULAR" | "STANDARD">("all");
-  const [sort, setSort] = useState<"recent" | "name" | "locations">("recent");
-  const [showAllHistory, setShowAllHistory] = useState(false);
-  const [historyNames, setHistoryNames] = useState<string[]>(() => {
-    if (typeof window === "undefined")
-      return destinations.map((destination) => destination.name);
-    try {
-      const stored = JSON.parse(
-        window.localStorage.getItem("tajlandia.explore-history") ?? "null",
-      );
-      return Array.isArray(stored)
-        ? stored.filter((name): name is string => typeof name === "string")
-        : destinations.map((destination) => destination.name);
-    } catch {
-      return destinations.map((destination) => destination.name);
-    }
-  });
+  // Applied values; they will drive the plot API once it is wired up.
+  const [plotFilters, setPlotFilters] = useState<PlotFilters>(DEFAULT_PLOT_FILTERS);
+  const [plotSort, setPlotSort] = useState<PlotSortOption>(DEFAULT_PLOT_SORT);
   const [searchMessage, setSearchMessage] = useState("");
+  // Last suggestion lookup; only used while it still matches what is typed.
+  const [suggestionLookup, setSuggestionLookup] = useState<{
+    query: string;
+    suggestions: SearchSuggestion[];
+    failed: boolean;
+  } | null>(null);
+  // Results of the last submitted search; shown while the query still matches.
+  const [searchResults, setSearchResults] = useState<{
+    query: string;
+    results: SearchResult[];
+  } | null>(null);
+  // Query of the search request in flight, if any.
+  const [searchingQuery, setSearchingQuery] = useState<string | null>(null);
+  const searchAbortRef = useRef<AbortController | null>(null);
+  const searchTimerRef = useRef<number | undefined>(undefined);
+  // Mirrors for the async search flow (state would be stale inside timers).
+  const lastResultsRef = useRef<{ query: string; results: SearchResult[] } | null>(null);
+  const inFlightQueryRef = useRef<string | null>(null);
+  // Set by Enter / recent click: fly to the first result once that query's results arrive.
+  const flyWhenReadyRef = useRef<string | null>(null);
+  // Recent searches (backend history). `recentReloadKey` refetches them.
+  const [recentSearches, setRecentSearches] = useState<RecentSearch[]>([]);
+  const [recentStatus, setRecentStatus] = useState<"loading" | "ready" | "error">(
+    "loading",
+  );
+  const [recentReloadKey, setRecentReloadKey] = useState(0);
+  const [showAllRecent, setShowAllRecent] = useState(false);
+  // Error state: the map itself failed (nothing to show behind the dialog) or
+  // its data failed after the map loaded (map stays visible behind it).
+  const [mapStatus, setMapStatus] = useState<MapboxMapStatus>("loading");
+  const [hasDataError, setHasDataError] = useState(false);
+  const [isErrorDismissed, setIsErrorDismissed] = useState(false);
+  // Bumped by "Try again": `mapKey` remounts a failed map, `reloadKey` refetches data.
+  const [mapKey, setMapKey] = useState(0);
+  const [reloadKey, setReloadKey] = useState(0);
+  const hasMapError = mapStatus === "error" || hasDataError;
+  // Area picked from search; its plots are drawn on the map (all statuses, no sort yet).
+  const [plotScope, setPlotScope] = useState<PlotScope | null>(null);
+  const [plots, setPlots] = useState<ExplorePlot[]>([]);
+  const [plotsReloadKey, setPlotsReloadKey] = useState(0);
+  const [plotsStatus, setPlotsStatus] = useState<"idle" | "loading" | "ready" | "error">(
+    "idle",
+  );
+  // Name shown in the search box for the open area; the plot list shows while it matches.
+  const [plotAreaName, setPlotAreaName] = useState("");
+  const [selectedPlotId, setSelectedPlotId] = useState<string | null>(null);
+  // Plot whose detail panel is open (replaces the list until closed).
+  const [detailPlotId, setDetailPlotId] = useState<string | null>(null);
+  const mapPlots = useMemo(() => plots.map(toMapPlot), [plots]);
+  // Set once the user moves the map, so late API data doesn't yank the camera back.
+  const hasNavigatedRef = useRef(false);
+  // Set when an area is opened without a known location (a recent search):
+  // fit the map to its plots once they load.
+  const fitToPlotsRef = useRef(false);
+  // Thailand's bounds from `/explore/map`; "clear" flies back to this start view.
+  const initialBoundsRef = useRef<MapBounds>(THAILAND_BOUNDS);
   const selectedPlot = useMemo(() => {
     const plotId = searchParams.get("plotId");
     const latitude = Number(searchParams.get("lat"));
@@ -89,16 +227,130 @@ export function AuthenticatedExploreMapPage() {
       zoom: Number.isFinite(zoom) ? zoom : 16,
     };
   }, [searchParams]);
+  const hasSelectedPlot = Boolean(selectedPlot);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    const controller = new AbortController();
+    getExploreMap(controller.signal)
+      .then(({ map }) => {
+        initialBoundsRef.current = map.bounds;
+        if (!hasSelectedPlot && !hasNavigatedRef.current) {
+          mapRef.current?.fitBounds(map.bounds);
+        }
+      })
+      .catch((error: unknown) => {
+        // A cancelled request is not an error, and 401 already redirects to login.
+        if (isAbortError(error)) return;
+        if (isApiError(error) && error.code === "API_SESSION_EXPIRED") return;
+        logError(error, "Failed to load Explore Map data");
+        setHasDataError(true);
+      });
+
+    return () => controller.abort();
+  }, [isAuthenticated, hasSelectedPlot, reloadKey]);
+
+  useEffect(() => {
+    if (!isAuthenticated || !plotScope) return;
+
+    const controller = new AbortController();
+    getPlotsInArea(plotScope, controller.signal)
+      .then((items) => {
+        setPlots(items);
+        setPlotsStatus("ready");
+        if (fitToPlotsRef.current) {
+          fitToPlotsRef.current = false;
+          const bounds = plotsBounds(items);
+          if (bounds) mapRef.current?.fitBounds(bounds, { duration: 1200 });
+        }
+      })
+      .catch((error: unknown) => {
+        if (isAbortError(error)) return;
+        if (isApiError(error) && error.code === "API_SESSION_EXPIRED") return;
+        logError(error, "Failed to load plots");
+        setPlots([]);
+        setPlotsStatus("error");
+        setSearchMessage("Couldn't load plots for this area. Please try again.");
+        setIsSearchExpanded(true);
+      });
+
+    return () => controller.abort();
+  }, [isAuthenticated, plotScope, plotsReloadKey]);
+
+  // Fly to a place and show its plots.
+  function openPlace(place: SearchResult) {
+    const scope = plotScopeFor(place);
+    if (!scope) {
+      flyToPlace(place);
+      return;
+    }
+    // The area's plots (with their labels) mark it, so fly without a pin that would cover them.
+    hasNavigatedRef.current = true;
+    mapRef.current?.clearMarker();
+    void mapRef.current?.flyToView({
+      center: [place.location.lng, place.location.lat],
+      zoom: PLACE_ZOOM[place.type.toUpperCase()] ?? 11,
+      duration: 1500,
+    });
+    showAreaPlots(scope, place.name);
+    rememberPlace(place);
+    // Show the full place name ("pat" -> "Pattaya"). Not scheduled as a search,
+    // so it isn't sent (or auto-saved) again.
+    window.clearTimeout(searchTimerRef.current);
+    setSearch(place.name);
+  }
+
+  function showAreaPlots(scope: PlotScope, name: string) {
+    setPlotsStatus("loading");
+    setPlotAreaName(name);
+    setSelectedPlotId(null);
+    setDetailPlotId(null);
+    // Same area again (e.g. after an error): refetch instead of skipping.
+    if (plotScope?.param === scope.param && plotScope.id === scope.id) {
+      setPlotsReloadKey((key) => key + 1);
+    } else {
+      setPlots([]);
+      setPlotScope(scope);
+    }
+  }
+
+  // Saves the picked place to recent searches. Best effort: a failure only logs.
+  function rememberPlace(place: SearchResult) {
+    const type = place.type.toUpperCase();
+    saveRecentSearch({
+      query: place.name,
+      type: type === "REGION" || type === "CITY" ? type : "LOCATION",
+      referenceId: place.id,
+    })
+      .then(() => setRecentReloadKey((key) => key + 1))
+      .catch((error: unknown) => {
+        if (isApiError(error) && error.code === "API_SESSION_EXPIRED") return;
+        logError(error, "Failed to save recent search");
+      });
+  }
+
+  function retryMap() {
+    setIsErrorDismissed(false);
+    setHasDataError(false);
+    if (mapStatus === "error") setMapKey((key) => key + 1);
+    setReloadKey((key) => key + 1);
+  }
 
   useEffect(() => {
     if (!isSearchExpanded) return;
 
     function handleOutsidePointer(event: PointerEvent) {
-      if (!searchAreaRef.current?.contains(event.target as Node)) {
+      // The results panel is a sibling of the search bar, so it counts as inside too.
+      const target = event.target as Node;
+      if (
+        !searchAreaRef.current?.contains(target) &&
+        !searchPanelRef.current?.contains(target)
+      ) {
         setIsSearchExpanded(false);
         setIsFilterOpen(false);
         setIsSortOpen(false);
-        setShowAllHistory(false);
+        setShowAllRecent(false);
       }
     }
 
@@ -107,7 +359,7 @@ export function AuthenticatedExploreMapPage() {
         setIsSearchExpanded(false);
         setIsFilterOpen(false);
         setIsSortOpen(false);
-        setShowAllHistory(false);
+        setShowAllRecent(false);
       }
     }
 
@@ -119,76 +371,280 @@ export function AuthenticatedExploreMapPage() {
     };
   }, [isSearchExpanded]);
 
-  const filteredDestinations = useMemo(() => {
-    const query = search.trim().toLowerCase();
-    return [...destinations]
-      .filter((destination) => filter === "all" || destination.badge === filter)
-      .filter(
-        (destination) =>
-          !query ||
-          `${destination.name} ${destination.detail}`.toLowerCase().includes(query),
-      )
-      .sort((first, second) => {
-        if (sort === "name") return first.name.localeCompare(second.name);
-        if (sort === "locations")
-          return (
-            Number.parseInt(second.locations, 10) - Number.parseInt(first.locations, 10)
-          );
-        return 0;
-      });
-  }, [filter, search, sort]);
-  const historyDestinations = useMemo(() => {
-    const available = new Map<string, (typeof destinations)[number]>(
-      filteredDestinations.map((destination) => [destination.name, destination]),
+  function flyToPlace(place: {
+    type: string;
+    name: string;
+    location: { lat: number; lng: number };
+  }) {
+    hasNavigatedRef.current = true;
+    mapRef.current?.flyToCoordinates(
+      [place.location.lng, place.location.lat],
+      PLACE_ZOOM[place.type.toUpperCase()] ?? 11,
+      place.name,
     );
-    return [
-      ...historyNames
-        .map((name) => available.get(name))
-        .filter((destination): destination is (typeof destinations)[number] =>
-          Boolean(destination),
-        ),
-      ...filteredDestinations.filter(
-        (destination) => !historyNames.includes(destination.name),
-      ),
-    ];
-  }, [filteredDestinations, historyNames]);
-  const visibleHistory = showAllHistory
-    ? historyDestinations
-    : historyDestinations.slice(0, 6);
+  }
 
-  function rememberLocation(name: string) {
-    setHistoryNames((current) => {
-      const next = [name, ...current.filter((item) => item !== name)];
-      window.localStorage.setItem("tajlandia.explore-history", JSON.stringify(next));
-      return next;
+  // Keeps the panel open: it switches to the area's plot list.
+  function selectResult(result: SearchResult) {
+    openPlace(result);
+    setIsFilterOpen(false);
+    setIsSortOpen(false);
+  }
+
+  const trimmedSearch = search.trim();
+  // An area is open and the box still shows its name (typing something else goes back to search).
+  const showPlotList =
+    plotScope !== null && trimmedSearch === plotAreaName && !hasMapError;
+
+  // Select a plot card and zoom the map to it.
+  function focusPlot(plot: ExplorePlot) {
+    hasNavigatedRef.current = true;
+    void mapRef.current?.flyToView({
+      center: [plot.coordinates.lng, plot.coordinates.lat],
+      zoom: 15,
+      duration: 1200,
     });
   }
 
-  async function selectLocation(destination: (typeof destinations)[number]) {
-    setSearchMessage("");
-    setIsSearchExpanded(false);
-    setIsFilterOpen(false);
-    setIsSortOpen(false);
-    setShowAllHistory(false);
-    const result = await mapRef.current?.searchAndFlyTo(destination.name);
-    if (result === "success") {
-      rememberLocation(destination.name);
-      return;
-    }
-    mapRef.current?.flyToCoordinates(destination.coordinates, 13, destination.name);
-    rememberLocation(destination.name);
+  // Card or map click: select the plot, zoom to it and open its detail.
+  function openPlotDetail(plot: ExplorePlot) {
+    setSelectedPlotId(plot.id);
+    setDetailPlotId(plot.id);
+    setIsSearchExpanded(true);
+    focusPlot(plot);
   }
 
-  async function searchLocation() {
-    const result = await mapRef.current?.searchAndFlyTo(search);
-    if (result === "success") {
-      setSearchMessage("");
-      setIsSearchExpanded(false);
-    } else if (result === "not-found") {
-      setSearchMessage("Please search for locations within Thailand.");
-    } else {
-      setSearchMessage("Unable to search right now. Please try again.");
+  function handleMapPlotClick(plotId: string) {
+    const plot = plots.find((item) => item.id === plotId);
+    if (plot) openPlotDetail(plot);
+  }
+
+  const detailPlot = detailPlotId
+    ? (plots.find((item) => item.id === detailPlotId) ?? null)
+    : null;
+  const currentSuggestions =
+    suggestionLookup?.query === trimmedSearch && !suggestionLookup.failed
+      ? suggestionLookup.suggestions
+      : null;
+  const searchCompletion = inlineCompletion(search, currentSuggestions?.[0]?.name);
+
+  // Autocomplete: debounced, and a newer keystroke cancels the older request.
+  useEffect(() => {
+    const query = search.trim();
+    if (query.length < MIN_SUGGESTION_QUERY_LENGTH) return;
+
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => {
+      getSearchSuggestions(query, controller.signal)
+        .then((suggestions) => setSuggestionLookup({ query, suggestions, failed: false }))
+        .catch((error: unknown) => {
+          if (isAbortError(error)) return;
+          if (isApiError(error) && error.code === "API_SESSION_EXPIRED") return;
+          // No inline hint on failure; pressing Enter retries and shows a message.
+          logError(error, "Failed to load search suggestions");
+          setSuggestionLookup({ query, suggestions: [], failed: true });
+        });
+    }, SUGGESTION_DEBOUNCE_MS);
+
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [search]);
+
+  function acceptCompletion() {
+    const suggestion = currentSuggestions?.[0];
+    if (!searchCompletion || !suggestion) return false;
+    // Use the API's spelling, e.g. "phu" + Tab -> "Phuket".
+    setSearch(suggestion.name);
+    scheduleSearch(suggestion.name);
+    return true;
+  }
+
+  // The message lives in the search panel, so make sure the panel is open to show it.
+  function showSearchMessage(message: string) {
+    setSearchMessage(message);
+    setIsSearchExpanded(true);
+  }
+
+  const currentResults =
+    searchResults?.query === trimmedSearch ? searchResults.results : null;
+  const isSearching = searchingQuery !== null && searchingQuery === trimmedSearch;
+
+  // Stop a pending or running search when the page goes away.
+  useEffect(
+    () => () => {
+      window.clearTimeout(searchTimerRef.current);
+      searchAbortRef.current?.abort();
+    },
+    [],
+  );
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    const controller = new AbortController();
+    getRecentSearches(controller.signal)
+      .then((items) => {
+        setRecentSearches(items);
+        setRecentStatus("ready");
+      })
+      .catch((error: unknown) => {
+        if (isAbortError(error)) return;
+        if (isApiError(error) && error.code === "API_SESSION_EXPIRED") return;
+        logError(error, "Failed to load recent searches");
+        setRecentStatus("error");
+      });
+
+    return () => controller.abort();
+  }, [isAuthenticated, recentReloadKey]);
+
+  function retryRecentSearches() {
+    setRecentStatus("loading");
+    setRecentReloadKey((key) => key + 1);
+  }
+
+  // Only places the user picked (saved with a `referenceId`). `/explore/search`
+  // still auto-saves half-typed text like "phu"; those entries are hidden.
+  const recentPlaces = recentSearches.filter((item) => item.referenceId);
+  const visibleRecent = showAllRecent
+    ? recentPlaces
+    : recentPlaces.slice(0, RECENT_PREVIEW_COUNT);
+
+  // Known place: fly straight there. Older entries only have the text, so search it again.
+  function selectRecent(item: RecentSearch) {
+    // Saved from a click: open that region/city directly (no search, so nothing new is saved).
+    const type = item.type.toUpperCase();
+    if (item.referenceId && (type === "REGION" || type === "CITY")) {
+      hasNavigatedRef.current = true;
+      mapRef.current?.clearMarker();
+      fitToPlotsRef.current = true;
+      showAreaPlots(
+        { param: type === "REGION" ? "regionId" : "cityId", id: item.referenceId },
+        item.query,
+      );
+      setSearch(item.query);
+      return;
     }
+    if (item.location) {
+      flyToPlace({
+        type: item.type,
+        name: item.name ?? item.query,
+        location: item.location,
+      });
+      setIsSearchExpanded(false);
+      return;
+    }
+    setSearch(item.query);
+    window.clearTimeout(searchTimerRef.current);
+    void runSearch(item.query, true);
+  }
+
+  function handleRecentFailure(error: unknown) {
+    if (isApiError(error) && error.code === "API_SESSION_EXPIRED") return;
+    logError(error, "Failed to update recent searches");
+    showSearchMessage("Couldn't update recent searches. Please try again.");
+    // Reload so the list matches the server again.
+    setRecentReloadKey((key) => key + 1);
+  }
+
+  async function removeRecent(item: RecentSearch) {
+    setRecentSearches((current) => current.filter((entry) => entry.id !== item.id));
+    try {
+      await deleteRecentSearch(item.id);
+    } catch (error) {
+      // Already gone (deleted elsewhere, or a stale list): the user got what they
+      // wanted, so just resync instead of showing an error.
+      if (isApiError(error) && /not found/i.test(error.message)) {
+        setRecentReloadKey((key) => key + 1);
+        return;
+      }
+      handleRecentFailure(error);
+    }
+  }
+
+  async function clearAllRecent() {
+    if (!window.confirm(t("Clear all searches?"))) return;
+    setRecentSearches([]);
+    setShowAllRecent(false);
+    try {
+      await clearRecentSearches();
+    } catch (error) {
+      handleRecentFailure(error);
+    }
+  }
+
+  function flyToFirstResult(results: SearchResult[]) {
+    const [first] = results;
+    if (first) {
+      openPlace(first);
+    } else {
+      showSearchMessage("Please search for locations within Thailand.");
+    }
+  }
+
+  // Full search. Typing calls it (debounced) to list results; Enter and recent
+  // searches pass `fly` to also move the map to the best match.
+  async function runSearch(rawQuery: string, fly: boolean) {
+    const query = rawQuery.trim();
+    if (query.length < MIN_SUGGESTION_QUERY_LENGTH) {
+      if (fly) showSearchMessage("Type at least 2 characters to search.");
+      return;
+    }
+
+    // Reuse what we already have so one query is never sent (and saved) twice.
+    const cached = lastResultsRef.current;
+    if (cached?.query === query) {
+      if (fly) flyToFirstResult(cached.results);
+      return;
+    }
+    if (inFlightQueryRef.current === query) {
+      if (fly) flyWhenReadyRef.current = query;
+      return;
+    }
+
+    searchAbortRef.current?.abort();
+    const controller = new AbortController();
+    searchAbortRef.current = controller;
+    inFlightQueryRef.current = query;
+    flyWhenReadyRef.current = fly ? query : null;
+    setSearchingQuery(query);
+    setSearchMessage("");
+
+    try {
+      const results = await searchPlaces(query, controller.signal);
+      lastResultsRef.current = { query, results };
+      setSearchResults({ query, results });
+      if (flyWhenReadyRef.current === query) {
+        flyWhenReadyRef.current = null;
+        flyToFirstResult(results);
+      }
+    } catch (error) {
+      // A newer search replaced this one, or 401 already redirected to login.
+      if (isAbortError(error)) return;
+      if (isApiError(error) && error.code === "API_SESSION_EXPIRED") return;
+      logError(error, "Search failed");
+      showSearchMessage("Unable to search right now. Please try again.");
+    } finally {
+      if (searchAbortRef.current === controller) {
+        searchAbortRef.current = null;
+        inFlightQueryRef.current = null;
+        setSearchingQuery(null);
+      }
+    }
+  }
+
+  // Called on every edit: search after the user pauses typing.
+  function scheduleSearch(value: string) {
+    window.clearTimeout(searchTimerRef.current);
+    if (value.trim().length < MIN_SUGGESTION_QUERY_LENGTH) {
+      // Too short (or cleared): drop any request that is still running.
+      searchAbortRef.current?.abort();
+      return;
+    }
+    searchTimerRef.current = window.setTimeout(() => {
+      void runSearch(value, false);
+    }, SEARCH_DEBOUNCE_MS);
   }
 
   if (isLoading)
@@ -203,48 +659,114 @@ export function AuthenticatedExploreMapPage() {
   }
 
   return (
-    <main className="relative min-h-[100svh] overflow-hidden bg-[#74d0e1] text-navy">
+    <main
+      className={`relative min-h-[100svh] overflow-hidden text-navy ${mapStatus === "error" ? "bg-[#eef3f6]" : "bg-[#74d0e1]"}`}
+    >
       <MapboxMap
+        key={mapKey}
         ref={mapRef}
         className="absolute inset-0"
         selectedLocation={selectedPlot}
+        onStatusChange={setMapStatus}
+        showErrorOverlay={false}
+        plots={mapPlots}
+        onPlotClick={handleMapPlotClick}
       />
+
+      {hasMapError && !isErrorDismissed ? (
+        // Centred on screen; slides right of the search panel while it is open
+        // (large screens), matching the search box's 300ms width transition.
+        <div
+          className={`pointer-events-none absolute inset-0 z-30 flex items-center justify-center px-4 transition-[padding] duration-300 ease-out motion-reduce:transition-none ${isSearchExpanded ? "lg:pl-[calc(2rem+304px)]" : ""}`}
+        >
+          <div className="pointer-events-auto flex w-full justify-center">
+            <MapErrorDialog
+              onContinue={() => setIsErrorDismissed(true)}
+              onRetry={retryMap}
+              t={t}
+            />
+          </div>
+        </div>
+      ) : null}
 
       <DashboardNavbar active="explore" overlay />
 
       <div
         ref={searchAreaRef}
-        className="absolute left-5 top-20 z-20 flex items-start gap-2 sm:left-8 sm:top-24"
+        className="absolute inset-x-4 top-20 z-20 flex items-start gap-2 sm:inset-x-auto sm:left-8 sm:top-24"
         onMouseEnter={() => setIsSearchExpanded(true)}
       >
         <label
-          className={`flex h-11 items-center gap-2 rounded-[10px] bg-white/95 px-4 text-[12px] text-[#aab2bd] shadow-[0_3px_12px_rgba(11,31,77,0.12)] transition-[width] duration-300 ${isSearchExpanded ? "w-[300px]" : "w-[150px]"}`}
+          className={`flex h-11 min-w-0 flex-1 items-center gap-2 rounded-[10px] bg-white/95 px-4 text-[12px] text-[#aab2bd] shadow-[0_3px_12px_rgba(11,31,77,0.12)] transition-[width] duration-300 sm:flex-none ${isSearchExpanded ? (showPlotList ? "sm:w-[420px]" : "sm:w-[300px]") : "sm:w-[150px]"}`}
         >
-          <span className="sr-only">Search Maps</span>
-          <input
-            type="search"
-            value={search}
-            onFocus={() => setIsSearchExpanded(true)}
-            onChange={(event) => {
-              setSearchMessage("");
-              setSearch(event.target.value);
-            }}
-            onKeyDown={(event) => {
-              if (event.key === "Enter") {
-                event.preventDefault();
-                void searchLocation();
-              }
-            }}
-            placeholder="Search Maps"
-            className="min-w-0 flex-1 bg-transparent outline-none placeholder:text-[#aab2bd]"
-          />
+          <span className="sr-only">{t("Search Maps")}</span>
+          <span className="relative flex min-w-0 flex-1 items-center">
+            {searchCompletion ? (
+              // Ghost text: the typed part is invisible so the rest lines up after it.
+              <span
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-0 flex items-center overflow-hidden whitespace-pre"
+              >
+                <span className="invisible">{search}</span>
+                <span className="text-[#aab2bd]">{searchCompletion}</span>
+              </span>
+            ) : null}
+            <input
+              type="search"
+              value={search}
+              aria-autocomplete="inline"
+              onFocus={() => setIsSearchExpanded(true)}
+              onChange={(event) => {
+                setSearchMessage("");
+                setSearch(event.target.value);
+                scheduleSearch(event.target.value);
+              }}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  // Search now instead of waiting for the debounce, then fly.
+                  window.clearTimeout(searchTimerRef.current);
+                  void runSearch(search, true);
+                  return;
+                }
+                const atEnd = event.currentTarget.selectionStart === search.length;
+                if (
+                  (event.key === "Tab" || (event.key === "ArrowRight" && atEnd)) &&
+                  acceptCompletion()
+                ) {
+                  event.preventDefault();
+                }
+              }}
+              placeholder={t("Search Maps")}
+              className="relative w-full min-w-0 bg-transparent text-[#001f54] outline-none placeholder:text-[#aab2bd] [&::-webkit-search-cancel-button]:hidden"
+            />
+          </span>
           <SearchIcon />
-          {search ? (
+          {search || plotScope ? (
             <button
               type="button"
-              aria-label="Clear search"
-              onClick={() => setSearch("")}
-              className="text-lg leading-none text-[#8c96a3]"
+              aria-label={t("Clear search")}
+              // In a plot's detail: back to the area's list. Otherwise clears the
+              // text and the area's plots it put on the map.
+              onClick={() => {
+                if (detailPlot) {
+                  setDetailPlotId(null);
+                  return;
+                }
+                setSearch("");
+                scheduleSearch("");
+                setSearchMessage("");
+                setPlotScope(null);
+                setPlots([]);
+                setPlotsStatus("idle");
+                setPlotAreaName("");
+                setSelectedPlotId(null);
+                // Back to the view the page opened with.
+                mapRef.current?.clearMarker();
+                mapRef.current?.fitBounds(initialBoundsRef.current, { duration: 1200 });
+                hasNavigatedRef.current = false;
+              }}
+              className="cursor-pointer text-lg leading-none text-[#8c96a3]"
             >
               ×
             </button>
@@ -260,28 +782,22 @@ export function AuthenticatedExploreMapPage() {
                   setIsFilterOpen((open) => !open);
                   setIsSortOpen(false);
                 }}
-                className="flex h-11 items-center gap-1 rounded-[10px] bg-white/95 px-3 text-[12px] text-[#6d7784] shadow-[0_3px_12px_rgba(11,31,77,0.12)]"
+                aria-label={t("Filter")}
+                className="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center gap-1 rounded-[10px] bg-white/95 text-[12px] text-[#6d7784] shadow-[0_3px_12px_rgba(11,31,77,0.12)] sm:w-auto sm:px-3"
               >
-                ☷ Filter
+                <span aria-hidden="true">☷</span>
+                <span className="hidden sm:inline">{t("Filter")}</span>
               </button>
               {isFilterOpen ? (
-                <div className="absolute left-0 top-12 w-36 rounded-[10px] bg-white p-2 text-[11px] shadow-[0_5px_18px_rgba(11,31,77,0.16)]">
-                  {(["all", "ICON", "POPULAR", "STANDARD"] as const).map((option) => (
-                    <button
-                      key={option}
-                      type="button"
-                      onClick={() => {
-                        setFilter(option);
-                        setIsFilterOpen(false);
-                      }}
-                      className={`block w-full rounded-md px-2 py-1.5 text-left ${filter === option ? "bg-[#edf3ff] text-navy" : "text-[#6d7784] hover:bg-[#f5f7fa]"}`}
-                    >
-                      {option === "all"
-                        ? "All plots"
-                        : option[0] + option.slice(1).toLowerCase()}
-                    </button>
-                  ))}
-                </div>
+                <FilterPlotsPanel
+                  value={plotFilters}
+                  totalPlots={exploreFiltersMock.totalPlots}
+                  matchingPlots={exploreFiltersMock.matchingPlots}
+                  priceRange={exploreFiltersMock.priceRange}
+                  onApply={setPlotFilters}
+                  onClose={() => setIsFilterOpen(false)}
+                  t={t}
+                />
               ) : null}
             </div>
             <div className="relative">
@@ -292,30 +808,19 @@ export function AuthenticatedExploreMapPage() {
                   setIsSortOpen((open) => !open);
                   setIsFilterOpen(false);
                 }}
-                className="flex h-11 items-center gap-1 rounded-[10px] bg-white/95 px-3 text-[12px] text-[#6d7784] shadow-[0_3px_12px_rgba(11,31,77,0.12)]"
+                aria-label={t("Sort")}
+                className="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center gap-1 rounded-[10px] bg-white/95 text-[12px] text-[#6d7784] shadow-[0_3px_12px_rgba(11,31,77,0.12)] sm:w-auto sm:px-3"
               >
-                ↕ Sort
+                <span aria-hidden="true">↕</span>
+                <span className="hidden sm:inline">{t("Sort")}</span>
               </button>
               {isSortOpen ? (
-                <div className="absolute left-0 top-12 w-36 rounded-[10px] bg-white p-2 text-[11px] shadow-[0_5px_18px_rgba(11,31,77,0.16)]">
-                  {(["recent", "name", "locations"] as const).map((option) => (
-                    <button
-                      key={option}
-                      type="button"
-                      onClick={() => {
-                        setSort(option);
-                        setIsSortOpen(false);
-                      }}
-                      className={`block w-full rounded-md px-2 py-1.5 text-left ${sort === option ? "bg-[#edf3ff] text-navy" : "text-[#6d7784] hover:bg-[#f5f7fa]"}`}
-                    >
-                      {option === "recent"
-                        ? "Recently viewed"
-                        : option === "name"
-                          ? "Name"
-                          : "Most locations"}
-                    </button>
-                  ))}
-                </div>
+                <SortPlotsPanel
+                  value={plotSort}
+                  onApply={setPlotSort}
+                  onClose={() => setIsSortOpen(false)}
+                  t={t}
+                />
               ) : null}
             </div>
           </>
@@ -323,105 +828,215 @@ export function AuthenticatedExploreMapPage() {
       </div>
 
       {isSearchExpanded ? (
-        <section className="absolute left-5 top-32 z-10 flex max-h-[calc(100svh-12rem)] w-[304px] flex-col overflow-hidden rounded-[18px] bg-white/95 p-4 shadow-[0_5px_20px_rgba(11,31,77,0.14)] sm:left-8 sm:top-36">
-          <div className="min-h-0 overflow-y-auto pr-1">
-            {searchMessage ? (
-              <p className="px-2 py-3 text-center text-[11px] text-[#b42318]">
-                {searchMessage}
-              </p>
-            ) : null}
-            {visibleHistory.length ? (
-              visibleHistory.map((destination) => (
-                <button
-                  key={destination.name}
-                  type="button"
-                  onClick={() => void selectLocation(destination)}
-                  className="flex w-full items-center gap-3 rounded-[10px] p-2 text-left hover:bg-[#f5f7fa]"
-                >
-                  <Image
-                    src={destination.image}
-                    alt=""
-                    width={34}
-                    height={34}
-                    className="h-[34px] w-[34px] rounded-[7px] object-cover"
+        <section
+          ref={searchPanelRef}
+          className={
+            showPlotList
+              ? // Phones: bottom sheet so the map stays visible. From sm: Figma
+                // "list of plots" panel (420 wide, radius 24), 16px below the search box and
+                // 16px above the screen bottom; scrolls inside.
+                "fixed inset-x-0 bottom-0 z-30 flex h-[58svh] flex-col overflow-hidden rounded-t-[24px] bg-white shadow-[0_-8px_24px_rgba(0,0,0,0.12)] sm:absolute sm:inset-x-auto sm:bottom-auto sm:left-8 sm:top-[156px] sm:z-10 sm:h-[calc(100svh-172px)] sm:w-[420px] sm:rounded-[24px] sm:shadow-[2px_0_20px_rgba(0,0,0,0.08)]"
+              : `absolute inset-x-4 top-32 z-10 flex max-h-[calc(100svh-12rem)] flex-col sm:inset-x-auto sm:w-[304px] overflow-hidden rounded-[18px] bg-white/95 p-4 shadow-[0_5px_20px_rgba(11,31,77,0.14)] sm:left-8 sm:top-36 ${hasMapError ? "h-[calc(100svh-15rem)]" : ""}`
+          }
+        >
+          {showPlotList ? (
+            <>
+              {/* Grab handle look for the phone bottom sheet. */}
+              <span
+                aria-hidden="true"
+                className="mx-auto mt-2.5 h-1 w-10 shrink-0 rounded-full bg-[#d9e1ea] sm:hidden"
+              />
+              <div
+                // New key per view, so opening a detail (or going back) starts at the top.
+                key={detailPlotId ?? "plot-list"}
+                // The detail lays out its own padding so its image can sit edge to edge.
+                className={`flex min-h-0 flex-1 flex-col overflow-y-auto ${detailPlot ? "" : "gap-[14px] px-4 pb-6 pt-4 sm:py-6"} ${SLIM_SCROLLBAR}`}
+                aria-live="polite"
+                aria-label={t("Plots")}
+              >
+                {searchMessage ? (
+                  <p className="px-2 py-3 text-center text-[11px] text-[#b42318]">
+                    {t(searchMessage)}
+                  </p>
+                ) : null}
+                {detailPlot ? (
+                  // TODO: load `GET /explore/plots/{plotId}`; every plot shows the demo for now.
+                  <PlotDetailPanel
+                    detail={plotDetailMock}
+                    onFocusPlot={() => focusPlot(detailPlot)}
+                    t={t}
                   />
-                  <span className="min-w-0 flex-1">
-                    <strong className="block truncate text-[12px] font-medium text-navy">
-                      {destination.name}
-                    </strong>
-                    <span className="block text-[10px] text-[#8d97a3]">
-                      {destination.locations}
-                    </span>
-                  </span>
-                  <span className="text-[#aab2bd]">›</span>
-                </button>
-              ))
-            ) : (
-              <p className="px-2 py-8 text-center text-[11px] text-[#8d97a3]">
-                No places match your search.
-              </p>
-            )}
-          </div>
-          {visibleHistory.length < historyDestinations.length ? (
-            <button
-              type="button"
-              onClick={() => setShowAllHistory((show) => !show)}
-              className="mt-3 shrink-0 border-t border-[#edf0f3] pt-3 text-center text-[11px] text-navy"
-            >
-              {showAllHistory ? "Show less" : "More from recent history"}
-            </button>
+                ) : plotsStatus === "loading" ? (
+                  <p className="px-2 py-8 text-center text-[11px] text-[#8d97a3]">
+                    {t("Loading plots...")}
+                  </p>
+                ) : plotsStatus === "ready" && !plots.length ? (
+                  <p className="px-2 py-8 text-center text-[11px] text-[#8d97a3]">
+                    {t("No plots in this area yet.")}
+                  </p>
+                ) : (
+                  plots.map((plot) => (
+                    <PlotCard
+                      key={plot.id}
+                      plot={plot}
+                      selected={plot.id === selectedPlotId}
+                      onSelect={openPlotDetail}
+                      t={t}
+                    />
+                  ))
+                )}
+              </div>
+            </>
+          ) : hasMapError ? (
+            <MapUnavailableState onRetry={retryMap} t={t} />
           ) : (
-            <p className="mt-3 shrink-0 border-t border-[#edf0f3] pt-3 text-center text-[11px] text-navy">
-              More from recent history
-            </p>
+            <>
+              <div
+                className={`min-h-0 overflow-y-auto pr-1 ${SLIM_SCROLLBAR}`}
+                aria-live="polite"
+              >
+                {searchMessage && !isSearching ? (
+                  <p className="px-2 py-3 text-center text-[11px] text-[#b42318]">
+                    {t(searchMessage)}
+                  </p>
+                ) : null}
+                {isSearching ? (
+                  <p className="px-2 py-8 text-center text-[11px] text-[#8d97a3]">
+                    {t("Searching...")}
+                  </p>
+                ) : currentResults ? (
+                  currentResults.length ? (
+                    <ul aria-label={t("Search results")}>
+                      {currentResults.map((result) => (
+                        <li key={`${result.type}-${result.id}`}>
+                          <SearchResultRow
+                            result={result}
+                            onSelect={selectResult}
+                            t={t}
+                          />
+                        </li>
+                      ))}
+                    </ul>
+                  ) : searchMessage ? null : (
+                    <p className="px-2 py-8 text-center text-[11px] text-[#8d97a3]">
+                      {t("No places match your search.")}
+                    </p>
+                  )
+                ) : recentStatus === "loading" ? (
+                  <p className="px-2 py-8 text-center text-[11px] text-[#8d97a3]">
+                    {t("Loading recent searches...")}
+                  </p>
+                ) : recentStatus === "error" ? (
+                  <div className="flex flex-col items-center gap-2 px-2 py-8 text-center">
+                    <p className="text-[11px] text-[#8d97a3]">
+                      {t("Couldn't load recent searches.")}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={retryRecentSearches}
+                      className="cursor-pointer text-[11px] font-semibold text-[#001f54] underline underline-offset-2"
+                    >
+                      {t("Try again")}
+                    </button>
+                  </div>
+                ) : visibleRecent.length ? (
+                  <ul aria-label={t("Recent searches")}>
+                    {visibleRecent.map((item) => (
+                      <li key={item.id}>
+                        <RecentSearchRow
+                          item={item}
+                          onSelect={selectRecent}
+                          onRemove={(entry) => void removeRecent(entry)}
+                          t={t}
+                        />
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="px-2 py-8 text-center text-[11px] text-[#8d97a3]">
+                    {t("Search for a region, city or zone.")}
+                  </p>
+                )}
+              </div>
+              {!isSearching && !currentResults && recentPlaces.length ? (
+                <div className="-mx-4 mt-3 flex h-[30px] shrink-0 items-center justify-between gap-3 rounded-[6px] px-5 py-[5px] text-[14px] leading-5">
+                  {recentPlaces.length > RECENT_PREVIEW_COUNT ? (
+                    <button
+                      type="button"
+                      onClick={() => setShowAllRecent((show) => !show)}
+                      className="cursor-pointer truncate text-[#001f54] hover:underline"
+                    >
+                      {t(showAllRecent ? "Show less" : "More from recent history")}
+                    </button>
+                  ) : (
+                    <p className="truncate text-[#001f54]">
+                      {t("More from recent history")}
+                    </p>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => void clearAllRecent()}
+                    className="cursor-pointer shrink-0 text-[#6b7785] underline underline-offset-2 hover:text-[#001f54]"
+                  >
+                    {t("Clear All")}
+                  </button>
+                </div>
+              ) : null}
+            </>
           )}
         </section>
       ) : null}
 
-      <div className="absolute bottom-9 left-5 flex max-w-[calc(100%-6rem)] flex-wrap items-center gap-3 rounded-md bg-white/95 px-3 py-2 text-[9px] text-[#273044] shadow-[0_3px_12px_rgba(11,31,77,0.12)] sm:bottom-10 sm:left-8 sm:max-w-none">
-        <span className="font-medium uppercase tracking-wide">Plot Status</span>
+      {/* Hidden under the open plot list (as in Figma); the cards show each status. */}
+      <div
+        className={`absolute bottom-9 left-5 flex max-w-[calc(100%-6rem)] flex-wrap items-center gap-3 rounded-md bg-white/95 px-3 py-2 text-[9px] text-[#273044] shadow-[0_3px_12px_rgba(11,31,77,0.12)] sm:bottom-10 sm:left-8 sm:max-w-none ${showPlotList && isSearchExpanded ? "hidden" : ""}`}
+      >
+        <span className="font-medium uppercase tracking-wide">{t("Plot Status")}</span>
         <span className="flex items-center gap-1">
           <i className="h-1.5 w-1.5 rounded-full bg-[#2cbf65]" />
-          Available
+          {t("Available")}
         </span>
         <span className="flex items-center gap-1">
           <i className="h-1.5 w-1.5 rounded-full bg-[#e7b52c]" />
-          Locked
+          {t("Locked")}
         </span>
         <span className="flex items-center gap-1">
           <i className="h-1.5 w-1.5 rounded-full bg-[#d64242]" />
-          Taken
+          {t("Taken")}
         </span>
         <span className="hidden items-center gap-1 sm:flex">
           <i className="h-1.5 w-1.5 rounded-full bg-navy" />
-          Your plots
+          {t("Your plots")}
         </span>
       </div>
 
       <div className="absolute bottom-9 right-5 flex flex-col items-center gap-3 sm:bottom-10 sm:right-8">
         <button
           type="button"
-          aria-label="Current location"
-          onClick={() => mapRef.current?.locate()}
-          className="flex h-9 w-9 items-center justify-center rounded-full bg-white/95 shadow-[0_3px_12px_rgba(11,31,77,0.12)]"
+          aria-label={t("Current location")}
+          onClick={() => {
+            hasNavigatedRef.current = true;
+            mapRef.current?.locate();
+          }}
+          className="cursor-pointer flex h-9 w-9 items-center justify-center rounded-full bg-white/95 shadow-[0_3px_12px_rgba(11,31,77,0.12)]"
         >
           <LocateIcon />
         </button>
         <div className="flex flex-col overflow-hidden rounded-full bg-white/95 shadow-[0_3px_12px_rgba(11,31,77,0.12)]">
           <button
             type="button"
-            aria-label="Zoom in"
+            aria-label={t("Zoom in")}
             onClick={() => mapRef.current?.zoomIn()}
-            className="flex h-9 w-9 items-center justify-center hover:bg-[#f4f7fa]"
+            className="cursor-pointer flex h-9 w-9 items-center justify-center hover:bg-[#f4f7fa]"
           >
             +
           </button>
           <span className="mx-auto h-px w-4 bg-line" />
           <button
             type="button"
-            aria-label="Zoom out"
+            aria-label={t("Zoom out")}
             onClick={() => mapRef.current?.zoomOut()}
-            className="flex h-9 w-9 items-center justify-center hover:bg-[#f4f7fa]"
+            className="cursor-pointer flex h-9 w-9 items-center justify-center hover:bg-[#f4f7fa]"
           >
             −
           </button>
