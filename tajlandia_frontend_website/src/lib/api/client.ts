@@ -3,21 +3,12 @@ import "server-only";
 import type { ZodType } from "zod";
 import { getServerEnv } from "@/lib/config/server-env";
 import { joinSameOriginUrl } from "@/lib/security/urls";
+import { ApiError, readSafeApiMessage } from "./errors";
+
+export { ApiError, isApiError } from "./errors";
 
 const DEFAULT_TIMEOUT_MS = 8_000;
 const MAX_RESPONSE_BYTES = 1_000_000;
-
-export class ApiError extends Error {
-  readonly status: number;
-  readonly code: string;
-
-  constructor(message: string, status: number, code = "API_ERROR") {
-    super(message);
-    this.name = "ApiError";
-    this.status = status;
-    this.code = code;
-  }
-}
 
 export type ApiGetOptions = {
   fetchImpl?: typeof fetch;
@@ -36,23 +27,9 @@ function resolveApiUrl(baseUrl: string, path: string): URL {
   return url;
 }
 
-const SAFE_API_MESSAGE = /^[\w\s.,'!?:()-]{1,180}$/;
-
 async function readSafeErrorMessage(response: Response): Promise<string> {
   try {
-    const json: unknown = await response.json();
-
-    if (!json || typeof json !== "object" || !("message" in json)) {
-      return "The request failed";
-    }
-
-    const message = json.message;
-
-    if (typeof message !== "string" || !SAFE_API_MESSAGE.test(message.trim())) {
-      return "The request failed";
-    }
-
-    return message.trim();
+    return readSafeApiMessage(await response.json(), "The request failed");
   } catch {
     return "The request failed";
   }
@@ -185,8 +162,4 @@ export async function apiPost<T>(
   }
 
   return parsed.data;
-}
-
-export function isApiError(error: unknown): error is ApiError {
-  return error instanceof ApiError;
 }

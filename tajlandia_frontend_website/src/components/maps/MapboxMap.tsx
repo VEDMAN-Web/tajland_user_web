@@ -24,7 +24,34 @@ export type MapboxMapHandle = {
     bearing?: number;
     pitch?: number;
   }) => Promise<void>;
+  /** Removes the pin left by `flyToCoordinates` / `searchAndFlyTo`. */
+  clearMarker: () => void;
+  /** Moves the camera so the whole area is visible. */
+  /** `duration` in ms; 0 (default) jumps straight there. */
+  fitBounds: (
+    bounds: LngLatBounds,
+    options?: {
+      duration?: number;
+      /** Space to keep clear (e.g. under a panel); defaults to 40px all round. */
+      padding?: number | { top: number; bottom: number; left: number; right: number };
+      maxZoom?: number;
+    },
+  ) => void;
 };
+
+export type LngLatBounds = { west: number; south: number; east: number; north: number };
+
+function toMapboxBounds({
+  west,
+  south,
+  east,
+  north,
+}: LngLatBounds): mapboxgl.LngLatBoundsLike {
+  return [
+    [west, south],
+    [east, north],
+  ];
+}
 
 type GeocodeFeature = {
   center?: [number, number];
@@ -68,8 +95,159 @@ function zoomForPlace(placeType?: string) {
   return 14;
 }
 
+export type MapboxMapStatus = "loading" | "ready" | "error";
+
+/** A plot drawn on the map: a dot when zoomed out, its outline when zoomed in. */
+export type MapPlot = {
+  id: string;
+  color: string;
+  center: [number, number];
+  /** GeoJSON Polygon rings ([lng, lat] pairs). */
+  polygon?: number[][][];
+  /** Shown in a pill above the plot, e.g. its plot number. */
+  label?: string;
+};
+
+const PLOT_LABEL_IMAGE = "plot-label-pill";
+// Labels appear once a region fills the screen, so Thailand-wide views stay clean.
+const PLOT_LABEL_MIN_ZOOM = 9;
+
+/**
+ * A white rounded pill registered as an SDF image, so the label layer can
+ * stretch it around each plot number and tint it with the plot's colour.
+ */
+function addLabelPill(map: mapboxgl.Map) {
+  if (map.hasImage(PLOT_LABEL_IMAGE)) return;
+  const size = 32;
+  const radius = 12;
+  const canvas = document.createElement("canvas");
+  canvas.width = size;
+  canvas.height = size;
+  const context = canvas.getContext("2d");
+  if (!context) return;
+  context.fillStyle = "#ffffff";
+  context.beginPath();
+  context.roundRect(0, 0, size, size, radius);
+  context.fill();
+  map.addImage(PLOT_LABEL_IMAGE, context.getImageData(0, 0, size, size), {
+    sdf: true,
+    pixelRatio: 2,
+    // Only the straight middle stretches, so the rounded ends keep their shape.
+    stretchX: [[radius, size - radius]],
+    stretchY: [[radius, size - radius]],
+    // Text fills almost the whole pill; the fit padding below adds the spacing.
+    content: [2, 2, size - 2, size - 2],
+  });
+}
+
+// GeoJSON as mapbox-gl types it (its bundled types aren't exported by name).
+type PlotGeoJson = Exclude<Parameters<mapboxgl.GeoJSONSource["setData"]>[0], string>;
+
+const PLOT_AREAS_SOURCE = "plot-areas";
+const PLOT_POINTS_SOURCE = "plot-points";
+// Plots are small (tens of metres), so show dots until their shape is visible.
+const PLOT_SHAPE_MIN_ZOOM = 13;
+
+function plotCollections(plots: MapPlot[]) {
+  const areas: PlotGeoJson = {
+    type: "FeatureCollection",
+    features: plots
+      .filter((plot) => plot.polygon)
+      .map((plot) => ({
+        type: "Feature",
+        id: plot.id,
+        properties: { id: plot.id, color: plot.color },
+        geometry: { type: "Polygon", coordinates: plot.polygon! },
+      })),
+  };
+  const points: PlotGeoJson = {
+    type: "FeatureCollection",
+    features: plots.map((plot) => ({
+      type: "Feature",
+      id: plot.id,
+      properties: { id: plot.id, color: plot.color, label: plot.label ?? "" },
+      geometry: { type: "Point", coordinates: plot.center },
+    })),
+  };
+  return { areas, points };
+}
+
+/** Adds the plot sources and layers on first use, then just swaps their data. */
+function drawPlots(map: mapboxgl.Map, plots: MapPlot[]) {
+  const { areas, points } = plotCollections(plots);
+  const areaSource = map.getSource(PLOT_AREAS_SOURCE) as
+    mapboxgl.GeoJSONSource | undefined;
+  const pointSource = map.getSource(PLOT_POINTS_SOURCE) as
+    mapboxgl.GeoJSONSource | undefined;
+  if (areaSource && pointSource) {
+    areaSource.setData(areas);
+    pointSource.setData(points);
+    return;
+  }
+
+  map.addSource(PLOT_AREAS_SOURCE, { type: "geojson", data: areas });
+  map.addSource(PLOT_POINTS_SOURCE, { type: "geojson", data: points });
+  map.addLayer({
+    id: "plot-areas-fill",
+    type: "fill",
+    source: PLOT_AREAS_SOURCE,
+    minzoom: PLOT_SHAPE_MIN_ZOOM,
+    paint: { "fill-color": ["get", "color"], "fill-opacity": 0.4 },
+  });
+  map.addLayer({
+    id: "plot-areas-outline",
+    type: "line",
+    source: PLOT_AREAS_SOURCE,
+    minzoom: PLOT_SHAPE_MIN_ZOOM,
+    paint: { "line-color": ["get", "color"], "line-width": 2 },
+  });
+  map.addLayer({
+    id: "plot-points",
+    type: "circle",
+    source: PLOT_POINTS_SOURCE,
+    maxzoom: PLOT_SHAPE_MIN_ZOOM,
+    paint: {
+      "circle-color": ["get", "color"],
+      "circle-radius": 6,
+      "circle-stroke-color": "#ffffff",
+      "circle-stroke-width": 2,
+    },
+  });
+  addLabelPill(map);
+  map.addLayer({
+    id: "plot-labels",
+    type: "symbol",
+    source: PLOT_POINTS_SOURCE,
+    minzoom: PLOT_LABEL_MIN_ZOOM,
+    filter: ["!=", ["get", "label"], ""],
+    layout: {
+      "text-field": ["get", "label"],
+      "text-font": ["DIN Pro Bold", "Arial Unicode MS Bold"],
+      "text-size": 10,
+      "text-line-height": 1,
+      // Every plot keeps its number, even when neighbours sit close together.
+      "text-allow-overlap": true,
+      "icon-allow-overlap": true,
+      "text-anchor": "bottom",
+      // Sit just above the plot's dot / shape.
+      "text-offset": [0, -0.9],
+      "icon-image": PLOT_LABEL_IMAGE,
+      "icon-text-fit": "both",
+      "icon-text-fit-padding": [2, 6, 1, 6],
+    },
+    paint: {
+      "text-color": "#ffffff",
+      "icon-color": ["get", "color"],
+    },
+  });
+}
+
 type MapboxMapProps = {
   className?: string;
+  /** Called whenever the map moves between loading, ready and error. */
+  onStatusChange?: (status: MapboxMapStatus) => void;
+  /** Set false when the page renders its own error UI. */
+  showErrorOverlay?: boolean;
   initialCenter?: [number, number];
   initialZoom?: number;
   /** "globe" shows the Earth as a sphere when zoomed out (blends to flat when zoomed in). */
@@ -79,10 +257,26 @@ type MapboxMapProps = {
     coordinates: [number, number];
     zoom?: number;
   };
+  /** Plots to draw; pass a new array to replace them, `[]` to clear. */
+  plots?: MapPlot[];
+  /** Called with a plot's id when its dot, shape or label is clicked. */
+  onPlotClick?: (plotId: string) => void;
 };
 
+const CLICKABLE_PLOT_LAYERS = ["plot-areas-fill", "plot-points", "plot-labels"];
+
 export const MapboxMap = forwardRef<MapboxMapHandle, MapboxMapProps>(function MapboxMap(
-  { className, initialCenter, initialZoom, projection = "mercator", selectedLocation },
+  {
+    className,
+    initialCenter,
+    initialZoom,
+    projection = "mercator",
+    selectedLocation,
+    onStatusChange,
+    showErrorOverlay = true,
+    plots,
+    onPlotClick,
+  },
   ref,
 ) {
   const projectionRef = useRef(projection);
@@ -95,7 +289,18 @@ export const MapboxMap = forwardRef<MapboxMapHandle, MapboxMapProps>(function Ma
       initialCenter ?? selectedLocation?.coordinates ?? ([100.5, 15] as [number, number]),
     zoom: initialZoom ?? selectedLocation?.zoom ?? 4.5,
   });
-  const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
+  const [status, setStatus] = useState<MapboxMapStatus>("loading");
+  // Latest plots, so the load handler can draw ones that arrived before the style.
+  const plotsRef = useRef(plots);
+  // Latest handler, so the map listeners (added once) never call a stale one.
+  const onPlotClickRef = useRef(onPlotClick);
+  useEffect(() => {
+    onPlotClickRef.current = onPlotClick;
+  }, [onPlotClick]);
+
+  useEffect(() => {
+    onStatusChange?.(status);
+  }, [onStatusChange, status]);
 
   function focusLocation(coordinates: [number, number], zoom: number, label: string) {
     const map = mapRef.current;
@@ -167,6 +372,23 @@ export const MapboxMap = forwardRef<MapboxMapHandle, MapboxMapProps>(function Ma
     map.once("load", () => {
       loadedRef.current = true;
       map.resize();
+      if (plotsRef.current) drawPlots(map, plotsRef.current);
+      // Layer listeners work even before the layers exist (added when plots load).
+      for (const layer of CLICKABLE_PLOT_LAYERS) {
+        map.on("click", layer, (event) => {
+          const props = (
+            event.features?.[0] as { properties?: { id?: unknown } } | undefined
+          )?.properties;
+          const id = props?.id;
+          if (typeof id === "string") onPlotClickRef.current?.(id);
+        });
+        map.on("mouseenter", layer, () => {
+          if (onPlotClickRef.current) map.getCanvas().style.cursor = "pointer";
+        });
+        map.on("mouseleave", layer, () => {
+          map.getCanvas().style.cursor = "";
+        });
+      }
     });
     map.once("load", () => {
       if (!selectedLocation) return;
@@ -192,6 +414,13 @@ export const MapboxMap = forwardRef<MapboxMapHandle, MapboxMapProps>(function Ma
       loadedRef.current = false;
     };
   }, []);
+
+  useEffect(() => {
+    plotsRef.current = plots;
+    const map = mapRef.current;
+    if (!map || !loadedRef.current || !plots) return;
+    drawPlots(map, plots);
+  }, [plots]);
 
   useImperativeHandle(
     ref,
@@ -265,6 +494,17 @@ export const MapboxMap = forwardRef<MapboxMapHandle, MapboxMapProps>(function Ma
           map.flyTo({ center, zoom, duration, curve, bearing, pitch, essential: true });
         });
       },
+      clearMarker: () => {
+        selectedMarkerRef.current?.remove();
+        selectedMarkerRef.current = null;
+      },
+      fitBounds: (bounds, options) => {
+        mapRef.current?.fitBounds(toMapboxBounds(bounds), {
+          padding: options?.padding ?? 40,
+          duration: options?.duration ?? 0,
+          maxZoom: options?.maxZoom,
+        });
+      },
       locate: () => {
         if (!mapRef.current || !navigator.geolocation) return;
         navigator.geolocation.getCurrentPosition(({ coords }) => {
@@ -301,7 +541,7 @@ export const MapboxMap = forwardRef<MapboxMapHandle, MapboxMapProps>(function Ma
           </span>
         </div>
       </div>
-      {status === "error" ? (
+      {status === "error" && showErrorOverlay ? (
         <div className="absolute inset-0 z-10 flex items-center justify-center bg-[#74d0e1] px-6 text-center text-sm text-navy">
           The map could not be loaded. Please check your connection and try again.
         </div>
