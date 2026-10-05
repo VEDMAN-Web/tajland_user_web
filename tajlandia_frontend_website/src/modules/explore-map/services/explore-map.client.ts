@@ -200,3 +200,11 @@ export async function getSortOptions(signal?: AbortSignal): Promise<PlotSortOpti
 export function getFilterOptions(signal?: AbortSignal): Promise<FilterOptions> {
   return authedGet("/explore/filters", filterOptionsSchema, { signal });
 }
+
+/**
+ * Adds a plot to the cart. The backend reserves it for 10 minutes itself, so no
+ * separate `POST /reservations`. Adding it twice also succeeds ("already in cart").
+ */
+export async function addPlotToCart(plotId: string): Promise<void> {
+  await authedPost("/cart/items", { plotId }, ignoredResultSchema);
+}

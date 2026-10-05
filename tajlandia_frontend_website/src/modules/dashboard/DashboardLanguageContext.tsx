@@ -128,6 +128,95 @@ const translations: Record<string, Record<Exclude<DashboardLanguage, "EN">, stri
   "$ per Rai": { PL: "$ za Rai", TH: "$ ต่อไร่" },
   "Total Price": { PL: "Cena całkowita", TH: "ราคารวม" },
   "Add to Cart": { PL: "Dodaj do koszyka", TH: "เพิ่มลงรถเข็น" },
+  "In Cart": { PL: "W koszyku", TH: "อยู่ในรถเข็น" },
+  "Adding...": { PL: "Dodawanie...", TH: "กำลังเพิ่ม..." },
+  "This plot just became unavailable.": {
+    PL: "Ta działka właśnie stała się niedostępna.",
+    TH: "แปลงนี้เพิ่งไม่พร้อมให้บริการ",
+  },
+  "Couldn't load your cart.": {
+    PL: "Nie udało się załadować koszyka.",
+    TH: "ไม่สามารถโหลดรถเข็นของคุณได้",
+  },
+  "Couldn't update your cart. Please try again.": {
+    PL: "Nie udało się zaktualizować koszyka. Spróbuj ponownie.",
+    TH: "ไม่สามารถอัปเดตรถเข็นได้ โปรดลองอีกครั้ง",
+  },
+  "Clearing...": {
+    PL: "Czyszczenie...",
+    TH: "กำลังล้าง...",
+  },
+  "Removing...": {
+    PL: "Usuwanie...",
+    TH: "กำลังลบ...",
+  },
+  "Discount": {
+    PL: "Rabat",
+    TH: "ส่วนลด",
+  },
+  "Minimum order progress": {
+    PL: "Postęp minimalnego zamówienia",
+    TH: "ความคืบหน้าคำสั่งซื้อขั้นต่ำ",
+  },
+  "Minimum order completed!": {
+    PL: "Minimalne zamówienie osiągnięte!",
+    TH: "ครบคำสั่งซื้อขั้นต่ำแล้ว!",
+  },
+  "Complete your selection": {
+    PL: "Dokończ swój wybór",
+    TH: "เลือกแปลงให้ครบ",
+  },
+  "You have successfully reached the required {min} Rai minimum to continue.": {
+    PL: "Osiągnięto wymagane minimum {min} rai, możesz kontynuować.",
+    TH: "คุณถึงขั้นต่ำ {min} ไร่ที่กำหนดแล้ว ดำเนินการต่อได้",
+  },
+  "You need {min} Rai minimum to continue buying plots and payment.": {
+    PL: "Potrzebujesz minimum {min} rai, aby kontynuować zakup działek i płatność.",
+    TH: "คุณต้องมีอย่างน้อย {min} ไร่เพื่อซื้อแปลงและชำระเงินต่อ",
+  },
+  "Minimum Reached": {
+    PL: "Minimum osiągnięte",
+    TH: "ถึงขั้นต่ำแล้ว",
+  },
+  "{rai} Rai more to reach minimum": {
+    PL: "Brakuje {rai} rai do minimum",
+    TH: "ต้องการอีก {rai} ไร่เพื่อถึงขั้นต่ำ",
+  },
+  "Select parcels from any province zone to unlock settlement.": {
+    PL: "Wybierz działki z dowolnej strefy prowincji, aby odblokować rozliczenie.",
+    TH: "เลือกแปลงจากโซนใดก็ได้เพื่อปลดล็อกการชำระ",
+  },
+  "Add more places to reach the {min} Rai threshold": {
+    PL: "Dodaj więcej miejsc, aby osiągnąć próg {min} rai",
+    TH: "เพิ่มสถานที่เพื่อให้ถึงเกณฑ์ {min} ไร่",
+  },
+  "Unlock deed certification and blockchain cadastral inscription by selecting {rai} additional Rai.": {
+    PL: "Odblokuj certyfikację aktu i wpis katastralny w blockchainie, wybierając dodatkowe {rai} rai.",
+    TH: "ปลดล็อกการรับรองโฉนดและการจดทะเบียนที่ดินบนบล็อกเชนโดยเลือกเพิ่มอีก {rai} ไร่",
+  },
+  "Requires {rai} more Rai to activate checkout": {
+    PL: "Potrzeba jeszcze {rai} rai, aby aktywować zakup",
+    TH: "ต้องการอีก {rai} ไร่เพื่อเปิดใช้การชำระเงิน",
+  },
+  "Your selection meets the {min} Rai minimum.": {
+    PL: "Twój wybór spełnia minimum {min} rai.",
+    TH: "การเลือกของคุณถึงขั้นต่ำ {min} ไร่แล้ว",
+  },
+  "Your cart is empty": { PL: "Twój koszyk jest pusty", TH: "รถเข็นของคุณว่างเปล่า" },
+  "You haven't selected any plots yet. Explore Thailand and discover a place to add to your collection.": {
+    PL: "Nie wybrano jeszcze żadnych działek. Odkryj Tajlandię i znajdź miejsce do swojej kolekcji.",
+    TH: "คุณยังไม่ได้เลือกแปลงใด สำรวจประเทศไทยและค้นหาสถานที่เพื่อเพิ่มในคอลเลกชันของคุณ",
+  },
+  "My Purchase": { PL: "Moje zakupy", TH: "การซื้อของฉัน" },
+  Requires: { PL: "Wymagane", TH: "ต้องการอีก" },
+  "Unlock deed certification and blockchain cadastral inscription.": {
+    PL: "Odblokuj certyfikację aktu i wpis katastralny w blockchainie.",
+    TH: "ปลดล็อกการรับรองโฉนดและการจดทะเบียนที่ดินบนบล็อกเชน",
+  },
+  "Couldn't add to cart. Please try again.": {
+    PL: "Nie udało się dodać do koszyka. Spróbuj ponownie.",
+    TH: "ไม่สามารถเพิ่มลงรถเข็นได้ โปรดลองอีกครั้ง",
+  },
   "View Deed": { PL: "Zobacz akt", TH: "ดูโฉนด" },
   "Gifted plot": { PL: "Podarowana działka", TH: "แปลงที่ได้รับเป็นของขวัญ" },
   "Loading plots...": { PL: "Ładowanie działek...", TH: "กำลังโหลดแปลงที่ดิน..." },
@@ -151,10 +240,6 @@ const translations: Record<string, Record<Exclude<DashboardLanguage, "EN">, stri
   "Couldn't update recent searches. Please try again.": {
     PL: "Nie udało się zaktualizować ostatnich wyszukiwań. Spróbuj ponownie.",
     TH: "ไม่สามารถอัปเดตการค้นหาล่าสุดได้ โปรดลองอีกครั้ง",
-  },
-  "Clear all searches?": {
-    PL: "Wyczyścić wszystkie wyszukiwania?",
-    TH: "ล้างการค้นหาทั้งหมดหรือไม่?",
   },
   "Remove from recent searches": {
     PL: "Usuń z ostatnich wyszukiwań",

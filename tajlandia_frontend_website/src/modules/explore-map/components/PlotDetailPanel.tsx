@@ -13,6 +13,9 @@ import type { ExplorePlotDetail } from "../types/explore-map.types";
 type PlotDetailPanelProps = {
   plot: ExplorePlotDetail;
   onFocusPlot: () => void;
+  /** True while this plot's Add to Cart request runs. */
+  isAddingToCart: boolean;
+  onAddToCart: () => void;
   t: Translate;
 };
 
@@ -24,6 +27,7 @@ const CART_DEMO = { cartRai: 25, minimumRai: 100, total: 2.5 };
 
 const STATUS_STYLE = {
   available: { label: "Available", text: "text-[#18a957]", dot: "bg-[#18a957]" },
+  inCart: { label: "In Cart", text: "text-[#001f54]", dot: "bg-[#001f54]" },
   locked: { label: "Locked", text: "text-[#c8941a]", dot: "bg-[#c8941a]" },
   taken: { label: "Taken", text: "text-[#d64242]", dot: "bg-[#d64242]" },
   owned: { label: "Your plot", text: "text-[#001f54]", dot: "bg-[#001f54]" },
@@ -118,7 +122,7 @@ function DetailRow({ label, children }: { label: string; children: ReactNode }) 
   );
 }
 
-// Actions (share, gallery, Remove) aren't wired up yet.
+// Actions (share, gallery) aren't wired up yet.
 const decorative = "cursor-pointer";
 
 /** Plot image; the local placeholder when missing, from a host we don't allow, or broken. */
@@ -142,8 +146,15 @@ function PlotImage({ src, alt }: { src: string | null | undefined; alt: string }
 }
 
 /** Plot detail (Figma "Added to cart / rei calc") from `GET /explore/plots/{plotId}`. */
-export function PlotDetailPanel({ plot, onFocusPlot, t }: PlotDetailPanelProps) {
-  const status = STATUS_STYLE[plotCardStatus(plot.status, plot.isOwned)];
+export function PlotDetailPanel({
+  plot,
+  onFocusPlot,
+  isAddingToCart,
+  onAddToCart,
+  t,
+}: PlotDetailPanelProps) {
+  const statusKey = plotCardStatus(plot.status, plot.isOwned, plot.isInCart);
+  const status = STATUS_STYLE[statusKey];
   const progress = Math.min(100, (CART_DEMO.cartRai / CART_DEMO.minimumRai) * 100);
   const tier = plot.zone?.tier;
   const sizeSqm = plotSizeSqm(plot.sizeSquareFeet);
@@ -300,22 +311,29 @@ export function PlotDetailPanel({ plot, onFocusPlot, t }: PlotDetailPanelProps) 
           />
         </div>
 
-        <div className="mt-4 flex items-center gap-3">
-          <Link
-            href={routes.cart}
-            className="flex h-11 flex-1 items-center justify-center rounded-[10px] bg-[#001f54] text-[13px] font-medium text-white hover:bg-[#0b2d6b]"
-          >
-            {`${t("View Cart")} →`}
-          </Link>
-          <button
-            type="button"
-            className={cn(
-              decorative,
-              "shrink-0 text-[11px] font-medium text-[#d64242] underline",
-            )}
-          >
-            {t("Remove")}
-          </button>
+        {/* In the cart: View Cart. Available: Add to Cart. Otherwise its status. */}
+        <div className="mt-4">
+          {statusKey === "inCart" ? (
+            <Link
+              href={routes.cart}
+              className="flex h-11 items-center justify-center rounded-[10px] bg-[#001f54] text-[13px] font-medium text-white hover:bg-[#0b2d6b]"
+            >
+              {`${t("View Cart")} →`}
+            </Link>
+          ) : statusKey === "available" ? (
+            <button
+              type="button"
+              disabled={isAddingToCart}
+              onClick={onAddToCart}
+              className="flex h-11 w-full cursor-pointer items-center justify-center rounded-[10px] bg-[#001f54] text-[13px] font-medium text-white hover:bg-[#0b2d6b] disabled:cursor-wait disabled:opacity-70"
+            >
+              {t(isAddingToCart ? "Adding..." : "Add to Cart")}
+            </button>
+          ) : (
+            <p className="flex h-11 items-center justify-center rounded-[10px] bg-[#eef1f5] text-[13px] font-medium text-[#8a94a3]">
+              {t(status.label)}
+            </p>
+          )}
         </div>
       </div>
     </article>

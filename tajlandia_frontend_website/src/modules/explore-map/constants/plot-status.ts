@@ -7,14 +7,19 @@ export const PLOT_STATUS_COLORS = {
   OWNED: "#0b1f4d",
 } as const;
 
-export type PlotCardStatus = "available" | "locked" | "taken" | "owned";
+export type PlotCardStatus = "available" | "inCart" | "locked" | "taken" | "owned";
 
-/** The four states the legend and plot cards use. */
+/**
+ * The legend's four states, plus "inCart": a plot in the user's cart is LOCKED
+ * (reserved for them), so it shows as in the cart rather than locked.
+ */
 export function plotCardStatus(
   status: string,
   isOwned: boolean | undefined,
+  isInCart?: boolean,
 ): PlotCardStatus {
   if (isOwned) return "owned";
+  if (isInCart) return "inCart";
   if (status === "AVAILABLE") return "available";
   if (status === "LOCKED") return "locked";
   return "taken";

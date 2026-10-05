@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { isAbortError } from "@/lib/api/browser-client";
 import { isApiError } from "@/lib/api/errors";
+import { notifyCartChanged } from "@/lib/cart/cart-events";
 import { routes } from "@/lib/constants/routes";
 import { logError } from "@/lib/logging/logger";
 import { useAuth } from "@/lib/hooks/useAuth";
@@ -31,6 +32,7 @@ import { DEFAULT_PLOT_FILTERS, toPlotFilterQuery } from "./constants/explore-fil
 import { plotColor } from "./constants/plot-status";
 import { exploreFiltersMock } from "./data/explore-filters.mock";
 import {
+  addPlotToCart,
   clearRecentSearches,
   deleteRecentSearch,
   getExploreMap,
@@ -284,6 +286,8 @@ export function AuthenticatedExploreMapPage() {
     | null
   >(null);
   const [plotDetailReloadKey, setPlotDetailReloadKey] = useState(0);
+  // Plots whose Add to Cart request is running (buttons show "Adding...").
+  const [addingPlotIds, setAddingPlotIds] = useState<string[]>([]);
   const mapPlots = useMemo(() => plots.map(toMapPlot), [plots]);
   const { sortBy, sortOrder } =
     sortOptions.find((option) => option.key === plotSortKey)?.query ?? {};
@@ -611,6 +615,42 @@ export function AuthenticatedExploreMapPage() {
     focusPlot(plot);
   }
 
+  // `POST /cart/items` (the backend reserves the plot itself), then mark it in
+  // the list and the open detail, and tell the navbar badge to reload.
+  async function addToCart(plotId: string) {
+    if (addingPlotIds.includes(plotId)) return;
+    setAddingPlotIds((ids) => [...ids, plotId]);
+    setSearchMessage("");
+    try {
+      await addPlotToCart(plotId);
+      setPlots((current) =>
+        current.map((plot) => (plot.id === plotId ? { ...plot, isInCart: true } : plot)),
+      );
+      setPlotDetail((current) =>
+        current?.status === "ready" && current.id === plotId
+          ? { ...current, plot: { ...current.plot, isInCart: true } }
+          : current,
+      );
+      notifyCartChanged();
+    } catch (error) {
+      if (isApiError(error) && error.code === "API_SESSION_EXPIRED") return;
+      const notFound = isApiError(error) && error.status === 404;
+      const conflict = isApiError(error) && error.status === 409;
+      if (!notFound && !conflict) logError(error, "Failed to add plot to cart");
+      showSearchMessage(
+        notFound
+          ? "This plot is no longer available."
+          : conflict
+            ? "This plot just became unavailable."
+            : "Couldn't add to cart. Please try again.",
+      );
+      // Someone else took it: refresh the list so its status is current.
+      if (conflict) setPlotsReloadKey((key) => key + 1);
+    } finally {
+      setAddingPlotIds((ids) => ids.filter((id) => id !== plotId));
+    }
+  }
+
   function retryPlotDetail() {
     if (!detailPlotId) return;
     setPlotDetail({ id: detailPlotId, status: "loading" });
@@ -792,7 +832,6 @@ export function AuthenticatedExploreMapPage() {
   }
 
   async function clearAllRecent() {
-    if (!window.confirm(t("Clear all searches?"))) return;
     setRecentSearches([]);
     setShowAllRecent(false);
     setRecentPage(1);
@@ -1121,6 +1160,8 @@ export function AuthenticatedExploreMapPage() {
                     <PlotDetailPanel
                       plot={openDetail.plot}
                       onFocusPlot={() => focusPlot(openDetail.plot)}
+                      isAddingToCart={addingPlotIds.includes(openDetail.plot.id)}
+                      onAddToCart={() => void addToCart(openDetail.plot.id)}
                       t={t}
                     />
                   ) : openDetail?.status === "error" ? (
@@ -1158,6 +1199,8 @@ export function AuthenticatedExploreMapPage() {
                       plot={plot}
                       selected={plot.id === selectedPlotId}
                       onSelect={openPlotDetail}
+                      isAddingToCart={addingPlotIds.includes(plot.id)}
+                      onAddToCart={(item) => void addToCart(item.id)}
                       t={t}
                     />
                   ))

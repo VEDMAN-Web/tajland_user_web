@@ -1,84 +1,148 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { DashboardNavbar } from "./DashboardNavbar";
-import { useAuth } from "@/lib/hooks/useAuth";
+import { useEffect, useState } from "react";
+import { isAbortError } from "@/lib/api/browser-client";
+import { isApiError } from "@/lib/api/errors";
+import { notifyCartChanged } from "@/lib/cart/cart-events";
+import { isAllowedRemoteImage } from "@/lib/config/remote-images";
 import { routes } from "@/lib/constants/routes";
+import { useAuth } from "@/lib/hooks/useAuth";
+import { logError } from "@/lib/logging/logger";
+import { cn } from "@/lib/utils/cn";
+import { DashboardNavbar } from "./DashboardNavbar";
 import { useDashboardLanguage } from "./DashboardLanguageContext";
+import type { CartItem, CartSummary } from "./schemas/cart.schema";
+import {
+  clearCart,
+  getCart,
+  getOrderSummary,
+  removeCartItem,
+} from "./services/cart.client";
 
-type CartItem = {
-  id?: string;
-  name?: string;
-  region?: string;
-  rai?: number;
-  amount?: number;
-  image?: string;
-  badge?: string;
+type Translate = (source: string) => string;
+
+const PLACEHOLDER_IMAGE = "/images/explore/place-placeholder.svg";
+const bone = "animate-pulse rounded-[8px] bg-[#eef1f5] motion-reduce:animate-none";
+
+// Order Summary dot / label colour per zone tier (Figma).
+const ZONE_COLORS: Record<string, string> = {
+  ICON: "#c9961a",
+  POPULAR: "#16807f",
+  STANDARD: "#6b7785",
 };
 
-const initialCart: CartItem[] = [25, 25, 25, 25].map((rai) => ({
-  id: "PH-1124",
-  name: "Seaview Ridge Plot",
-  region: "Phuket City",
-  rai,
-  amount: 2.5,
-  image: "/images/explore/phuket.jpg",
-  badge: "ICON",
-}));
+// What the page shows: the items (`GET /cart`) with their totals (`GET /cart/order-summary`).
+type CartView = CartSummary & { items: CartItem[] };
 
-function readCart(): CartItem[] {
-  try {
-    const stored = localStorage.getItem("tajlandia_cart");
-    if (stored === null) return initialCart;
-    const parsed = JSON.parse(stored);
-    if (
-      Array.isArray(parsed) &&
-      parsed.length === 0 &&
-      localStorage.getItem("tajlandia_cart_admin_empty") !== "true"
-    )
-      return initialCart;
-    if (
-      Array.isArray(parsed) &&
-      parsed.length === 4 &&
-      parsed.every((item) => item?.id?.startsWith("PH-"))
-    )
-      return initialCart;
-    return Array.isArray(parsed)
-      ? parsed.filter((item): item is CartItem => item && typeof item === "object")
-      : [];
-  } catch {
-    return [];
-  }
+function money(amount: number) {
+  return `$${amount.toFixed(2)}`;
 }
+
+/** Puts values into a translated "{name}" template. */
+function fill(template: string, values: Record<string, string | number>) {
+  return template.replace(/\{(\w+)\}/g, (match, key: string) =>
+    key in values ? String(values[key]) : match,
+  );
+}
+
+const titleCase = (value: string) => value.charAt(0) + value.slice(1).toLowerCase();
 
 export function CartPage() {
   const router = useRouter();
   const { isAuthenticated, isLoading } = useAuth();
   const { t } = useDashboardLanguage();
-  const [cartItems, setCartItems] = useState<CartItem[]>(() => readCart());
+  // `GET /cart`; `reloadKey` refetches it (after a retry, remove or clear).
+  const [cart, setCart] = useState<
+    | { status: "loading" }
+    | { status: "ready"; data: CartView }
+    | { status: "empty" }
+    | { status: "error" }
+  >({ status: "loading" });
+  const [reloadKey, setReloadKey] = useState(0);
+  const [removingIds, setRemovingIds] = useState<string[]>([]);
+  const [isClearing, setIsClearing] = useState(false);
+  const [actionError, setActionError] = useState("");
   const [coupon, setCoupon] = useState("");
-  const totalRai = cartItems.reduce(
-    (total, item) => total + (typeof item.rai === "number" ? item.rai : 0),
-    0,
-  );
-  const total = cartItems.reduce(
-    (sum, item) => sum + (typeof item.amount === "number" ? item.amount : 0),
-    0,
-  );
-  function clearAll() {
-    setCartItems(initialCart);
-    localStorage.setItem("tajlandia_cart", JSON.stringify(initialCart));
-    localStorage.removeItem("tajlandia_cart_admin_empty");
+
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) router.replace(routes.login);
+  }, [isAuthenticated, isLoading, router]);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    const controller = new AbortController();
+    // Items first; an empty cart has no summary (the API answers 404), so it's skipped.
+    getCart({ signal: controller.signal })
+      .then(async ({ items }) => {
+        if (!items.length) {
+          setCart({ status: "empty" });
+          return;
+        }
+        const summary = await getOrderSummary(controller.signal);
+        setCart({ status: "ready", data: { ...summary, items } });
+      })
+      .catch((error: unknown) => {
+        // A cancelled request is not an error, and 401 already redirects to login.
+        if (isAbortError(error)) return;
+        if (isApiError(error) && error.code === "API_SESSION_EXPIRED") return;
+        logError(error, "Failed to load cart");
+        // A failed refresh keeps the cart on screen; only a first load shows the error.
+        setCart((current) =>
+          current.status === "ready" ? current : { status: "error" },
+        );
+      });
+
+    return () => controller.abort();
+  }, [isAuthenticated, reloadKey]);
+
+  function retry() {
+    setCart({ status: "loading" });
+    setReloadKey((key) => key + 1);
   }
 
-  function removeItem(index: number) {
-    setCartItems((current) => {
-      const next = current.filter((_, itemIndex) => itemIndex !== index);
-      localStorage.setItem("tajlandia_cart", JSON.stringify(next));
-      return next;
-    });
+  // After a change: reload the cart (totals come from the API) and the navbar badge.
+  function cartChanged() {
+    setReloadKey((key) => key + 1);
+    notifyCartChanged();
+  }
+
+  function handleActionError(error: unknown, message: string) {
+    if (isApiError(error) && error.code === "API_SESSION_EXPIRED") return;
+    logError(error, message);
+    setActionError("Couldn't update your cart. Please try again.");
+    setReloadKey((key) => key + 1);
+  }
+
+  async function removeItem(plotId: string) {
+    if (removingIds.includes(plotId)) return;
+    setActionError("");
+    setRemovingIds((ids) => [...ids, plotId]);
+    try {
+      await removeCartItem(plotId);
+      cartChanged();
+    } catch (error) {
+      handleActionError(error, "Failed to remove cart item");
+    } finally {
+      setRemovingIds((ids) => ids.filter((id) => id !== plotId));
+    }
+  }
+
+  async function clearAll() {
+    if (isClearing) return;
+    setActionError("");
+    setIsClearing(true);
+    try {
+      await clearCart();
+      cartChanged();
+    } catch (error) {
+      handleActionError(error, "Failed to clear cart");
+    } finally {
+      setIsClearing(false);
+    }
   }
 
   if (isLoading)
@@ -87,34 +151,51 @@ export function CartPage() {
         {t("Loading cart...")}
       </main>
     );
-  if (!isAuthenticated) {
-    router.replace(routes.login);
-    return null;
-  }
+  if (!isAuthenticated) return null;
 
   return (
     <div className="min-h-[100svh] bg-[#f7f9fc] text-navy">
       <DashboardNavbar active="none" />
-      <main className="mx-auto w-full max-w-[1120px] px-5 pb-16 pt-8 sm:px-8">
+      <main className="mx-auto w-full max-w-[1240px] px-4 pb-16 pt-6 sm:px-8 sm:pt-8">
         <section>
-          <h1 className="font-manrope text-[28px] font-semibold leading-none tracking-[-0.03em] text-navy sm:text-[32px]">
+          <h1 className="font-manrope text-[26px] font-semibold leading-none tracking-[-0.03em] text-navy sm:text-[32px]">
             {t("Your Cart")}
           </h1>
-          <p className="mt-2 font-manrope text-[14px] leading-5 text-[#8b939e]">
+          <p className="mt-2 font-manrope font-medium text-[13px] leading-5 text-[#8b939e] sm:text-[14px]">
             {t("Review your selected plots before checkout.")}
           </p>
-          {cartItems.length ? (
+          {cart.status === "loading" ? (
+            <CartSkeleton t={t} />
+          ) : cart.status === "error" ? (
+            <div
+              role="alert"
+              className="mt-6 flex flex-col items-center gap-3 rounded-[16px] border border-[#eef1f4] bg-white px-4 py-12 text-center"
+            >
+              <p className="font-manrope font-medium text-[14px] text-[#8b939e]">
+                {t("Couldn't load your cart.")}
+              </p>
+              <button
+                type="button"
+                onClick={retry}
+                className="h-9 cursor-pointer rounded-[8px] border border-navy px-4 font-manrope text-[13px] font-semibold text-navy hover:bg-[#f5f7fa]"
+              >
+                {t("Try Again")}
+              </button>
+            </div>
+          ) : cart.status === "ready" ? (
             <FilledCart
-              items={cartItems}
-              totalRai={totalRai}
-              total={total}
+              cart={cart.data}
               coupon={coupon}
               setCoupon={setCoupon}
-              onClearAll={clearAll}
-              onRemove={removeItem}
+              removingIds={removingIds}
+              isClearing={isClearing}
+              actionError={actionError}
+              onClearAll={() => void clearAll()}
+              onRemove={(plotId) => void removeItem(plotId)}
+              t={t}
             />
           ) : (
-            <EmptyCart />
+            <EmptyCart t={t} />
           )}
         </section>
       </main>
@@ -122,7 +203,7 @@ export function CartPage() {
   );
 }
 
-function EmptyCart() {
+function EmptyCart({ t }: { t: Translate }) {
   return (
     <div className="flex min-h-[calc(100svh-210px)] flex-col items-center justify-center text-center">
       <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[#f5f8fc]">
@@ -133,200 +214,517 @@ function EmptyCart() {
         />
       </div>
       <h2 className="mt-5 text-[21px] font-semibold text-[#171717]">
-        Your cart is empty
+        {t("Your cart is empty")}
       </h2>
       <p className="mt-1 max-w-[310px] text-[12px] leading-5 text-[#7b858f]">
-        You haven&apos;t selected any plots yet. Explore Thailand and discover a place to
-        add to your collection.
+        {t(
+          "You haven't selected any plots yet. Explore Thailand and discover a place to add to your collection.",
+        )}
       </p>
       <div className="mt-6 flex w-full max-w-[365px] gap-2">
         <Link
           href={routes.purchases}
           className="flex flex-1 items-center justify-center rounded-[9px] border border-[#e1e7ec] bg-white px-4 py-3 text-[11px] text-navy"
         >
-          My Purchase
+          {t("My Purchase")}
         </Link>
         <Link
           href={routes.dashboardExplore}
           className="flex flex-1 items-center justify-center rounded-[9px] bg-navy px-4 py-3 text-[11px] text-white"
         >
-          Explore Thailand →
+          {t("Explore Thailand →")}
         </Link>
       </div>
     </div>
   );
 }
 
-function FilledCart({
-  items,
-  totalRai,
-  total,
-  coupon,
-  setCoupon,
-  onClearAll,
-  onRemove,
-}: {
-  items: CartItem[];
-  totalRai: number;
-  total: number;
-  coupon: string;
-  setCoupon: (value: string) => void;
-  onClearAll: () => void;
-  onRemove: (index: number) => void;
-}) {
-  const { t } = useDashboardLanguage();
-  const minimumReached = totalRai >= 100;
-  const referenceCart = items.length === 4 && items.every((item) => item.id === "PH-1124" && item.rai === 25);
-  const subtotal = referenceCart ? 6.5 : total;
-  const grandTotal = referenceCart ? 6.25 : total;
-  const zones = referenceCart
-    ? [
-        { label: "Icon Zone", amount: 6, color: "#e0aa2b" },
-        { label: "Popular Zone", amount: 1.25, color: "#14b8a6" },
-        { label: "Standard Zone", amount: 0.25, color: "#3b82f6" },
-      ]
-    : [
-        { label: "Icon Zone", amount: total, color: "#e0aa2b" },
-        { label: "Popular Zone", amount: 0, color: "#14b8a6" },
-        { label: "Standard Zone", amount: 0, color: "#3b82f6" },
-      ];
+// Order Summary skeleton rows (label / value widths), split into the Figma's divided groups.
+const SUMMARY_SKELETON_GROUPS = [
+  [
+    ["w-20", "w-14"],
+    ["w-20", "w-16"],
+  ],
+  [
+    ["w-24", "w-14"],
+    ["w-16", "w-16"],
+    ["w-32", "w-12"],
+  ],
+  [["w-24", "w-12"]],
+];
 
+function CartSkeleton({ t }: { t: Translate }) {
   return (
-    <div className="mt-6 grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+    <div
+      aria-busy="true"
+      className="mt-6 grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_360px]"
+    >
       <section>
-        <div className="flex items-center justify-between gap-3">
-          <h2 className="font-manrope text-[16px] font-semibold text-navy">{t("Selected Plots")}</h2>
-          <button type="button" onClick={onClearAll} className="font-manrope text-[13px] text-[#8b939e]">
-            {t("Clear All")}
-          </button>
-        </div>
+        <h2 className="font-manrope text-[18px] font-semibold text-navy sm:text-[20px]">
+          {t("Selected Plots")}
+        </h2>
         <div className="mt-3 space-y-3">
-          {items.map((item, index) => (
-            <CartItemCard key={`${item.id ?? "plot"}-${index}`} item={item} onRemove={() => onRemove(index)} />
-          ))}
-        </div>
-        <div className="mt-3 flex flex-col items-start justify-between gap-4 rounded-[16px] border border-dashed border-[#d5deea] bg-white px-4 py-4 sm:flex-row sm:items-center">
-          <div className="flex items-start gap-3">
-            <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#edf3ff] text-navy">
-              <ShieldIcon />
-            </span>
-            <div>
-              <h3 className="font-manrope text-[14px] font-semibold leading-5 text-navy">{t("Add more plots and make them yours.")}</h3>
-              <p className="mt-1 max-w-[420px] font-manrope text-[12px] leading-5 text-[#8b939e]">
-                {t("Unlock deed certification and blockchain cadastral inscription by selecting 25 additional Rai.")}
-              </p>
-            </div>
-          </div>
-          <Link href={routes.dashboardExplore} className="inline-flex h-11 shrink-0 items-center rounded-[12px] bg-navy px-4 font-manrope text-[13px] font-medium text-white">
-            {t("Explore Thailand →")}
-          </Link>
-        </div>
-      </section>
-      <aside>
-        <div className="flex gap-2">
-          <input
-            value={coupon}
-            onChange={(event) => setCoupon(event.target.value)}
-            placeholder={t("Enter Code")}
-            className="h-11 min-w-0 flex-1 rounded-[12px] border border-[#e4e9ef] bg-white px-3 font-manrope text-[13px] text-navy outline-none placeholder:text-[#b0b7c0]"
-          />
-          <button type="button" className="h-11 shrink-0 rounded-[12px] bg-navy px-5 font-manrope text-[13px] font-medium text-white">
-            {t("Apply")}
-          </button>
-        </div>
-        <div className="mt-3 rounded-[16px] border border-[#eef1f4] bg-white px-5 py-5 shadow-[0_8px_24px_rgba(11,31,77,0.05)]">
-          <h2 className="font-manrope text-[18px] font-semibold text-navy">{t("Order Summary")}</h2>
-          <div className="mt-4 space-y-2.5 font-manrope text-[13px] text-[#8b939e]">
-            <p className="flex items-center justify-between">
-              <span>{t("Plots")}</span>
-              <strong className="font-semibold text-navy">{items.length}</strong>
-            </p>
-            <p className="flex items-center justify-between">
-              <span>{t("Total Rai")}</span>
-              <strong className="font-semibold text-[#e11d2e]">{totalRai}</strong>
-            </p>
-          </div>
-          <div className="my-4 border-t border-[#eef1f4]" />
-          <div className="space-y-2.5 font-manrope text-[13px] text-[#5c6770]">
-            {zones.map((zone) => (
-              <p key={zone.label} className="flex items-center justify-between">
-                <span className="inline-flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full" style={{ backgroundColor: zone.color }} />
-                  {t(zone.label)}
-                </span>
-                <span>${zone.amount.toFixed(2)}</span>
-              </p>
-            ))}
-          </div>
-          <div className="my-4 border-t border-[#eef1f4]" />
-          <p className="flex items-center justify-between font-manrope text-[13px] text-[#8b939e]">
-            <span>{t("Subtotal")}</span>
-            <span className="font-medium text-[#1a1a1a]">${subtotal.toFixed(2)}</span>
-          </p>
-          <p className="mt-3 flex items-center justify-between font-manrope text-[14px] text-[#8b939e]">
-            <span>{t("Total")}</span>
-            <strong className="text-[22px] font-semibold text-[#1a1a1a]">${grandTotal.toFixed(2)}</strong>
-          </p>
-          {minimumReached ? (
-            <div className="mt-4 flex items-start gap-2 rounded-[12px] bg-[#eefbf4] px-3 py-3">
-              <span className="mt-0.5 text-[#16a34a]">
-                <CheckIcon />
-              </span>
-              <div>
-                <p className="font-manrope text-[13px] font-semibold leading-5 text-[#15803d]">{t("Minimum purchase reached")}</p>
-                <p className="font-manrope text-[12px] leading-4 text-[#3f9d62]">{t("Your selection meets the 100 Rai minimum.")}</p>
+          {Array.from({ length: 4 }, (_, index) => (
+            <div
+              key={index}
+              className="flex items-center gap-3 rounded-[16px] bg-white px-3 py-3 shadow-[0_2px_8px_rgba(0,0,0,0.08)] sm:px-4 sm:py-[14px]"
+            >
+              <span
+                className={cn(
+                  bone,
+                  "h-20 w-20 shrink-0 rounded-[12px] sm:h-[100px] sm:w-[100px]",
+                )}
+              />
+              <div className="min-w-0 flex-1 space-y-2">
+                <div className="flex gap-2">
+                  <span className={cn(bone, "block h-3 w-8")} />
+                  <span className={cn(bone, "block h-3 w-16")} />
+                </div>
+                <span className={cn(bone, "block h-4 w-3/5 max-w-[160px]")} />
+                <span className={cn(bone, "block h-3 w-1/2 max-w-[140px]")} />
+                <span className={cn(bone, "block h-3 w-1/2 max-w-[140px]")} />
+              </div>
+              <div className="flex shrink-0 flex-col items-end gap-3">
+                <span className={cn(bone, "block h-8 w-20 sm:w-[110px]")} />
+                <span className={cn(bone, "block h-4 w-14 sm:w-[70px]")} />
               </div>
             </div>
-          ) : (
-            <p className="mt-4 text-center font-manrope text-[12px] text-[#e11d2e]">
-              {t("Requires")} {100 - totalRai} {t("Rai")}
-            </p>
-          )}
-          <button
-            type="button"
-            disabled={!minimumReached}
-            className="mt-4 h-11 w-full rounded-[12px] bg-[#e8edf2] font-manrope text-[13px] font-medium text-[#9aa3ad] disabled:cursor-not-allowed"
-          >
-            {t("Proceed to checkout →")}
-          </button>
-          <Link href={routes.dashboardExplore} className="mt-2 flex h-11 items-center justify-center rounded-[12px] border border-[#e4e9ef] bg-white font-manrope text-[13px] font-medium text-[#3d4654]">
-            {t("Continue Exploring")}
-          </Link>
+          ))}
+        </div>
+      </section>
+      <aside className="rounded-[16px] border border-[#eef1f4] bg-white px-5 py-5 shadow-[0_8px_24px_rgba(11,31,77,0.05)] sm:px-6">
+        <h2 className="font-manrope text-[18px] font-semibold text-navy sm:text-[20px]">
+          {t("Order Summary")}
+        </h2>
+        <div className="mt-4 divide-y divide-[#eef1f4]">
+          {SUMMARY_SKELETON_GROUPS.map((rows, groupIndex) => (
+            <div key={groupIndex} className="space-y-2.5 py-3 first:pt-0">
+              {rows.map(([label, value], rowIndex) => (
+                <div key={rowIndex} className="flex items-center justify-between">
+                  <span className={cn(bone, "block h-3.5", label)} />
+                  <span className={cn(bone, "block h-3.5", value)} />
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+        <div className="mt-4 space-y-3 border-t border-[#eef1f4] pt-5">
+          <span className={cn(bone, "block h-11 rounded-[12px]")} />
+          <span className={cn(bone, "block h-11 rounded-[12px]")} />
         </div>
       </aside>
     </div>
   );
 }
 
-function CartItemCard({ item, onRemove }: { item: CartItem; onRemove: () => void }) {
-  const { t } = useDashboardLanguage();
-  const rai = item.rai ?? 0;
-  const amount = item.amount ?? 0;
-  const rate = rai > 0 ? amount / rai : 0;
+type FilledCartProps = {
+  cart: CartView;
+  coupon: string;
+  setCoupon: (value: string) => void;
+  removingIds: string[];
+  isClearing: boolean;
+  actionError: string;
+  onClearAll: () => void;
+  onRemove: (plotId: string) => void;
+  t: Translate;
+};
+
+function FilledCart({
+  cart,
+  coupon,
+  setCoupon,
+  removingIds,
+  isClearing,
+  actionError,
+  onClearAll,
+  onRemove,
+  t,
+}: FilledCartProps) {
+  const remainingRai = Math.max(cart.remainingRai, 0);
+  const minimumReached = remainingRai === 0;
 
   return (
-    <article className="flex items-center gap-3 rounded-[16px] border border-[#eef1f4] bg-white p-3 shadow-[0_8px_22px_rgba(11,31,77,0.05)]">
-      <div className="h-[72px] w-[88px] shrink-0 overflow-hidden rounded-[12px] bg-[#edf3f8]">
-        {item.image ? <img src={item.image} alt="" className="h-full w-full object-cover" /> : null}
+    <>
+      <ProgressBanner cart={cart} t={t} />
+      <div className="mt-6 grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
+        <section>
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="font-manrope text-[18px] font-semibold text-navy sm:text-[20px]">
+              {t("Selected Plots")}
+            </h2>
+            <button
+              type="button"
+              onClick={onClearAll}
+              disabled={isClearing}
+              className="cursor-pointer font-manrope font-medium text-[13px] text-[#6b7785] underline underline-offset-2 hover:text-navy disabled:cursor-wait disabled:opacity-60"
+            >
+              {t(isClearing ? "Clearing..." : "Clear All")}
+            </button>
+          </div>
+          {actionError ? (
+            <p
+              role="alert"
+              className="mt-2 font-manrope font-medium text-[12px] text-[#e11d2e]"
+            >
+              {t(actionError)}
+            </p>
+          ) : null}
+          <div className="mt-3 space-y-3">
+            {cart.items.map((item) => (
+              <CartItemCard
+                key={item.plotId}
+                item={item}
+                isRemoving={removingIds.includes(item.plotId)}
+                onRemove={() => onRemove(item.plotId)}
+                t={t}
+              />
+            ))}
+          </div>
+          <div className="mt-3 flex flex-col items-start justify-between gap-4 rounded-[16px] border border-dashed border-[#d5deea] bg-white px-4 py-4 sm:flex-row sm:items-center sm:px-5">
+            <div className="flex items-start gap-3">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] bg-[#f1f4f9] text-navy">
+                <PinPlusIcon />
+              </span>
+              <div>
+                <h3 className="font-manrope text-[14px] font-semibold leading-5 text-navy">
+                  {fill(t("Add more places to reach the {min} Rai threshold"), {
+                    min: cart.minimumRai,
+                  })}
+                </h3>
+                <p className="mt-1 max-w-[420px] font-manrope font-medium text-[12px] leading-5 text-[#8b939e]">
+                  {minimumReached
+                    ? t("Unlock deed certification and blockchain cadastral inscription.")
+                    : fill(
+                        t(
+                          "Unlock deed certification and blockchain cadastral inscription by selecting {rai} additional Rai.",
+                        ),
+                        { rai: remainingRai },
+                      )}
+                </p>
+              </div>
+            </div>
+            <Link
+              href={routes.dashboardExplore}
+              className="inline-flex h-11 w-full shrink-0 items-center justify-center rounded-[10px] bg-navy px-4 font-manrope text-[13px] font-medium text-white hover:bg-navy-deep sm:w-auto"
+            >
+              {t("Explore Thailand →")}
+            </Link>
+          </div>
+        </section>
+
+        <OrderSummary
+          cart={cart}
+          coupon={coupon}
+          setCoupon={setCoupon}
+          remainingRai={remainingRai}
+          t={t}
+        />
       </div>
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2">
-          <span className="font-manrope text-[10px] font-semibold uppercase tracking-[0.04em] text-[#e11d2e]">{item.badge ?? "ICON"}</span>
-          <span className="font-manrope text-[11px] text-[#b0b7c0]">{item.id ?? "PH-1124"}</span>
+    </>
+  );
+}
+
+/** Figma "Section - Progress banner": below the minimum (red) or reached (green). */
+function ProgressBanner({ cart, t }: { cart: CartView; t: Translate }) {
+  const remainingRai = Math.max(cart.remainingRai, 0);
+  const reached = remainingRai === 0;
+  const progress =
+    cart.minimumRai > 0 ? Math.min(100, (cart.totalRai / cart.minimumRai) * 100) : 100;
+  const plotCount = cart.plots;
+
+  return (
+    <section
+      aria-label={t("Minimum order progress")}
+      className="mt-6 rounded-[20px] bg-white p-5 shadow-[0_2px_20px_rgba(0,0,0,0.08)] sm:rounded-[24px] sm:p-8"
+    >
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <h2 className="flex items-center gap-2 font-manrope text-[16px] font-semibold text-navy sm:text-[18px]">
+            <CheckCircleIcon />
+            {t(reached ? "Minimum order completed!" : "Complete your selection")}
+          </h2>
+          <p className="mt-1 max-w-[360px] font-manrope font-medium text-[11px] leading-4 text-[#8b939e]">
+            {fill(
+              t(
+                reached
+                  ? "You have successfully reached the required {min} Rai minimum to continue."
+                  : "You need {min} Rai minimum to continue buying plots and payment.",
+              ),
+              { min: cart.minimumRai },
+            )}
+          </p>
         </div>
-        <h3 className="mt-0.5 truncate font-manrope text-[14px] font-semibold leading-5 text-navy">{t(item.name ?? "Seaview Ridge Plot")}</h3>
-        <p className="mt-0.5 inline-flex items-center gap-1 font-manrope text-[12px] text-[#8b939e]">
-          <PinIcon />
-          {item.region ?? "Phuket City"}
+        <div className="flex shrink-0 items-center gap-2 sm:flex-col sm:items-end sm:gap-1">
+          <p className="font-manrope font-medium">
+            <span className="text-[20px] font-semibold text-navy">{cart.totalRai}</span>
+            <span className="text-[11px] text-[#8b939e]">{` / ${cart.minimumRai} ${t("Rai")}`}</span>
+          </p>
+          {reached ? (
+            <span className="rounded-full bg-[#dcfce7] px-2 py-0.5 font-manrope text-[9px] font-semibold text-[#16a34a]">
+              {t("Minimum Reached")}
+            </span>
+          ) : null}
+        </div>
+      </div>
+
+      <div className="mt-4 flex items-center justify-between gap-3 font-manrope font-medium text-[12px] text-navy">
+        <span>
+          {`${plotCount} ${t(plotCount === 1 ? "Plot" : "Plots")} · ${cart.totalRai} ${t("Rai")}`}
+        </span>
+        <span className="font-semibold">{`${t("Total")}: ${money(cart.total)}`}</span>
+      </div>
+      <div
+        role="progressbar"
+        aria-valuemin={0}
+        aria-valuemax={cart.minimumRai}
+        aria-valuenow={Math.min(cart.totalRai, cart.minimumRai)}
+        className="mt-2 h-1.5 overflow-hidden rounded-full bg-[#eef1f5]"
+      >
+        <span
+          className={cn(
+            "block h-full rounded-full transition-[width] duration-500",
+            reached ? "bg-[#22c55e]" : "bg-[#e11d2e]",
+          )}
+          style={{ width: `${progress}%` }}
+        />
+      </div>
+      <div className="mt-2 flex flex-col gap-1 font-manrope font-medium text-[11px] leading-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+        {reached ? (
+          <span />
+        ) : (
+          <span className="text-[#5c6770]">
+            {fill(t("{rai} Rai more to reach minimum"), { rai: remainingRai })}
+          </span>
+        )}
+        <span className="text-[#8b939e] sm:text-right">
+          <strong className="font-semibold text-navy">{t("NEXT STEP:")}</strong>{" "}
+          {t("Select parcels from any province zone to unlock settlement.")}
+        </span>
+      </div>
+    </section>
+  );
+}
+
+function OrderSummary({
+  cart,
+  coupon,
+  setCoupon,
+  remainingRai,
+  t,
+}: {
+  cart: CartView;
+  coupon: string;
+  setCoupon: (value: string) => void;
+  remainingRai: number;
+  t: Translate;
+}) {
+  return (
+    <aside>
+      {/* TODO: `POST /cart/coupon` and `DELETE /cart/coupon`. */}
+      <div className="flex gap-2">
+        <input
+          value={coupon}
+          onChange={(event) => setCoupon(event.target.value)}
+          placeholder={t("Enter Code")}
+          aria-label={t("Enter Code")}
+          className="h-12 min-w-0 flex-1 rounded-[12px] border border-[#e4e9ef] bg-white px-4 font-manrope font-medium text-[14px] text-navy outline-none placeholder:text-[#b0b7c0] focus:border-navy"
+        />
+        <button
+          type="button"
+          className="h-12 shrink-0 cursor-pointer rounded-[12px] bg-navy px-7 font-manrope text-[16px] font-medium text-white hover:bg-navy-deep sm:text-[18px]"
+        >
+          {t("Apply")}
+        </button>
+      </div>
+      <div className="mt-3 rounded-[16px] border border-[#eef1f4] bg-white px-5 py-6 shadow-[0_8px_24px_rgba(11,31,77,0.05)] sm:px-7 sm:py-7">
+        <h2 className="font-manrope text-[22px] leading-none font-semibold text-[#111111] sm:text-[24px]">
+          {t("Order Summary")}
+        </h2>
+        <div className="mt-5 space-y-3 font-manrope text-[16px] font-medium text-[#6b7280]">
+          <p className="flex items-center justify-between">
+            <span>{t("Plots")}</span>
+            <strong className="font-bold text-navy">{cart.plots}</strong>
+          </p>
+          <p className="flex items-center justify-between">
+            <span>{t("Total Rai")}</span>
+            <strong className="font-bold text-[#e11d2e]">{cart.totalRai}</strong>
+          </p>
+        </div>
+        {cart.zones.length ? <div className="my-5 border-t border-[#e5e7eb]" /> : null}
+        {/* Zone split as the API sends it (every tier, including those at $0). */}
+        <div className="space-y-3 font-manrope text-[16px] font-medium">
+          {cart.zones.map((zone) => {
+            const color = ZONE_COLORS[zone.tier.toUpperCase()] ?? "#6b7785";
+            return (
+              <p key={zone.tier} className="flex items-center justify-between">
+                <span
+                  className="inline-flex items-center gap-2 font-semibold"
+                  style={{ color }}
+                >
+                  <span
+                    aria-hidden="true"
+                    className="h-1.5 w-1.5 rounded-full"
+                    style={{ backgroundColor: color }}
+                  />
+                  {t(zone.name)}
+                </span>
+                <span className="text-[#6b7280]">{money(zone.amount)}</span>
+              </p>
+            );
+          })}
+        </div>
+        <div className="my-5 border-t border-[#e5e7eb]" />
+        <p className="flex items-center justify-between font-manrope text-[16px] font-medium text-[#6b7280]">
+          <span>{t("Subtotal")}</span>
+          <span>{money(cart.subtotal)}</span>
         </p>
-        <p className="mt-0.5 font-manrope text-[12px] leading-4 text-[#e11d2e]">
-          {rai} {t("Rai")} <span className="text-[#8b939e]">· ${rate.toFixed(2)} / {t("Rai")}</span>
+        {cart.discount > 0 ? (
+          <p className="mt-3 flex items-center justify-between font-manrope text-[16px] font-medium text-[#6b7280]">
+            <span>{t("Discount")}</span>
+            <span className="text-[#16a34a]">{`−${money(cart.discount)}`}</span>
+          </p>
+        ) : null}
+        <div className="my-5 border-t border-[#e5e7eb]" />
+        <p className="flex items-center justify-between font-manrope font-medium text-[16px] text-[#6b7280]">
+          <span>{t("Total")}</span>
+          <strong className="text-[28px] font-bold leading-none text-[#111111] sm:text-[32px]">
+            {money(cart.total)}
+          </strong>
+        </p>
+        {/* Figma "Minimum purchase reached" note, once the cart can check out. */}
+        {remainingRai === 0 ? (
+          <div className="mt-5 flex items-start gap-2 rounded-[10px] border border-[#bbf7d0] bg-[#f0fdf4] px-3 py-2.5">
+            <span className="mt-0.5 text-[#15803d]">
+              <CheckCircleIcon />
+            </span>
+            <div>
+              <p className="font-manrope text-[13px] font-semibold leading-5 text-[#15803d]">
+                {t("Minimum purchase reached")}
+              </p>
+              <p className="font-manrope font-medium text-[11px] leading-4 text-[#16a34a]">
+                {fill(t("Your selection meets the {min} Rai minimum."), {
+                  min: cart.minimumRai,
+                })}
+              </p>
+            </div>
+          </div>
+        ) : null}
+        {/* TODO: `POST /cart/validate` and `POST /cart/checkout`. */}
+        <button
+          type="button"
+          disabled={!cart.checkoutEligible}
+          className="mt-6 h-12 w-full cursor-pointer rounded-[12px] bg-navy font-manrope text-[15px] font-medium text-white hover:bg-navy-deep disabled:cursor-not-allowed disabled:bg-[#d9dde3] disabled:text-[#9aa3ad]"
+        >
+          {t("Proceed to checkout →")}
+        </button>
+        <Link
+          href={routes.dashboardExplore}
+          className="mt-3 flex h-12 items-center justify-center rounded-[12px] border border-[#e4e9ef] bg-white font-manrope text-[15px] font-medium text-[#111111] hover:border-[#cfd8e3]"
+        >
+          {t("Continue Exploring")}
+        </Link>
+        {remainingRai > 0 ? (
+          <p className="mt-3 flex items-center justify-center gap-1.5 text-center font-manrope font-medium text-[11px] text-[#e11d2e]">
+            <WarningIcon />
+            {fill(t("Requires {rai} more Rai to activate checkout"), {
+              rai: remainingRai,
+            })}
+          </p>
+        ) : null}
+      </div>
+    </aside>
+  );
+}
+
+/** Plot image; the local placeholder when missing, from a host we don't allow, or broken. */
+function CartItemImage({ src }: { src: string | null | undefined }) {
+  const [failedSrc, setFailedSrc] = useState<string | null>(null);
+  const usable = isAllowedRemoteImage(src) && failedSrc !== src;
+
+  return (
+    // next/image serves remote images through our own origin (the CSP blocks direct ones).
+    <Image
+      src={usable ? src : PLACEHOLDER_IMAGE}
+      alt=""
+      width={100}
+      height={100}
+      unoptimized={!usable}
+      onError={() => {
+        if (usable) setFailedSrc(src);
+      }}
+      className="h-20 w-20 shrink-0 rounded-[12px] bg-[#edf3f8] object-cover sm:h-[100px] sm:w-[100px]"
+    />
+  );
+}
+
+/** One cart row (Figma "Selected Plots" card); optional fields hide when not sent. */
+function CartItemCard({
+  item,
+  isRemoving,
+  onRemove,
+  t,
+}: {
+  item: CartItem;
+  isRemoving: boolean;
+  onRemove: () => void;
+  t: Translate;
+}) {
+  const location = item.city ?? item.region?.name;
+  const title = item.name ?? item.plotNumber ?? item.zone?.name;
+  const tier = item.zone?.tier;
+
+  return (
+    <article
+      className={cn(
+        // Figma "Card: In cart": 14px / 16px padding, 12px gap, radius 16.
+        "flex items-center gap-3 rounded-[16px] bg-white px-3 py-3 shadow-[0_2px_8px_rgba(0,0,0,0.08)] transition-opacity sm:px-4 sm:py-[14px]",
+        isRemoving && "opacity-60",
+      )}
+    >
+      <CartItemImage src={item.imageUrl} />
+      <div className="min-w-0 flex-1">
+        {tier || item.plotNumber ? (
+          <div className="flex flex-wrap items-center gap-2">
+            {tier ? (
+              <span className="rounded-[4px] bg-[#fdf0c4] px-2 py-[2px] font-manrope text-[10px] font-semibold uppercase leading-4 text-[#c9961a]">
+                {t(titleCase(tier))}
+              </span>
+            ) : null}
+            {item.plotNumber ? (
+              <span className="rounded-[4px] border border-[#9ca3af] bg-[#f3f4f6] px-1.5 py-px font-manrope font-medium text-[10px] leading-4 text-[#6b7280]">
+                {item.plotNumber}
+              </span>
+            ) : null}
+          </div>
+        ) : null}
+        {title ? (
+          <h3 className="mt-1 truncate font-manrope text-[15px] font-semibold leading-6 text-navy sm:text-[16px]">
+            {title}
+          </h3>
+        ) : null}
+        {location ? (
+          <p className="mt-0.5 inline-flex max-w-full items-center gap-1 rounded-[4px] border border-[#9ca3af] bg-[#f3f4f6] px-1.5 py-px font-manrope font-medium text-[10px] leading-4 text-[#6b7280]">
+            <PinIcon />
+            <span className="truncate">{location}</span>
+          </p>
+        ) : null}
+        <p className="mt-1.5 font-manrope font-medium text-[12px] leading-4">
+          <span className="font-bold text-[#e11d2e]">{`${item.sizeRai} ${t("Rai")}`}</span>
+          <span className="text-[#8b939e]">{` · ${money(item.pricePerRai)} / ${t("Rai")}`}</span>
         </p>
       </div>
-      <div className="shrink-0 text-right">
-        <strong className="block font-manrope text-[20px] font-semibold leading-6 text-[#1a1a1a]">${amount.toFixed(2)}</strong>
-        <button type="button" onClick={onRemove} className="mt-1 font-manrope text-[12px] text-[#8b939e]">
-          {t("Remove")}
+      <div className="flex shrink-0 flex-col items-end justify-center gap-3 self-stretch sm:gap-4">
+        <strong className="font-manrope text-[22px] font-semibold leading-7 text-[#111111] sm:text-[30px] sm:leading-9">
+          {money(item.subtotal)}
+        </strong>
+        <button
+          type="button"
+          onClick={onRemove}
+          disabled={isRemoving}
+          className="inline-flex cursor-pointer items-center gap-1.5 font-manrope font-medium text-[12px] text-[#636363] hover:text-[#e11d2e] disabled:cursor-wait"
+        >
+          <TrashIcon />
+          {t(isRemoving ? "Removing..." : "Remove")}
         </button>
       </div>
     </article>
@@ -335,27 +733,83 @@ function CartItemCard({ item, onRemove }: { item: CartItem; onRemove: () => void
 
 function PinIcon() {
   return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-3.5 w-3.5">
-      <path d="M12 21s6-5.1 6-10a6 6 0 1 0-12 0c0 4.9 6 10 6 10Z" fill="none" stroke="currentColor" strokeWidth="1.7" />
-      <circle cx="12" cy="11" r="1.8" fill="currentColor" />
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-3 w-3 shrink-0">
+      <path d="M12 21s6-5.1 6-10a6 6 0 1 0-12 0c0 4.9 6 10 6 10Z" fill="#6b7280" />
+      <circle cx="12" cy="11" r="2.2" fill="white" />
     </svg>
   );
 }
 
-function ShieldIcon() {
+function PinPlusIcon() {
   return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-4 w-4">
-      <path d="M12 3.5 19 6.2v5.3c0 4.2-2.8 7.2-7 8.9-4.2-1.7-7-4.7-7-8.9V6.2L12 3.5Z" fill="none" stroke="currentColor" strokeLinejoin="round" strokeWidth="1.6" />
-      <path d="m8.8 12.1 2.1 2.1 4.3-4.4" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.6" />
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-5 w-5">
+      <path
+        d="M12 21s6-5.1 6-10a6 6 0 1 0-12 0c0 4.9 6 10 6 10Z"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.6"
+      />
+      <path
+        d="M12 8.5v5M9.5 11h5"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeWidth="1.6"
+      />
     </svg>
   );
 }
 
-function CheckIcon() {
+function TrashIcon() {
+  // Solid, 10 x 12 (Figma).
   return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-4 w-4">
-      <circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" strokeWidth="1.6" />
-      <path d="m8.5 12.2 2.3 2.3 4.7-5" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.6" />
+    <svg viewBox="0 0 10 12" aria-hidden="true" className="h-3 w-2.5 shrink-0">
+      <path
+        d="M3.5 0h3l.5 1H10v1.25H0V1h3L3.5 0ZM.75 3h8.5l-.6 8.1a1 1 0 0 1-1 .9H2.35a1 1 0 0 1-1-.9L.75 3Z"
+        fill="currentColor"
+      />
+    </svg>
+  );
+}
+
+function CheckCircleIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-4 w-4 shrink-0">
+      <circle
+        cx="12"
+        cy="12"
+        r="8.5"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+      />
+      <path
+        d="m8.5 12.2 2.3 2.3 4.7-5"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.8"
+      />
+    </svg>
+  );
+}
+
+function WarningIcon() {
+  return (
+    <svg viewBox="0 0 16 16" aria-hidden="true" className="h-3.5 w-3.5 shrink-0">
+      <path
+        d="M8 2.5 14 13H2L8 2.5Z"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.3"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M8 6.5v3M8 11.3v.2"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeWidth="1.4"
+      />
     </svg>
   );
 }

@@ -5,8 +5,13 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { BrandLogo } from "@/components/ui/BrandLogo";
+import { getStoredToken } from "@/lib/api/auth.utils";
+import { isAbortError } from "@/lib/api/browser-client";
+import { CART_CHANGED_EVENT } from "@/lib/cart/cart-events";
 import { routes } from "@/lib/constants/routes";
+import { logError } from "@/lib/logging/logger";
 import { useDashboardLanguage } from "./DashboardLanguageContext";
+import { getCart } from "./services/cart.client";
 
 type DashboardNavbarProps = {
   active: "home" | "explore" | "my-land" | "none";
@@ -39,21 +44,31 @@ function Icon({
   );
 }
 
+// Items in the cart (`GET /cart`), reloaded whenever the cart changes elsewhere.
 function useCartCount() {
   const [count, setCount] = useState(0);
 
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem("tajlandia_cart");
-      if (stored === null) {
-        setCount(4);
-        return;
-      }
-      const parsed: unknown = JSON.parse(stored);
-      setCount(Array.isArray(parsed) ? parsed.length : 0);
-    } catch {
-      setCount(0);
+    let controller: AbortController | null = null;
+
+    function load() {
+      if (!getStoredToken()) return;
+      controller?.abort();
+      controller = new AbortController();
+      // The badge is secondary: a failure keeps the last count and never logs out.
+      getCart({ signal: controller.signal, redirectOnUnauthorized: false })
+        .then((cart) => setCount(cart.items.length))
+        .catch((error: unknown) => {
+          if (!isAbortError(error)) logError(error, "Failed to load cart count");
+        });
     }
+
+    load();
+    window.addEventListener(CART_CHANGED_EVENT, load);
+    return () => {
+      controller?.abort();
+      window.removeEventListener(CART_CHANGED_EVENT, load);
+    };
   }, []);
 
   return count;
