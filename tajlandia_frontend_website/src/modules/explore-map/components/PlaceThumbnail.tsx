@@ -45,15 +45,19 @@ export function PlaceCounts({
   plots,
   t,
 }: {
-  zone: number | undefined;
-  plots: number | undefined;
+  zone: number | null | undefined;
+  plots: number | null | undefined;
   t: (source: string) => string;
 }) {
-  if (zone === undefined || plots === undefined) return null;
+  if (zone == null || plots == null) return null;
 
   return (
     <span className="block text-[10px] text-[#8d97a3]">
-      {`${zone} ${t(zone === 1 ? "Zone" : "Zones")} · ${plots} ${t(plots === 1 ? "Plot" : "Plots")}`}
+      {`${zone} ${t(zone === 1 ? "Zone" : "Zones")} · `}
+      {/* Navy while its row is hovered (Figma "Selected"). */}
+      <span className="group-hover/place:text-[#001f54] group-focus-visible/place:text-[#001f54]">
+        {`${plots} ${t(plots === 1 ? "Plot" : "Plots")}`}
+      </span>
     </span>
   );
 }

@@ -13,6 +13,8 @@ const ALLOWED_PREFIXES = new Set([
   "reservations",
   "cart",
 ]);
+// Single endpoints whose area is otherwise off-limits (e.g. `dashboard/admin/*`).
+const ALLOWED_EXACT_PATHS = new Set(["dashboard"]);
 const ALLOWED_METHODS = new Set(["GET", "POST", "PUT", "PATCH", "DELETE"]);
 const SAFE_SEGMENT = /^[\w-]{1,128}$/;
 // The backend can be slow to wake from idle, so this is longer than `client.ts`.
@@ -36,7 +38,7 @@ function isAllowedPath(segments: string[]) {
   const [prefix] = segments;
   return (
     prefix !== undefined &&
-    ALLOWED_PREFIXES.has(prefix) &&
+    (ALLOWED_PREFIXES.has(prefix) || ALLOWED_EXACT_PATHS.has(segments.join("/"))) &&
     segments.every((segment) => SAFE_SEGMENT.test(segment))
   );
 }

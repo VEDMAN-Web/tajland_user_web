@@ -18,30 +18,42 @@ import { useDashboardLanguage } from "@/modules/dashboard/DashboardLanguageConte
 import { FilterPlotsPanel } from "./components/FilterPlotsPanel";
 import { MapErrorDialog } from "./components/MapErrorDialog";
 import { MapUnavailableState } from "./components/MapUnavailableState";
-import { PlotCard } from "./components/PlotCard";
-import { PlotDetailPanel } from "./components/PlotDetailPanel";
+import { PlotCard, PlotCardSkeleton } from "./components/PlotCard";
+import {
+  PlotDetailError,
+  PlotDetailPanel,
+  PlotDetailSkeleton,
+} from "./components/PlotDetailPanel";
 import { RecentSearchRow } from "./components/RecentSearchRow";
 import { SearchResultRow } from "./components/SearchResultRow";
 import { SortPlotsPanel } from "./components/SortPlotsPanel";
-import { DEFAULT_PLOT_FILTERS, DEFAULT_PLOT_SORT } from "./constants/explore-filters";
+import { DEFAULT_PLOT_FILTERS, toPlotFilterQuery } from "./constants/explore-filters";
 import { plotColor } from "./constants/plot-status";
 import { exploreFiltersMock } from "./data/explore-filters.mock";
-import { plotDetailMock } from "./data/plot-detail.mock";
 import {
   clearRecentSearches,
   deleteRecentSearch,
   getExploreMap,
   getRecentSearches,
+  RECENT_SEARCH_PAGE_SIZE,
   saveRecentSearch,
   getSearchSuggestions,
   MIN_SUGGESTION_QUERY_LENGTH,
+  getFilterOptions,
+  getPlotDetail,
   getPlotsInArea,
+  getSortOptions,
   searchPlaces,
   type PlotScope,
 } from "./services/explore-map.client";
-import type { PlotFilters, PlotSortOption } from "./types/explore-filters.types";
+import type {
+  FilterOptions,
+  PlotFilters,
+  PlotSortOption,
+} from "./types/explore-filters.types";
 import type {
   ExplorePlot,
+  ExplorePlotDetail,
   MapBounds,
   RecentSearch,
   SearchResult,
@@ -71,6 +83,38 @@ function plotScopeFor(place: { type: string; id: string }): PlotScope | null {
   if (type === "CITY") return { param: "cityId", id: place.id };
   if (type === "ZONE") return { param: "zoneId", id: place.id };
   return null;
+}
+
+// Closest the "focus" zoom gets, so a tiny plot keeps some streets around it.
+const PLOT_FOCUS_MAX_ZOOM = 18;
+// Skeleton cards shown while an area's plots load.
+const PLOT_SKELETON_COUNT = 3;
+
+/** The plot's outline box, or null when the API sent no geometry. */
+function polygonBounds(plot: Pick<ExplorePlot, "geometry">): MapBounds | null {
+  const ring = plot.geometry?.coordinates[0];
+  if (!ring?.length) return null;
+  const lngs = ring.flatMap(([lng]) => (lng === undefined ? [] : [lng]));
+  const lats = ring.flatMap(([, lat]) => (lat === undefined ? [] : [lat]));
+  return {
+    north: Math.max(...lats),
+    south: Math.min(...lats),
+    east: Math.max(...lngs),
+    west: Math.min(...lngs),
+  };
+}
+
+/** Keeps a focused plot in the visible map: right of the side panel, or above the phone sheet. */
+function plotFocusPadding() {
+  if (window.matchMedia("(min-width: 640px)").matches) {
+    return { top: 170, bottom: 60, left: 500, right: 80 };
+  }
+  return {
+    top: 140,
+    bottom: Math.round(window.innerHeight * 0.58) + 24,
+    left: 40,
+    right: 40,
+  };
 }
 
 /** Box around the plots (padded so one plot isn't zoomed to street level). */
@@ -150,13 +194,33 @@ export function AuthenticatedExploreMapPage() {
   const searchPanelRef = useRef<HTMLElement>(null);
   const { isAuthenticated, isLoading } = useAuth();
   const { t } = useDashboardLanguage();
-  const [search, setSearch] = useState("");
-  const [isSearchExpanded, setIsSearchExpanded] = useState(false);
+  // Opened from a dashboard region card (`?regionId=…&region=Phuket`): start with
+  // that region's plots, the same as picking it in search. Read once.
+  const [linkedRegion] = useState(() => {
+    const id = searchParams.get("regionId");
+    const name = searchParams.get("region")?.trim();
+    return id && name ? { id, name } : null;
+  });
+  const [search, setSearch] = useState(linkedRegion?.name ?? "");
+  const [isSearchExpanded, setIsSearchExpanded] = useState(Boolean(linkedRegion));
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [isSortOpen, setIsSortOpen] = useState(false);
   // Applied values; they will drive the plot API once it is wired up.
   const [plotFilters, setPlotFilters] = useState<PlotFilters>(DEFAULT_PLOT_FILTERS);
-  const [plotSort, setPlotSort] = useState<PlotSortOption>(DEFAULT_PLOT_SORT);
+  // Filter panel options (`/explore/filters`, loaded once).
+  const [filterOptions, setFilterOptions] = useState<FilterOptions | null>(null);
+  const [filterOptionsStatus, setFilterOptionsStatus] = useState<
+    "loading" | "ready" | "error"
+  >("loading");
+  const [filterOptionsReloadKey, setFilterOptionsReloadKey] = useState(0);
+  // Sort panel options (`/explore/sort-options`, loaded once) and the applied one.
+  const [sortOptions, setSortOptions] = useState<PlotSortOption[]>([]);
+  const [sortOptionsStatus, setSortOptionsStatus] = useState<
+    "loading" | "ready" | "error"
+  >("loading");
+  const [sortOptionsReloadKey, setSortOptionsReloadKey] = useState(0);
+  // Null: the backend's default order.
+  const [plotSortKey, setPlotSortKey] = useState<string | null>(null);
   const [searchMessage, setSearchMessage] = useState("");
   // Last suggestion lookup; only used while it still matches what is typed.
   const [suggestionLookup, setSuggestionLookup] = useState<{
@@ -185,6 +249,10 @@ export function AuthenticatedExploreMapPage() {
   );
   const [recentReloadKey, setRecentReloadKey] = useState(0);
   const [showAllRecent, setShowAllRecent] = useState(false);
+  // Last page loaded, and whether it came back full (so a next page may exist).
+  const [recentPage, setRecentPage] = useState(1);
+  const [recentHasMore, setRecentHasMore] = useState(false);
+  const [isLoadingMoreRecent, setIsLoadingMoreRecent] = useState(false);
   // Error state: the map itself failed (nothing to show behind the dialog) or
   // its data failed after the map loaded (map stays visible behind it).
   const [mapStatus, setMapStatus] = useState<MapboxMapStatus>("loading");
@@ -195,23 +263,40 @@ export function AuthenticatedExploreMapPage() {
   const [reloadKey, setReloadKey] = useState(0);
   const hasMapError = mapStatus === "error" || hasDataError;
   // Area picked from search; its plots are drawn on the map (all statuses, no sort yet).
-  const [plotScope, setPlotScope] = useState<PlotScope | null>(null);
+  const [plotScope, setPlotScope] = useState<PlotScope | null>(
+    linkedRegion ? { param: "regionId", id: linkedRegion.id } : null,
+  );
   const [plots, setPlots] = useState<ExplorePlot[]>([]);
   const [plotsReloadKey, setPlotsReloadKey] = useState(0);
   const [plotsStatus, setPlotsStatus] = useState<"idle" | "loading" | "ready" | "error">(
-    "idle",
+    linkedRegion ? "loading" : "idle",
   );
   // Name shown in the search box for the open area; the plot list shows while it matches.
-  const [plotAreaName, setPlotAreaName] = useState("");
+  const [plotAreaName, setPlotAreaName] = useState(linkedRegion?.name ?? "");
   const [selectedPlotId, setSelectedPlotId] = useState<string | null>(null);
   // Plot whose detail panel is open (replaces the list until closed).
   const [detailPlotId, setDetailPlotId] = useState<string | null>(null);
+  // `GET /explore/plots/{plotId}` result for the open detail (matched by id).
+  const [plotDetail, setPlotDetail] = useState<
+    | { id: string; status: "loading" }
+    | { id: string; status: "ready"; plot: ExplorePlotDetail }
+    | { id: string; status: "error"; notFound: boolean }
+    | null
+  >(null);
+  const [plotDetailReloadKey, setPlotDetailReloadKey] = useState(0);
   const mapPlots = useMemo(() => plots.map(toMapPlot), [plots]);
+  const { sortBy, sortOrder } =
+    sortOptions.find((option) => option.key === plotSortKey)?.query ?? {};
+  // Primitives, so the plots request reruns only when a param really changes.
+  const { zoneId, minRai, maxRai, minPrice, maxPrice } = toPlotFilterQuery(plotFilters);
+  const hasActiveFilters = [zoneId, minRai, maxRai, minPrice, maxPrice].some(
+    (param) => param !== undefined,
+  );
   // Set once the user moves the map, so late API data doesn't yank the camera back.
-  const hasNavigatedRef = useRef(false);
-  // Set when an area is opened without a known location (a recent search):
-  // fit the map to its plots once they load.
-  const fitToPlotsRef = useRef(false);
+  const hasNavigatedRef = useRef(Boolean(linkedRegion));
+  // Set when an area is opened without a known location (a recent search or a
+  // dashboard link): fit the map to its plots once they load.
+  const fitToPlotsRef = useRef(Boolean(linkedRegion));
   // Thailand's bounds from `/explore/map`; "clear" flies back to this start view.
   const initialBoundsRef = useRef<MapBounds>(THAILAND_BOUNDS);
   const selectedPlot = useMemo(() => {
@@ -255,7 +340,14 @@ export function AuthenticatedExploreMapPage() {
     if (!isAuthenticated || !plotScope) return;
 
     const controller = new AbortController();
-    getPlotsInArea(plotScope, controller.signal)
+    getPlotsInArea(
+      plotScope,
+      {
+        sort: { sortBy, sortOrder },
+        filters: { zoneId, minRai, maxRai, minPrice, maxPrice },
+      },
+      controller.signal,
+    )
       .then((items) => {
         setPlots(items);
         setPlotsStatus("ready");
@@ -276,7 +368,100 @@ export function AuthenticatedExploreMapPage() {
       });
 
     return () => controller.abort();
-  }, [isAuthenticated, plotScope, plotsReloadKey]);
+  }, [
+    isAuthenticated,
+    plotScope,
+    plotsReloadKey,
+    sortBy,
+    sortOrder,
+    zoneId,
+    minRai,
+    maxRai,
+    minPrice,
+    maxPrice,
+  ]);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    const controller = new AbortController();
+    getFilterOptions(controller.signal)
+      .then((options) => {
+        setFilterOptions(options);
+        setFilterOptionsStatus("ready");
+      })
+      .catch((error: unknown) => {
+        if (isAbortError(error)) return;
+        if (isApiError(error) && error.code === "API_SESSION_EXPIRED") return;
+        logError(error, "Failed to load filter options");
+        setFilterOptionsStatus("error");
+      });
+
+    return () => controller.abort();
+  }, [isAuthenticated, filterOptionsReloadKey]);
+
+  function retryFilterOptions() {
+    setFilterOptionsStatus("loading");
+    setFilterOptionsReloadKey((key) => key + 1);
+  }
+
+  // Reloads the open area's plots when a sent param changes (the effect above refetches).
+  function applyFilters(next: PlotFilters) {
+    const changed =
+      JSON.stringify(toPlotFilterQuery(next)) !==
+      JSON.stringify(toPlotFilterQuery(plotFilters));
+    setPlotFilters(next);
+    if (changed && plotScope) setPlotsStatus("loading");
+  }
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    const controller = new AbortController();
+    getSortOptions(controller.signal)
+      .then((options) => {
+        setSortOptions(options);
+        setSortOptionsStatus("ready");
+      })
+      .catch((error: unknown) => {
+        if (isAbortError(error)) return;
+        if (isApiError(error) && error.code === "API_SESSION_EXPIRED") return;
+        logError(error, "Failed to load sort options");
+        setSortOptionsStatus("error");
+      });
+
+    return () => controller.abort();
+  }, [isAuthenticated, sortOptionsReloadKey]);
+
+  function retrySortOptions() {
+    setSortOptionsStatus("loading");
+    setSortOptionsReloadKey((key) => key + 1);
+  }
+
+  // Reloads the open area's plots in the new order (the effect above refetches).
+  function applySort(key: string | null) {
+    if (key === plotSortKey) return;
+    setPlotSortKey(key);
+    if (plotScope) setPlotsStatus("loading");
+  }
+
+  useEffect(() => {
+    if (!isAuthenticated || !detailPlotId) return;
+
+    // Switching plots aborts the previous request, so a late reply never shows the wrong plot.
+    const controller = new AbortController();
+    getPlotDetail(detailPlotId, controller.signal)
+      .then((plot) => setPlotDetail({ id: detailPlotId, status: "ready", plot }))
+      .catch((error: unknown) => {
+        if (isAbortError(error)) return;
+        if (isApiError(error) && error.code === "API_SESSION_EXPIRED") return;
+        const notFound = isApiError(error) && error.status === 404;
+        if (!notFound) logError(error, "Failed to load plot details");
+        setPlotDetail({ id: detailPlotId, status: "error", notFound });
+      });
+
+    return () => controller.abort();
+  }, [isAuthenticated, detailPlotId, plotDetailReloadKey]);
 
   // Fly to a place and show its plots.
   function openPlace(place: SearchResult) {
@@ -396,9 +581,18 @@ export function AuthenticatedExploreMapPage() {
   const showPlotList =
     plotScope !== null && trimmedSearch === plotAreaName && !hasMapError;
 
-  // Select a plot card and zoom the map to it.
-  function focusPlot(plot: ExplorePlot) {
+  // Zoom the map to fit the plot's outline (its centre at a fixed zoom if it has none).
+  function focusPlot(plot: Pick<ExplorePlot, "coordinates" | "geometry">) {
     hasNavigatedRef.current = true;
+    const bounds = polygonBounds(plot);
+    if (bounds) {
+      mapRef.current?.fitBounds(bounds, {
+        padding: plotFocusPadding(),
+        maxZoom: PLOT_FOCUS_MAX_ZOOM,
+        duration: 1200,
+      });
+      return;
+    }
     void mapRef.current?.flyToView({
       center: [plot.coordinates.lng, plot.coordinates.lat],
       zoom: 15,
@@ -409,9 +603,18 @@ export function AuthenticatedExploreMapPage() {
   // Card or map click: select the plot, zoom to it and open its detail.
   function openPlotDetail(plot: ExplorePlot) {
     setSelectedPlotId(plot.id);
-    setDetailPlotId(plot.id);
+    if (plot.id !== detailPlotId) {
+      setPlotDetail({ id: plot.id, status: "loading" });
+      setDetailPlotId(plot.id);
+    }
     setIsSearchExpanded(true);
     focusPlot(plot);
+  }
+
+  function retryPlotDetail() {
+    if (!detailPlotId) return;
+    setPlotDetail({ id: detailPlotId, status: "loading" });
+    setPlotDetailReloadKey((key) => key + 1);
   }
 
   function handleMapPlotClick(plotId: string) {
@@ -419,9 +622,8 @@ export function AuthenticatedExploreMapPage() {
     if (plot) openPlotDetail(plot);
   }
 
-  const detailPlot = detailPlotId
-    ? (plots.find((item) => item.id === detailPlotId) ?? null)
-    : null;
+  // Only the open plot's own result counts (a stale one shows the skeleton).
+  const openDetail = plotDetail?.id === detailPlotId ? plotDetail : null;
   const currentSuggestions =
     suggestionLookup?.query === trimmedSearch && !suggestionLookup.failed
       ? suggestionLookup.suggestions
@@ -484,9 +686,12 @@ export function AuthenticatedExploreMapPage() {
     if (!isAuthenticated) return;
 
     const controller = new AbortController();
-    getRecentSearches(controller.signal)
+    // A reload (after a save, delete or retry) starts again from the first page.
+    getRecentSearches(1, controller.signal)
       .then((items) => {
         setRecentSearches(items);
+        setRecentPage(1);
+        setRecentHasMore(items.length === RECENT_SEARCH_PAGE_SIZE);
         setRecentStatus("ready");
       })
       .catch((error: unknown) => {
@@ -506,7 +711,11 @@ export function AuthenticatedExploreMapPage() {
 
   // Only places the user picked (saved with a `referenceId`). `/explore/search`
   // still auto-saves half-typed text like "phu"; those entries are hidden.
+  // Duplicates stay, as the API sends them.
   const recentPlaces = recentSearches.filter((item) => item.referenceId);
+  // "More": first show the rest of what's loaded; call the API only when it's all shown.
+  const canShowMoreLoaded = !showAllRecent && recentPlaces.length > RECENT_PREVIEW_COUNT;
+  const canLoadMoreRecent = !canShowMoreLoaded && recentHasMore;
   const visibleRecent = showAllRecent
     ? recentPlaces
     : recentPlaces.slice(0, RECENT_PREVIEW_COUNT);
@@ -563,10 +772,31 @@ export function AuthenticatedExploreMapPage() {
     }
   }
 
+  // Loads the next page (10) and adds it below what's shown.
+  async function loadMoreRecent() {
+    const nextPage = recentPage + 1;
+    setIsLoadingMoreRecent(true);
+    try {
+      const items = await getRecentSearches(nextPage);
+      setRecentSearches((current) => [...current, ...items]);
+      setRecentPage(nextPage);
+      setRecentHasMore(items.length === RECENT_SEARCH_PAGE_SIZE);
+      setShowAllRecent(true);
+    } catch (error) {
+      if (isApiError(error) && error.code === "API_SESSION_EXPIRED") return;
+      logError(error, "Failed to load more recent searches");
+      showSearchMessage("Couldn't load more recent searches. Please try again.");
+    } finally {
+      setIsLoadingMoreRecent(false);
+    }
+  }
+
   async function clearAllRecent() {
     if (!window.confirm(t("Clear all searches?"))) return;
     setRecentSearches([]);
     setShowAllRecent(false);
+    setRecentPage(1);
+    setRecentHasMore(false);
     try {
       await clearRecentSearches();
     } catch (error) {
@@ -669,17 +899,32 @@ export function AuthenticatedExploreMapPage() {
         selectedLocation={selectedPlot}
         onStatusChange={setMapStatus}
         showErrorOverlay={false}
+        // Centre the loading card in the map left visible: right of the open
+        // search panel (sm up), or between the search bar and the plot list's
+        // bottom sheet (phones).
+        loadingOverlayClassName={
+          isSearchExpanded
+            ? showPlotList
+              ? "max-sm:pb-[58svh] max-sm:pt-32 sm:pl-[calc(2rem+420px)]"
+              : "sm:pl-[calc(2rem+304px)]"
+            : undefined
+        }
+        loadingLabels={{
+          title: t("Loading Map"),
+          subtitle: t("Preparing Thailand for exploration..."),
+        }}
         plots={mapPlots}
         onPlotClick={handleMapPlotClick}
       />
 
       {hasMapError && !isErrorDismissed ? (
-        // Centred on screen; slides right of the search panel while it is open
-        // (large screens), matching the search box's 300ms width transition.
+        // Centred on screen; from sm up it slides right of the search panel while
+        // that is open, matching the search box's 300ms width transition.
         <div
-          className={`pointer-events-none absolute inset-0 z-30 flex items-center justify-center px-4 transition-[padding] duration-300 ease-out motion-reduce:transition-none ${isSearchExpanded ? "lg:pl-[calc(2rem+304px)]" : ""}`}
+          className={`pointer-events-none absolute inset-0 z-30 flex items-center justify-center px-4 transition-[padding] duration-300 ease-out motion-reduce:transition-none ${isSearchExpanded ? "sm:pl-[calc(2rem+304px+1rem)]" : ""}`}
         >
-          <div className="pointer-events-auto flex w-full justify-center">
+          {/* Container query: the dialog adapts to the room left beside the panel. */}
+          <div className="pointer-events-auto flex w-full justify-center @container">
             <MapErrorDialog
               onContinue={() => setIsErrorDismissed(true)}
               onRetry={retryMap}
@@ -749,7 +994,7 @@ export function AuthenticatedExploreMapPage() {
               // In a plot's detail: back to the area's list. Otherwise clears the
               // text and the area's plots it put on the map.
               onClick={() => {
-                if (detailPlot) {
+                if (detailPlotId) {
                   setDetailPlotId(null);
                   return;
                 }
@@ -757,6 +1002,8 @@ export function AuthenticatedExploreMapPage() {
                 scheduleSearch("");
                 setSearchMessage("");
                 setPlotScope(null);
+                setIsFilterOpen(false);
+                setIsSortOpen(false);
                 setPlots([]);
                 setPlotsStatus("idle");
                 setPlotAreaName("");
@@ -772,7 +1019,8 @@ export function AuthenticatedExploreMapPage() {
             </button>
           ) : null}
         </label>
-        {isSearchExpanded ? (
+        {/* Filter and Sort act on an area's plots, so they show once one is open. */}
+        {isSearchExpanded && plotScope ? (
           <>
             <div className="relative">
               <button
@@ -791,10 +1039,12 @@ export function AuthenticatedExploreMapPage() {
               {isFilterOpen ? (
                 <FilterPlotsPanel
                   value={plotFilters}
+                  options={filterOptions}
+                  status={filterOptionsStatus}
+                  onRetry={retryFilterOptions}
                   totalPlots={exploreFiltersMock.totalPlots}
                   matchingPlots={exploreFiltersMock.matchingPlots}
-                  priceRange={exploreFiltersMock.priceRange}
-                  onApply={setPlotFilters}
+                  onApply={applyFilters}
                   onClose={() => setIsFilterOpen(false)}
                   t={t}
                 />
@@ -816,8 +1066,11 @@ export function AuthenticatedExploreMapPage() {
               </button>
               {isSortOpen ? (
                 <SortPlotsPanel
-                  value={plotSort}
-                  onApply={setPlotSort}
+                  options={sortOptions}
+                  status={sortOptionsStatus}
+                  onRetry={retrySortOptions}
+                  value={plotSortKey}
+                  onApply={applySort}
                   onClose={() => setIsSortOpen(false)}
                   t={t}
                 />
@@ -836,7 +1089,11 @@ export function AuthenticatedExploreMapPage() {
                 // "list of plots" panel (420 wide, radius 24), 16px below the search box and
                 // 16px above the screen bottom; scrolls inside.
                 "fixed inset-x-0 bottom-0 z-30 flex h-[58svh] flex-col overflow-hidden rounded-t-[24px] bg-white shadow-[0_-8px_24px_rgba(0,0,0,0.12)] sm:absolute sm:inset-x-auto sm:bottom-auto sm:left-8 sm:top-[156px] sm:z-10 sm:h-[calc(100svh-172px)] sm:w-[420px] sm:rounded-[24px] sm:shadow-[2px_0_20px_rgba(0,0,0,0.08)]"
-              : `absolute inset-x-4 top-32 z-10 flex max-h-[calc(100svh-12rem)] flex-col sm:inset-x-auto sm:w-[304px] overflow-hidden rounded-[18px] bg-white/95 p-4 shadow-[0_5px_20px_rgba(11,31,77,0.14)] sm:left-8 sm:top-36 ${hasMapError ? "h-[calc(100svh-15rem)]" : ""}`
+              : `absolute inset-x-4 top-32 z-10 flex max-h-[calc(100svh-12rem)] flex-col sm:inset-x-auto sm:w-[304px] overflow-hidden rounded-[18px] bg-white/95 p-4 shadow-[0_5px_20px_rgba(11,31,77,0.14)] sm:left-8 sm:top-36 ${hasMapError ? "h-[calc(100svh-15rem)]" : ""} ${
+                  // Phones: the error dialog would sit on top of this panel, so
+                  // hide it until "Continue" (it then shows "Map unavailable").
+                  hasMapError && !isErrorDismissed ? "max-sm:hidden" : ""
+                }`
           }
         >
           {showPlotList ? (
@@ -850,7 +1107,7 @@ export function AuthenticatedExploreMapPage() {
                 // New key per view, so opening a detail (or going back) starts at the top.
                 key={detailPlotId ?? "plot-list"}
                 // The detail lays out its own padding so its image can sit edge to edge.
-                className={`flex min-h-0 flex-1 flex-col overflow-y-auto ${detailPlot ? "" : "gap-[14px] px-4 pb-6 pt-4 sm:py-6"} ${SLIM_SCROLLBAR}`}
+                className={`flex min-h-0 flex-1 flex-col overflow-y-auto ${detailPlotId ? "" : "gap-[14px] px-4 pb-6 pt-4 sm:py-6"} ${SLIM_SCROLLBAR}`}
                 aria-live="polite"
                 aria-label={t("Plots")}
               >
@@ -859,20 +1116,40 @@ export function AuthenticatedExploreMapPage() {
                     {t(searchMessage)}
                   </p>
                 ) : null}
-                {detailPlot ? (
-                  // TODO: load `GET /explore/plots/{plotId}`; every plot shows the demo for now.
-                  <PlotDetailPanel
-                    detail={plotDetailMock}
-                    onFocusPlot={() => focusPlot(detailPlot)}
-                    t={t}
-                  />
+                {detailPlotId ? (
+                  openDetail?.status === "ready" ? (
+                    <PlotDetailPanel
+                      plot={openDetail.plot}
+                      onFocusPlot={() => focusPlot(openDetail.plot)}
+                      t={t}
+                    />
+                  ) : openDetail?.status === "error" ? (
+                    <PlotDetailError
+                      notFound={openDetail.notFound}
+                      onRetry={retryPlotDetail}
+                      onBack={() => setDetailPlotId(null)}
+                      t={t}
+                    />
+                  ) : (
+                    <PlotDetailSkeleton t={t} />
+                  )
                 ) : plotsStatus === "loading" ? (
-                  <p className="px-2 py-8 text-center text-[11px] text-[#8d97a3]">
-                    {t("Loading plots...")}
-                  </p>
+                  <div
+                    role="status"
+                    aria-label={t("Loading plots...")}
+                    className="flex flex-col gap-[14px]"
+                  >
+                    {Array.from({ length: PLOT_SKELETON_COUNT }, (_, index) => (
+                      <PlotCardSkeleton key={index} />
+                    ))}
+                  </div>
                 ) : plotsStatus === "ready" && !plots.length ? (
                   <p className="px-2 py-8 text-center text-[11px] text-[#8d97a3]">
-                    {t("No plots in this area yet.")}
+                    {t(
+                      hasActiveFilters
+                        ? "No plots match these filters."
+                        : "No plots in this area yet.",
+                    )}
                   </p>
                 ) : (
                   plots.map((plot) => (
@@ -960,13 +1237,24 @@ export function AuthenticatedExploreMapPage() {
               </div>
               {!isSearching && !currentResults && recentPlaces.length ? (
                 <div className="-mx-4 mt-3 flex h-[30px] shrink-0 items-center justify-between gap-3 rounded-[6px] px-5 py-[5px] text-[14px] leading-5">
-                  {recentPlaces.length > RECENT_PREVIEW_COUNT ? (
+                  {canShowMoreLoaded || canLoadMoreRecent ? (
                     <button
                       type="button"
-                      onClick={() => setShowAllRecent((show) => !show)}
+                      disabled={isLoadingMoreRecent}
+                      onClick={() =>
+                        canShowMoreLoaded ? setShowAllRecent(true) : void loadMoreRecent()
+                      }
+                      className="cursor-pointer truncate text-[#001f54] hover:underline disabled:cursor-wait disabled:opacity-60"
+                    >
+                      {t(isLoadingMoreRecent ? "Loading..." : "More from recent history")}
+                    </button>
+                  ) : showAllRecent && recentPlaces.length > RECENT_PREVIEW_COUNT ? (
+                    <button
+                      type="button"
+                      onClick={() => setShowAllRecent(false)}
                       className="cursor-pointer truncate text-[#001f54] hover:underline"
                     >
-                      {t(showAllRecent ? "Show less" : "More from recent history")}
+                      {t("Show less")}
                     </button>
                   ) : (
                     <p className="truncate text-[#001f54]">

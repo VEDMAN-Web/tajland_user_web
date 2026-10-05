@@ -248,6 +248,10 @@ type MapboxMapProps = {
   onStatusChange?: (status: MapboxMapStatus) => void;
   /** Set false when the page renders its own error UI. */
   showErrorOverlay?: boolean;
+  /** Extra classes for the loading overlay, e.g. padding so its card centres beside a side panel. */
+  loadingOverlayClassName?: string;
+  /** Loading card text (pass translated strings). */
+  loadingLabels?: { title: string; subtitle: string };
   initialCenter?: [number, number];
   initialZoom?: number;
   /** "globe" shows the Earth as a sphere when zoomed out (blends to flat when zoomed in). */
@@ -274,6 +278,11 @@ export const MapboxMap = forwardRef<MapboxMapHandle, MapboxMapProps>(function Ma
     selectedLocation,
     onStatusChange,
     showErrorOverlay = true,
+    loadingOverlayClassName,
+    loadingLabels = {
+      title: "Loading Map",
+      subtitle: "Preparing Thailand for exploration...",
+    },
     plots,
     onPlotClick,
   },
@@ -502,7 +511,8 @@ export const MapboxMap = forwardRef<MapboxMapHandle, MapboxMapProps>(function Ma
         mapRef.current?.fitBounds(toMapboxBounds(bounds), {
           padding: options?.padding ?? 40,
           duration: options?.duration ?? 0,
-          maxZoom: options?.maxZoom,
+          // An explicit `maxZoom: undefined` overrides Mapbox's default and the fit fails (NaN zoom).
+          ...(options?.maxZoom !== undefined && { maxZoom: options.maxZoom }),
         });
       },
       locate: () => {
@@ -528,16 +538,17 @@ export const MapboxMap = forwardRef<MapboxMapHandle, MapboxMapProps>(function Ma
         className={cn(
           "pointer-events-none absolute inset-0 z-10 flex items-center justify-center bg-[#effbfd]/75 transition-opacity duration-300",
           status === "loading" ? "opacity-100" : "opacity-0",
+          loadingOverlayClassName,
         )}
         aria-hidden={status !== "loading"}
       >
         <div className="flex h-[116px] w-[220px] flex-col items-center justify-center rounded-[14px] bg-white shadow-[0_8px_24px_rgba(11,31,77,0.08)]">
           <span className="h-7 w-7 animate-spin rounded-full border-[4px] border-[#151515]/20 border-t-[#151515]" />
           <strong className="mt-2 text-[14px] font-bold text-[#151515]">
-            Loading Map
+            {loadingLabels.title}
           </strong>
           <span className="mt-1 text-[11px] text-[#737373]">
-            Preparing Thailand for exploration...
+            {loadingLabels.subtitle}
           </span>
         </div>
       </div>

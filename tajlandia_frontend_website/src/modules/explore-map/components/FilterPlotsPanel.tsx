@@ -4,13 +4,13 @@ import { useId, useState, type ReactNode } from "react";
 import { cn } from "@/lib/utils/cn";
 import {
   DEFAULT_PLOT_FILTERS,
+  isInvalidRange,
   SQUARE_METRES_PER_RAI,
-  ZONE_CATEGORY_OPTIONS,
 } from "../constants/explore-filters";
 import type {
+  FilterOptions,
   PlotFilters,
   Translate,
-  ZoneCategory,
 } from "../types/explore-filters.types";
 import {
   PanelPrimaryButton,
@@ -20,15 +20,39 @@ import {
 
 type FilterPlotsPanelProps = {
   value: PlotFilters;
+  /** From `GET /explore/filters`; null while loading or after an error. */
+  options: FilterOptions | null;
+  status: "loading" | "ready" | "error";
+  onRetry: () => void;
+  // Figma placeholders until the API sends counts.
   totalPlots: number;
   matchingPlots: number;
-  priceRange: { min: number; max: number };
   onApply: (value: PlotFilters) => void;
   onClose: () => void;
   t: Translate;
 };
 
 const numberFormat = new Intl.NumberFormat("en-US");
+const bone = "animate-pulse rounded-[8px] bg-[#eef1f5] motion-reduce:animate-none";
+
+const titleCase = (value: string) => value.charAt(0) + value.slice(1).toLowerCase();
+
+/** Checkbox labels: the tier ("Icon"), or the zone name if two zones share a tier. */
+function zoneLabels(zoneTypes: FilterOptions["zoneTypes"]) {
+  return zoneTypes.map((zone) => {
+    const shared = zoneTypes.filter((other) => other.tier === zone.tier).length > 1;
+    return { id: zone.id, label: shared ? zone.name : titleCase(zone.tier) };
+  });
+}
+
+function RangeError({ show, t }: { show: boolean; t: Translate }) {
+  if (!show) return null;
+  return (
+    <p role="alert" className="mt-1.5 text-[11px] text-[#d64242]">
+      {t("Min can't be more than Max.")}
+    </p>
+  );
+}
 
 function FilterIcon() {
   return (
@@ -169,20 +193,26 @@ function NumberField({
 
 export function FilterPlotsPanel({
   value,
+  options,
+  status,
+  onRetry,
   totalPlots,
   matchingPlots,
-  priceRange,
   onApply,
   onClose,
   t,
 }: FilterPlotsPanelProps) {
   const [draft, setDraft] = useState(value);
+  const raiInvalid = isInvalidRange(draft.minRai, draft.maxRai);
+  const priceInvalid = isInvalidRange(draft.minPrice, draft.maxPrice);
+  const raiRange = options?.raiRange;
+  const priceRange = options?.priceRange;
 
   function update<K extends keyof PlotFilters>(key: K, next: PlotFilters[K]) {
     setDraft((current) => ({ ...current, [key]: next }));
   }
 
-  function toggleZone(zone: ZoneCategory, checked: boolean) {
+  function toggleZone(zone: string, checked: boolean) {
     setDraft((current) => ({
       ...current,
       zones: checked
@@ -210,6 +240,7 @@ export function FilterPlotsPanel({
               {numberFormat.format(matchingPlots)} {t("plots found")}
             </span>
             <PanelPrimaryButton
+              disabled={raiInvalid || priceInvalid}
               onClick={() => {
                 onApply(draft);
                 onClose();
@@ -246,15 +277,36 @@ export function FilterPlotsPanel({
                 if (checked) update("zones", []);
               }}
             />
-            {ZONE_CATEGORY_OPTIONS.map((zone) => (
-              <CheckboxCard
-                key={zone.value}
-                label={t(zone.label)}
-                checked={draft.zones.includes(zone.value)}
-                onChange={(checked) => toggleZone(zone.value, checked)}
-              />
-            ))}
+            {options
+              ? zoneLabels(options.zoneTypes).map((zone) => (
+                  <CheckboxCard
+                    key={zone.id}
+                    label={t(zone.label)}
+                    checked={draft.zones.includes(zone.id)}
+                    onChange={(checked) => toggleZone(zone.id, checked)}
+                  />
+                ))
+              : status === "loading"
+                ? Array.from({ length: 3 }, (_, index) => (
+                    <span key={index} aria-hidden="true" className={cn(bone, "h-8")} />
+                  ))
+                : null}
           </div>
+          {status === "error" ? (
+            <p
+              role="alert"
+              className="mt-2 flex items-center gap-2 text-[11px] text-[#6b7785]"
+            >
+              {t("Couldn't load zone types.")}
+              <button
+                type="button"
+                onClick={onRetry}
+                className="cursor-pointer font-semibold text-[#001f54] underline"
+              >
+                {t("Try Again")}
+              </button>
+            </p>
+          ) : null}
         </Section>
 
         <Section
@@ -266,41 +318,47 @@ export function FilterPlotsPanel({
             <NumberField
               label={t("Minimum rai")}
               value={draft.minRai}
-              placeholder={t("Min")}
+              placeholder={raiRange ? String(raiRange.min) : t("Min")}
               suffix={t("Rai")}
               onChange={(next) => update("minRai", next)}
             />
             <NumberField
               label={t("Maximum rai")}
               value={draft.maxRai}
-              placeholder={t("Max")}
+              placeholder={raiRange ? String(raiRange.max) : t("Max")}
               suffix={t("Rai")}
               onChange={(next) => update("maxRai", next)}
             />
           </div>
+          <RangeError show={raiInvalid} t={t} />
         </Section>
 
         <Section
           title={t("Price Range (USD)")}
-          note={`$${numberFormat.format(priceRange.min)} – $${numberFormat.format(priceRange.max)}`}
+          note={
+            priceRange
+              ? `$${numberFormat.format(priceRange.min)} – $${numberFormat.format(priceRange.max)}`
+              : undefined
+          }
           divider
         >
           <div className="grid grid-cols-2 gap-2.5">
             <NumberField
               label={t("Minimum price")}
               value={draft.minPrice}
-              placeholder={t("Min")}
+              placeholder={priceRange ? String(priceRange.min) : t("Min")}
               prefix="$"
               onChange={(next) => update("minPrice", next)}
             />
             <NumberField
               label={t("Maximum price")}
               value={draft.maxPrice}
-              placeholder={t("Max")}
+              placeholder={priceRange ? String(priceRange.max) : t("Max")}
               prefix="$"
               onChange={(next) => update("maxPrice", next)}
             />
           </div>
+          <RangeError show={priceInvalid} t={t} />
         </Section>
       </div>
     </PlotOptionsPanel>

@@ -80,7 +80,9 @@ export function DashboardNavbar({ active, overlay = false }: DashboardNavbarProp
   const isProfileActive = accountMenuRoutes.some((route) => pathname === route);
   const isHomeActive = active === "home" && pathname === routes.dashboard;
   const activeClass = "bg-navy text-white";
-  const navClass = overlay ? "absolute inset-x-0 top-0 z-20" : "sticky top-0 z-50";
+  // Overlay (Explore Map): above the map's search bar (z-20) and panels (z-30), so
+  // the mobile menu and account dropdown open on top of them.
+  const navClass = overlay ? "absolute inset-x-0 top-0 z-40" : "sticky top-0 z-50";
 
   return (
     <header
