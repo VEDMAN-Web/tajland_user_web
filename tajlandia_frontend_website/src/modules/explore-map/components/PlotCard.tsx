@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+import { routes } from "@/lib/constants/routes";
 import { cn } from "@/lib/utils/cn";
 import { plotCardStatus, type PlotCardStatus } from "../constants/plot-status";
 import type { Translate } from "../types/explore-filters.types";
@@ -10,11 +12,15 @@ type PlotCardProps = {
   plot: ExplorePlot;
   selected: boolean;
   onSelect: (plot: ExplorePlot) => void;
+  /** True while this plot's Add to Cart request runs. */
+  isAddingToCart: boolean;
+  onAddToCart: (plot: ExplorePlot) => void;
   t: Translate;
 };
 
 const STATUS_BADGE: Record<PlotCardStatus, { label: string; className: string }> = {
   available: { label: "Available", className: "border-[#bbf0d0] text-[#18a957]" },
+  inCart: { label: "In Cart", className: "border-[#c9d3e6] text-[#001f54]" },
   locked: { label: "Locked", className: "border-[#f6df9c] text-[#c8941a]" },
   taken: { label: "Taken", className: "border-[#f6c4c4] text-[#d64242]" },
   owned: { label: "Your plot", className: "border-[#c9d3e6] text-[#001f54]" },
@@ -79,8 +85,15 @@ function GiftIcon() {
 }
 
 /** Plot in the area list (Figma "list of plots" card). Actions aren't wired up yet. */
-export function PlotCard({ plot, selected, onSelect, t }: PlotCardProps) {
-  const status = plotCardStatus(plot.status, plot.isOwned);
+export function PlotCard({
+  plot,
+  selected,
+  onSelect,
+  isAddingToCart,
+  onAddToCart,
+  t,
+}: PlotCardProps) {
+  const status = plotCardStatus(plot.status, plot.isOwned, plot.isInCart);
   const badge = STATUS_BADGE[status];
   const tier = plot.zone?.tier;
 
@@ -181,18 +194,30 @@ export function PlotCard({ plot, selected, onSelect, t }: PlotCardProps) {
           </span>
         </div>
 
-        {/* TODO: wire to the cart / reservation and deed APIs. */}
+        {/* TODO: wire "View Deed" to the deed API. */}
         {status === "available" ? (
           <button
             type="button"
+            disabled={isAddingToCart}
+            onClick={() => onAddToCart(plot)}
             className={cn(
               actionClass,
-              "cursor-pointer bg-[#001f54] text-white hover:bg-[#0b2d6b]",
+              "cursor-pointer bg-[#001f54] text-white hover:bg-[#0b2d6b] disabled:cursor-wait disabled:opacity-70",
             )}
           >
             <CartIcon />
-            {t("Add to Cart")}
+            {t(isAddingToCart ? "Adding..." : "Add to Cart")}
           </button>
+        ) : status === "inCart" ? (
+          <Link
+            href={routes.cart}
+            className={cn(
+              actionClass,
+              "cursor-pointer bg-[#eef2f7] text-[#001f54] hover:bg-[#e2e8f1]",
+            )}
+          >
+            {t("View Cart")}
+          </Link>
         ) : status === "owned" ? (
           <button
             type="button"
