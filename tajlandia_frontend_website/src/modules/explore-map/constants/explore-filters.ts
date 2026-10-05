@@ -1,51 +1,20 @@
 import type {
+  PlotFilterQuery,
   PlotFilters,
-  PlotSortOption,
-  ZoneCategory,
+  PlotSortQuery,
 } from "../types/explore-filters.types";
 
-export const DEFAULT_PLOT_SORT: PlotSortOption = "recommended";
-
-export const PLOT_SORT_OPTIONS: ReadonlyArray<{
-  value: PlotSortOption;
-  label: string;
-  description?: string;
-  hint?: string;
-  /** Translated and appended to `hint`. */
-  hintUnit?: string;
-  badge?: "default" | "recent";
-}> = [
-  {
-    value: "recommended",
-    label: "Recommended",
-    description: "Curated by premier parcel score",
-    badge: "default",
-  },
-  { value: "price-asc", label: "Price: Low to High", hint: "$ → $$$" },
-  { value: "price-desc", label: "Price: High to Low", hint: "$$$ → $" },
-  {
-    value: "area-asc",
-    label: "Land Area: Small to Large",
-    hint: "1 → 50",
-    hintUnit: "Rai",
-  },
-  {
-    value: "area-desc",
-    label: "Land Area: Large to Small",
-    hint: "50 → 1",
-    hintUnit: "Rai",
-  },
-  { value: "newest", label: "Newest Added", badge: "recent" },
-];
-
-export const ZONE_CATEGORY_OPTIONS: ReadonlyArray<{
-  value: ZoneCategory;
-  label: string;
-}> = [
-  { value: "ICON", label: "Icon" },
-  { value: "POPULAR", label: "Popular" },
-  { value: "STANDARD", label: "Standard" },
-];
+// `/explore/sort-options` sends no sort field or order (and repeats `id`), so
+// each option's `name` is mapped to the plots API params here. Options not
+// listed are hidden, since we can't sort by them. Ask the backend to send
+// `sortBy` / `sortOrder` per option and this table can go.
+export const SORT_QUERY_BY_NAME: Readonly<Record<string, PlotSortQuery>> = {
+  "Price: Low to High": { sortBy: "totalPrice", sortOrder: "asc" },
+  "Price: High to Low": { sortBy: "totalPrice", sortOrder: "desc" },
+  "Land Area: Small to Large": { sortBy: "sizeRai", sortOrder: "asc" },
+  "Land Area: Large to Small": { sortBy: "sizeRai", sortOrder: "desc" },
+  "Newest Added": { sortBy: "createdAt", sortOrder: "desc" },
+};
 
 export const DEFAULT_PLOT_FILTERS: PlotFilters = {
   myPlots: false,
@@ -58,3 +27,27 @@ export const DEFAULT_PLOT_FILTERS: PlotFilters = {
 };
 
 export const SQUARE_METRES_PER_RAI = 1_600;
+
+/** A typed min/max as a number, or undefined when empty or just ".". */
+export function parseFilterNumber(value: string): number | undefined {
+  const number = Number.parseFloat(value);
+  return Number.isFinite(number) ? number : undefined;
+}
+
+/** Both ends set and min above max. */
+export function isInvalidRange(min: string, max: string) {
+  const low = parseFilterNumber(min);
+  const high = parseFilterNumber(max);
+  return low !== undefined && high !== undefined && low > high;
+}
+
+/** Applied filters as `/explore/plots` params ("My Plots" / "Gifted" aren't sent yet). */
+export function toPlotFilterQuery(filters: PlotFilters): PlotFilterQuery {
+  return {
+    zoneId: filters.zones.length ? JSON.stringify(filters.zones) : undefined,
+    minRai: parseFilterNumber(filters.minRai),
+    maxRai: parseFilterNumber(filters.maxRai),
+    minPrice: parseFilterNumber(filters.minPrice),
+    maxPrice: parseFilterNumber(filters.maxPrice),
+  };
+}

@@ -118,15 +118,18 @@ export function PanelTextButton({
 export function PanelPrimaryButton({
   children,
   onClick,
+  disabled = false,
 }: {
   children: ReactNode;
   onClick: () => void;
+  disabled?: boolean;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className="cursor-pointer h-8 shrink-0 rounded-[8px] bg-[#001f54] px-5 text-[13px] font-semibold text-white shadow-[0_1px_2px_rgba(0,0,0,0.05)] hover:bg-[#0b2d6b]"
+      disabled={disabled}
+      className="cursor-pointer h-8 shrink-0 rounded-[8px] bg-[#001f54] px-5 text-[13px] font-semibold text-white shadow-[0_1px_2px_rgba(0,0,0,0.05)] hover:bg-[#0b2d6b] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-[#001f54]"
     >
       {children}
     </button>

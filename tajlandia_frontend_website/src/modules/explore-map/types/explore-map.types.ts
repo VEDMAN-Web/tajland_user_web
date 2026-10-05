@@ -4,4 +4,4 @@ export type {
   SearchResult,
   SearchSuggestion,
 } from "../schemas/explore-search.schema";
-export type { ExplorePlot } from "../schemas/explore-plots.schema";
+export type { ExplorePlot, ExplorePlotDetail } from "../schemas/explore-plots.schema";

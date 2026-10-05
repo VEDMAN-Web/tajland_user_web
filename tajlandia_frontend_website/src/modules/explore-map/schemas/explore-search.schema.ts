@@ -49,8 +49,9 @@ const recentSearchSchema = z.object({
   name: z.string().min(1).optional(),
   imageUrl: z.string().nullish(),
   location: locationSchema.optional(),
-  zone: z.number().int().nonnegative().optional(),
-  plots: z.number().int().nonnegative().optional(),
+  // Null on typed-text (LOCATION) entries.
+  zone: z.number().int().nonnegative().nullish(),
+  plots: z.number().int().nonnegative().nullish(),
 });
 
 /** `GET /explore/recent-searches` `data` (newest first). */

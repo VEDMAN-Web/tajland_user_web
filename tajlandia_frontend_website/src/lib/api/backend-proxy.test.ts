@@ -82,6 +82,25 @@ describe("proxyToBackend", () => {
     expect(fetchImpl).not.toHaveBeenCalled();
   });
 
+  it("allows the user dashboard but not the admin dashboard", async () => {
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValue(jsonResponse({ success: true, data: {} }));
+
+    const user = await proxyToBackend(makeRequest("/api/backend/dashboard"), ["dashboard"], {
+      fetchImpl,
+    });
+    const admin = await proxyToBackend(
+      makeRequest("/api/backend/dashboard/admin/overview"),
+      ["dashboard", "admin", "overview"],
+      { fetchImpl },
+    );
+
+    expect(user.status).toBe(200);
+    expect(admin.status).toBe(404);
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+  });
+
   it("rejects traversal and unsafe segments", async () => {
     const fetchImpl = vi.fn();
 

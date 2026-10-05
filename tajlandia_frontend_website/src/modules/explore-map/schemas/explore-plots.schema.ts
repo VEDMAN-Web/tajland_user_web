@@ -40,3 +40,28 @@ export const explorePlotsPageSchema = z.object({
 });
 
 export type ExplorePlot = z.infer<typeof explorePlotSchema>;
+
+const placeRefSchema = z.object({ id: z.string(), name: z.string(), slug: z.string() });
+
+// Real `GET /explore/plots/{plotId}` `data`. Swagger only lists the topics
+// (no schema), so this follows the actual response.
+export const explorePlotDetailSchema = explorePlotSchema.extend({
+  name: z.string().min(1),
+  region: placeRefSchema,
+  // The plot's city.
+  location: placeRefSchema.nullish(),
+  zone: placeRefSchema.extend({ tier: z.string() }).nullish(),
+  description: z.string().nullish(),
+  // The API sends square feet, not square metres.
+  sizeSquareFeet: z.number().nullish(),
+  purchase: z
+    .object({
+      available: z.boolean(),
+      minimumRequired: z.boolean(),
+      reason: z.string(),
+    })
+    .partial()
+    .nullish(),
+});
+
+export type ExplorePlotDetail = z.infer<typeof explorePlotDetailSchema>;

@@ -5,11 +5,50 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/Button";
+import { isAbortError } from "@/lib/api/browser-client";
+import { isApiError } from "@/lib/api/errors";
+import { isAllowedRemoteImage } from "@/lib/config/remote-images";
 import { routes } from "@/lib/constants/routes";
+import { logError } from "@/lib/logging/logger";
 import { ScrollAnimatedElement } from "@/components/animations/ScrollAnimatedElement";
 import { useAuth } from "@/lib/hooks/useAuth";
 import { DashboardNavbar } from "./DashboardNavbar";
 import { useDashboardLanguage } from "./DashboardLanguageContext";
+import type { DashboardData, FeaturedRegion } from "./schemas/dashboard.schema";
+import { getDashboard } from "./services/dashboard.client";
+
+const PLACEHOLDER_IMAGE = "/images/explore/place-placeholder.svg";
+const numberFormat = new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 });
+const bone = "animate-pulse rounded-[8px] bg-[#eef1f5] motion-reduce:animate-none";
+
+/** "$" and "48,500" apart, so the symbol can be drawn smaller (Figma). */
+function splitMoney(amount: number, currency: string) {
+  try {
+    const parts = new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency,
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2,
+    }).formatToParts(amount);
+    return {
+      symbol: parts.filter((part) => part.type === "currency").map((part) => part.value).join(""),
+      value: parts
+        .filter((part) => part.type !== "currency")
+        .map((part) => part.value)
+        .join("")
+        .trim(),
+    };
+  } catch {
+    // Unknown currency code from the API: show the code instead of a symbol.
+    return { symbol: `${currency} `, value: numberFormat.format(amount) };
+  }
+}
+
+/** Explore Map link that opens the region's plots. */
+function regionExploreHref(region: FeaturedRegion) {
+  const query = new URLSearchParams({ regionId: region.id, region: region.name });
+  return `${routes.dashboardExplore}?${query.toString()}`;
+}
 
 function LoadingSpinner() {
   return (
@@ -23,15 +62,51 @@ export function DashboardPage() {
   const router = useRouter();
   const { isAuthenticated, user, isLoading } = useAuth();
   const { t } = useDashboardLanguage();
+  // `GET /dashboard`; `reloadKey` refetches after an error.
+  const [dashboard, setDashboard] = useState<
+    { status: "loading" } | { status: "ready"; data: DashboardData } | { status: "error" }
+  >({ status: "loading" });
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) router.replace(routes.login);
   }, [isAuthenticated, isLoading, router]);
 
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    const controller = new AbortController();
+    getDashboard(controller.signal)
+      .then((data) => setDashboard({ status: "ready", data }))
+      .catch((error: unknown) => {
+        // A cancelled request is not an error, and 401 already redirects to login.
+        if (isAbortError(error)) return;
+        if (isApiError(error) && error.code === "API_SESSION_EXPIRED") return;
+        logError(error, "Failed to load dashboard");
+        setDashboard({ status: "error" });
+      });
+
+    return () => controller.abort();
+  }, [isAuthenticated, reloadKey]);
+
   if (!isLoading && !isAuthenticated) return null;
   if (isLoading) return <LoadingSpinner />;
 
-  const firstName = user?.name?.trim().split(/\s+/)[0] || "User";
+  const data = dashboard.status === "ready" ? dashboard.data : null;
+  // The signed-in name shows until the dashboard answers.
+  const firstName = (data?.user.name ?? user?.name)?.trim().split(/\s+/)[0] || "User";
+  const collection = data?.collection;
+  const spent = collection ? splitMoney(collection.totalSpent, collection.currency) : null;
+  const regions = data
+    ? [...data.featuredRegions].sort(
+        (a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0),
+      )
+    : [];
+
+  function retry() {
+    setDashboard({ status: "loading" });
+    setReloadKey((key) => key + 1);
+  }
 
   return (
     <div className="min-h-[100svh] bg-[#f7f9fc] text-navy">
@@ -73,37 +148,67 @@ export function DashboardPage() {
               {t("All holdings verified across Thailand")}
             </p>
           </div>
-          <div className="mt-4 grid grid-cols-1 gap-3 min-[520px]:grid-cols-2 xl:grid-cols-4">
-            <Stat
-              icon="/images/dashboard/cards/ic_land.svg"
-              background="/images/dashboard/stat-land-bg.png"
-              value="8000"
-              suffix="sq ft"
-              label={t("Total Land (5 Rai)")}
-            />
-            <Stat
-              icon="/images/dashboard/cards/ic_plot.svg"
-              background="/images/dashboard/stat-plots-bg.png"
-              value="12"
-              label={t("Plots Claimed")}
-            />
-            <Stat
-              icon="/images/dashboard/cards/ic_region.svg"
-              background="/images/dashboard/regions-bg.png"
-              value="05"
-              label={t("Regions")}
-            />
-            <Stat
-              icon="/images/dashboard/cards/ic_total-spent.svg"
-              background="/images/dashboard/stat-spent-bg.png"
-              value="48,500"
-              prefix="$"
-              label={t("Total Spent")}
-            />
-          </div>
+          {dashboard.status === "error" ? (
+            <div
+              role="alert"
+              className="mt-4 flex flex-col items-center gap-3 rounded-[16px] border border-[#e7edf3] bg-white px-4 py-10 text-center"
+            >
+              <p className="font-manrope text-[14px] text-[#8b939e]">
+                {t("Couldn't load your dashboard.")}
+              </p>
+              <button
+                type="button"
+                onClick={retry}
+                className="font-manrope h-9 cursor-pointer rounded-[8px] border border-navy px-4 text-[13px] font-semibold text-navy hover:bg-[#f5f7fa]"
+              >
+                {t("Try Again")}
+              </button>
+            </div>
+          ) : (
+            <div
+              className="mt-4 grid grid-cols-1 gap-3 min-[520px]:grid-cols-2 xl:grid-cols-4"
+              aria-busy={!collection}
+            >
+              {collection && spent ? (
+                <>
+                  <Stat
+                    icon="/images/dashboard/cards/ic_land.svg"
+                    background="/images/dashboard/stat-land-bg.png"
+                    value={numberFormat.format(Math.round(collection.totalLandSqFt))}
+                    suffix="sq ft"
+                    label={`${t("Total Land")} (${numberFormat.format(collection.totalLandRai)} ${t("Rai")})`}
+                  />
+                  <Stat
+                    icon="/images/dashboard/cards/ic_plot.svg"
+                    background="/images/dashboard/stat-plots-bg.png"
+                    value={numberFormat.format(collection.plotsClaimed)}
+                    label={t("Plots Claimed")}
+                  />
+                  <Stat
+                    icon="/images/dashboard/cards/ic_region.svg"
+                    background="/images/dashboard/regions-bg.png"
+                    // Two digits, as in Figma ("05").
+                    value={String(collection.regionsCount).padStart(2, "0")}
+                    label={t("Regions")}
+                  />
+                  <Stat
+                    icon="/images/dashboard/cards/ic_total-spent.svg"
+                    background="/images/dashboard/stat-spent-bg.png"
+                    value={spent.value}
+                    prefix={spent.symbol}
+                    label={t("Total Spent")}
+                  />
+                </>
+              ) : (
+                Array.from({ length: 4 }, (_, index) => <StatSkeleton key={index} />)
+              )}
+            </div>
+          )}
         </ScrollAnimatedElement>
 
         <section className="mt-5">
+          {/* Hidden only when the API turns gifting off. */}
+          {data?.gift?.enabled === false ? null : (
           <div className="relative overflow-hidden rounded-[22px] border border-[#f3c3c3] bg-[#fff8f8] px-5 py-6 sm:px-8 sm:py-7 lg:px-10">
             <Image
               src="/images/dashboard/gift-ribbon.png"
@@ -140,15 +245,30 @@ export function DashboardPage() {
             </div>
           </div>
 
-          <div className="mt-8">
-            <p className="font-manrope text-[11px] font-bold uppercase tracking-[0.16em] text-brand-red">
-              {t("Your Land Archive")}
-            </p>
-            <h2 className="font-manrope mt-1.5 text-[22px] font-semibold tracking-[-0.02em] text-navy sm:text-[24px]">
-              {t("Explore Thailand")}
-            </h2>
-          </div>
-          <ExploreCarousel />
+          )}
+
+          {/* Featured regions; the section hides when there are none (or on error). */}
+          {dashboard.status === "loading" || regions.length ? (
+            <>
+              <div className="mt-8">
+                <p className="font-manrope text-[11px] font-bold uppercase tracking-[0.16em] text-brand-red">
+                  {t("Your Land Archive")}
+                </p>
+                <h2 className="font-manrope mt-1.5 text-[22px] font-semibold tracking-[-0.02em] text-navy sm:text-[24px]">
+                  {t("Explore Thailand")}
+                </h2>
+              </div>
+              {regions.length ? (
+                <ExploreCarousel regions={regions} />
+              ) : (
+                <div className="mt-4 flex gap-4 overflow-hidden pb-2" aria-busy="true">
+                  {Array.from({ length: 3 }, (_, index) => (
+                    <ExploreCardSkeleton key={index} />
+                  ))}
+                </div>
+              )}
+            </>
+          ) : null}
         </section>
       </main>
     </div>
@@ -192,41 +312,82 @@ function Stat({
   );
 }
 
-function ExploreCard({
-  image,
-  badge,
-  name,
-  description,
-  locations,
-}: {
-  image: string;
-  badge: string;
-  name: string;
-  description: string;
-  locations: string;
-}) {
+function StatSkeleton() {
+  return (
+    <div
+      aria-hidden="true"
+      className="h-[132px] rounded-[16px] border border-[#e7edf3] bg-white px-4 py-4 shadow-[0_8px_24px_rgba(11,31,77,0.05)]"
+    >
+      <span className={`${bone} block h-[38px] w-[38px] rounded-full`} />
+      <span className={`${bone} mt-3 block h-[26px] w-24`} />
+      <span className={`${bone} mt-2 block h-3.5 w-28`} />
+    </div>
+  );
+}
+
+const cardSize =
+  "min-w-0 snap-start flex-[0_0_86%] rounded-[18px] border border-[#eef1f4] bg-white p-3 shadow-[0_10px_28px_rgba(11,31,77,0.06)] sm:flex-[0_0_48%] lg:flex-[0_0_calc((100%-2rem)/3)]";
+
+function ExploreCardSkeleton() {
+  return (
+    <div aria-hidden="true" className={cardSize}>
+      <span className={`${bone} block aspect-[1.55] w-full rounded-[14px]`} />
+      <span className={`${bone} mx-1.5 mt-3 block h-5 w-1/3`} />
+      <span className={`${bone} mx-1.5 mt-2 block h-3.5 w-3/4`} />
+      <span className={`${bone} mx-1.5 mt-5 block h-3.5 w-1/2`} />
+    </div>
+  );
+}
+
+/** Region image; the local placeholder when missing, from a host we don't allow, or broken. */
+function RegionImage({ src, alt }: { src: string | null | undefined; alt: string }) {
+  const [failedSrc, setFailedSrc] = useState<string | null>(null);
+  const usable = isAllowedRemoteImage(src) && failedSrc !== src;
+
+  return (
+    <Image
+      src={usable ? src : PLACEHOLDER_IMAGE}
+      alt={alt}
+      width={360}
+      height={220}
+      unoptimized={!usable}
+      onError={() => {
+        if (usable) setFailedSrc(src);
+      }}
+      className="aspect-[1.55] w-full rounded-[14px] object-cover"
+    />
+  );
+}
+
+function ExploreCard({ region }: { region: FeaturedRegion }) {
   const { t } = useDashboardLanguage();
   return (
-    <article className="min-w-0 snap-start flex-[0_0_86%] rounded-[18px] border border-[#eef1f4] bg-white p-3 shadow-[0_10px_28px_rgba(11,31,77,0.06)] sm:flex-[0_0_48%] lg:flex-[0_0_calc((100%-2rem)/3)]">
+    <article className={cardSize}>
       <div className="relative">
-        <Image
-          src={image}
-          alt={name}
-          width={360}
-          height={220}
-          className="aspect-[1.55] w-full rounded-[14px] object-cover"
-        />
-        <span className={`absolute left-3 top-3 rounded-full px-2 py-0.5 font-manrope text-[10px] font-semibold uppercase tracking-[0.06em] ${badge === "POPULAR" ? "bg-[#f6d56a] text-[#6b5310]" : "bg-white/92 text-[#5c6570]"}`}>
-          {t(badge)}
-        </span>
+        <RegionImage src={region.imageUrl} alt={region.name} />
+        {/* Shown as the API sends it, one style for every badge. */}
+        {region.badge ? (
+          <span className="absolute left-3 top-3 rounded-full bg-white/92 px-2 py-0.5 font-manrope text-[10px] font-semibold uppercase tracking-[0.06em] text-[#5c6570]">
+            {t(region.badge)}
+          </span>
+        ) : null}
       </div>
       <div className="px-1.5 pt-3">
-        <h3 className="font-manrope text-[18px] font-semibold leading-6 text-navy">{name}</h3>
-        <p className="font-manrope mt-1 text-[13px] leading-5 text-[#8b939e]">{t(description)}</p>
+        <h3 className="font-manrope text-[18px] font-semibold leading-6 text-navy">{region.name}</h3>
+        {region.description ? (
+          <p className="font-manrope mt-1 text-[13px] leading-5 text-[#8b939e]">
+            {t(region.description)}
+          </p>
+        ) : null}
       </div>
       <div className="font-manrope mt-3 flex items-center justify-between border-t border-[#eef1f4] px-1.5 pt-3 text-[12px]">
-        <span className="text-[#8b939e]">{t(locations)}</span>
-        <Link href="/dashboard/explore" className="font-semibold text-navy hover:underline">
+        <span className="text-[#8b939e]">
+          {`${numberFormat.format(region.locationCount)} ${t(region.locationCount === 1 ? "location" : "locations")}`}
+        </span>
+        <Link
+          href={regionExploreHref(region)}
+          className="cursor-pointer font-semibold text-navy hover:underline"
+        >
           {t("Discover Plots →")}
         </Link>
       </div>
@@ -234,53 +395,9 @@ function ExploreCard({
   );
 }
 
-function ExploreCarousel() {
+function ExploreCarousel({ regions }: { regions: FeaturedRegion[] }) {
   const carouselRef = useRef<HTMLDivElement>(null);
   const [activePage, setActivePage] = useState(0);
-  const destinations = [
-    {
-      image: "/images/explore/phuket.jpg",
-      badge: "POPULAR",
-      name: "Phuket",
-      description: "Island life, reimagined.",
-      locations: "24 locations",
-    },
-    {
-      image: "/images/explore/krabi.jpg",
-      badge: "POPULAR",
-      name: "Krabi",
-      description: "Where limestone meets the sea.",
-      locations: "16 locations",
-    },
-    {
-      image: "/images/explore/chiang-mai.jpg",
-      badge: "STANDARD",
-      name: "Chiang Mai",
-      description: "Mountains, culture and quiet.",
-      locations: "12 locations",
-    },
-    {
-      image: "/images/explore/bangkok.jpg",
-      badge: "STANDARD",
-      name: "Bangkok",
-      description: "Energy, culture and endless discovery.",
-      locations: "20 locations",
-    },
-    {
-      image: "/images/explore/pattaya.jpg",
-      badge: "STANDARD",
-      name: "Pattaya",
-      description: "Coastal escapes, just beyond the city.",
-      locations: "14 locations",
-    },
-    {
-      image: "/images/explore/koh-samui.jpg",
-      badge: "STANDARD",
-      name: "Koh Samui",
-      description: "Island serenity, beautifully preserved.",
-      locations: "18 locations",
-    },
-  ];
 
   useEffect(() => {
     const carousel = carouselRef.current;
@@ -311,8 +428,8 @@ function ExploreCarousel() {
         onWheel={moveCarousel}
         className="mt-4 flex snap-x snap-mandatory gap-4 overflow-x-auto overscroll-contain pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
-        {destinations.map((destination) => (
-          <ExploreCard key={destination.name} {...destination} />
+        {regions.map((region) => (
+          <ExploreCard key={region.id} region={region} />
         ))}
       </div>
       <div

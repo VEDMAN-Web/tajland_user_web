@@ -19,7 +19,7 @@ export function MapErrorDialog({ onContinue, onRetry, t }: MapErrorDialogProps) 
       role="alertdialog"
       aria-labelledby={titleId}
       aria-describedby={descriptionId}
-      className="flex w-full max-w-[460px] flex-col items-center gap-2.5 rounded-[16px] border border-[#e9ecef] bg-white px-5 py-8 text-center shadow-[0_0_0_1px_rgba(11,31,51,0.04),0_20px_40px_-15px_rgba(11,31,51,0.18)] sm:px-8"
+      className="flex w-full max-w-[460px] flex-col items-center gap-2.5 rounded-[16px] border border-[#e9ecef] bg-white px-5 py-8 text-center shadow-[0_0_0_1px_rgba(11,31,51,0.04),0_20px_40px_-15px_rgba(11,31,51,0.18)] @[400px]:px-8"
     >
       <span className="flex h-20 w-20 items-center justify-center rounded-full bg-[#fdecee]">
         <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#e11d2e] text-white">
@@ -35,13 +35,17 @@ export function MapErrorDialog({ onContinue, onRetry, t }: MapErrorDialogProps) 
           </svg>
         </span>
       </span>
-      <h2 id={titleId} className="text-[20px] font-semibold leading-7 text-[#0b1f33]">
+      <h2
+        id={titleId}
+        className="text-[18px] font-semibold leading-6 text-[#0b1f33] @[400px]:text-[20px] @[400px]:leading-7"
+      >
         {t("Map couldn't load")}
       </h2>
       <p id={descriptionId} className="text-[14px] leading-[18px] text-[#6b7785]">
         {t("We're having trouble loading the map. Please try again.")}
       </p>
-      <div className="mt-4 grid w-full grid-cols-2 gap-3">
+      {/* Narrow room (beside the panel on small tablets): buttons stack, Try again on top. */}
+      <div className="mt-4 flex w-full flex-col-reverse gap-3 @[340px]:grid @[340px]:grid-cols-2">
         <button
           type="button"
           onClick={onContinue}

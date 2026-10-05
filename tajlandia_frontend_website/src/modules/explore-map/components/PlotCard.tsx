@@ -217,3 +217,39 @@ export function PlotCard({ plot, selected, onSelect, t }: PlotCardProps) {
     </article>
   );
 }
+
+const bone = "animate-pulse rounded-[6px] bg-[#eef1f5] motion-reduce:animate-none";
+
+/** Card outline in grey blocks while the area's plots load (Figma loading state). */
+export function PlotCardSkeleton() {
+  return (
+    <div
+      aria-hidden="true"
+      className="flex shrink-0 flex-col gap-3 rounded-[12px] border border-[#e9ecef] bg-white p-[14px] sm:h-[184px]"
+    >
+      <div className="flex gap-3">
+        <span
+          className={cn(
+            bone,
+            "h-[84px] w-[84px] shrink-0 rounded-[12px] sm:h-[99px] sm:w-[99px]",
+          )}
+        />
+        <div className="flex min-w-0 flex-1 flex-col">
+          <div className="flex justify-between gap-2">
+            <span className={cn(bone, "h-3.5 w-2/5")} />
+            <span className={cn(bone, "h-3.5 w-14 rounded-full")} />
+          </div>
+          <span className={cn(bone, "mt-2 h-2.5 w-1/4")} />
+          <div className="mt-auto grid grid-cols-2 gap-2 border-t border-[#eef1f5] pt-2">
+            <span className={cn(bone, "h-6")} />
+            <span className={cn(bone, "h-6")} />
+          </div>
+        </div>
+      </div>
+      <div className="mt-auto flex items-end justify-between gap-3">
+        <span className={cn(bone, "h-7 w-24")} />
+        <span className={cn(bone, "h-[38px] w-[120px] rounded-[8px]")} />
+      </div>
+    </div>
+  );
+}
