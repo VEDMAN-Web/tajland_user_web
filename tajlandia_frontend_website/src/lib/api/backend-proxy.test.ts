@@ -82,14 +82,20 @@ describe("proxyToBackend", () => {
     expect(fetchImpl).not.toHaveBeenCalled();
   });
 
-  it("allows the user dashboard but not the admin dashboard", async () => {
+  it("allows the user dashboard and coupons but not the admin dashboard", async () => {
     const fetchImpl = vi
       .fn()
-      .mockResolvedValue(jsonResponse({ success: true, data: {} }));
+      .mockImplementation(() =>
+        Promise.resolve(jsonResponse({ success: true, data: {} })),
+      );
 
-    const user = await proxyToBackend(makeRequest("/api/backend/dashboard"), ["dashboard"], {
-      fetchImpl,
-    });
+    const user = await proxyToBackend(
+      makeRequest("/api/backend/dashboard"),
+      ["dashboard"],
+      {
+        fetchImpl,
+      },
+    );
     const admin = await proxyToBackend(
       makeRequest("/api/backend/dashboard/admin/overview"),
       ["dashboard", "admin", "overview"],
@@ -99,6 +105,15 @@ describe("proxyToBackend", () => {
     expect(user.status).toBe(200);
     expect(admin.status).toBe(404);
     expect(fetchImpl).toHaveBeenCalledTimes(1);
+
+    const coupons = await proxyToBackend(
+      makeRequest("/api/backend/coupons"),
+      ["coupons"],
+      {
+        fetchImpl,
+      },
+    );
+    expect(coupons.status).toBe(200);
   });
 
   it("rejects traversal and unsafe segments", async () => {

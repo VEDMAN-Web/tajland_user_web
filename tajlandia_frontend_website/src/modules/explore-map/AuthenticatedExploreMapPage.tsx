@@ -14,7 +14,10 @@ import {
   type MapboxMapHandle,
   type MapboxMapStatus,
   type MapPlot,
+  type MapRegion,
+  type MapView,
 } from "@/components/maps/MapboxMap";
+import { isAllowedRemoteImage } from "@/lib/config/remote-images";
 import { useDashboardLanguage } from "@/modules/dashboard/DashboardLanguageContext";
 import { FilterPlotsPanel } from "./components/FilterPlotsPanel";
 import { MapErrorDialog } from "./components/MapErrorDialog";
@@ -44,6 +47,8 @@ import {
   getFilterOptions,
   getPlotDetail,
   getPlotsInArea,
+  getPlotsInViewport,
+  MAX_VIEWPORT_DEGREES,
   getSortOptions,
   searchPlaces,
   type PlotScope,
@@ -117,6 +122,17 @@ function plotFocusPadding() {
     left: 40,
     right: 40,
   };
+}
+
+// Zoomed out the map shows region pills; from this zoom, the plots in view.
+const VIEWPORT_PLOTS_MIN_ZOOM = 8;
+// Wait for the camera to settle before asking for the plots in view.
+const VIEWPORT_DEBOUNCE_MS = 300;
+
+/** Region pill image through the Next image proxy (the CSP blocks remote images). */
+function regionImageSrc(imageUrl: string | null | undefined) {
+  if (!isAllowedRemoteImage(imageUrl)) return undefined;
+  return `/_next/image?url=${encodeURIComponent(imageUrl)}&w=64&q=75`;
 }
 
 /** Box around the plots (padded so one plot isn't zoomed to street level). */
@@ -288,7 +304,20 @@ export function AuthenticatedExploreMapPage() {
   const [plotDetailReloadKey, setPlotDetailReloadKey] = useState(0);
   // Plots whose Add to Cart request is running (buttons show "Adding...").
   const [addingPlotIds, setAddingPlotIds] = useState<string[]>([]);
-  const mapPlots = useMemo(() => plots.map(toMapPlot), [plots]);
+  // Zoomed in with no area open: the plots in view (`GET /explore/plots?bbox=`).
+  const [viewportPlots, setViewportPlots] = useState<ExplorePlot[]>([]);
+  const [mapView, setMapView] = useState<MapView | null>(null);
+  // Regions from `/explore/map`, drawn as pills while zoomed out.
+  const [mapRegions, setMapRegions] = useState<
+    Array<MapRegion & { location: { lat: number; lng: number } }>
+  >([]);
+  const showViewportPlots =
+    plotScope === null && mapView !== null && mapView.zoom >= VIEWPORT_PLOTS_MIN_ZOOM;
+  // An open area shows its own (filtered, sorted) plots; otherwise what's in view.
+  const mapPlots = useMemo(
+    () => (plotScope ? plots : showViewportPlots ? viewportPlots : []).map(toMapPlot),
+    [plotScope, plots, showViewportPlots, viewportPlots],
+  );
   const { sortBy, sortOrder } =
     sortOptions.find((option) => option.key === plotSortKey)?.query ?? {};
   // Primitives, so the plots request reruns only when a param really changes.
@@ -323,8 +352,17 @@ export function AuthenticatedExploreMapPage() {
 
     const controller = new AbortController();
     getExploreMap(controller.signal)
-      .then(({ map }) => {
+      .then(({ map, regions }) => {
         initialBoundsRef.current = map.bounds;
+        setMapRegions(
+          regions.map((region) => ({
+            id: region.id,
+            name: region.name,
+            center: [region.longitude, region.latitude],
+            location: { lat: region.latitude, lng: region.longitude },
+            imageSrc: regionImageSrc(region.imageUrl),
+          })),
+        );
         if (!hasSelectedPlot && !hasNavigatedRef.current) {
           mapRef.current?.fitBounds(map.bounds);
         }
@@ -408,6 +446,34 @@ export function AuthenticatedExploreMapPage() {
     setFilterOptionsStatus("loading");
     setFilterOptionsReloadKey((key) => key + 1);
   }
+
+  // Browsing (no area open, zoomed in): load the plots in view once the camera settles.
+  useEffect(() => {
+    if (!isAuthenticated || !showViewportPlots || !mapView) return;
+    const { bounds } = mapView;
+    if (
+      bounds.east - bounds.west > MAX_VIEWPORT_DEGREES ||
+      bounds.north - bounds.south > MAX_VIEWPORT_DEGREES
+    )
+      return;
+
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => {
+      getPlotsInViewport(bounds, controller.signal)
+        .then(setViewportPlots)
+        .catch((error: unknown) => {
+          // Best effort: keep what's drawn; the next move tries again.
+          if (isAbortError(error)) return;
+          if (isApiError(error) && error.code === "API_SESSION_EXPIRED") return;
+          logError(error, "Failed to load plots in view");
+        });
+    }, VIEWPORT_DEBOUNCE_MS);
+
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [isAuthenticated, showViewportPlots, mapView]);
 
   // Reloads the open area's plots when a sent param changes (the effect above refetches).
   function applyFilters(next: PlotFilters) {
@@ -659,7 +725,37 @@ export function AuthenticatedExploreMapPage() {
 
   function handleMapPlotClick(plotId: string) {
     const plot = plots.find((item) => item.id === plotId);
-    if (plot) openPlotDetail(plot);
+    if (plot) {
+      openPlotDetail(plot);
+      return;
+    }
+    // A plot seen while browsing: open its region's list, then its detail.
+    const inView = viewportPlots.find((item) => item.id === plotId);
+    if (!inView) return;
+    if (inView.region) {
+      hasNavigatedRef.current = true;
+      showAreaPlots({ param: "regionId", id: inView.region.id }, inView.region.name);
+      setSearch(inView.region.name);
+    }
+    setSelectedPlotId(inView.id);
+    setPlotDetail({ id: inView.id, status: "loading" });
+    setDetailPlotId(inView.id);
+    setIsSearchExpanded(true);
+    focusPlot(inView);
+  }
+
+  // Region pill: the same as picking the region in search.
+  function handleMapRegionClick(regionId: string) {
+    const region = mapRegions.find((item) => item.id === regionId);
+    if (!region) return;
+    setIsSearchExpanded(true);
+    openPlace({
+      type: "region",
+      id: region.id,
+      name: region.name,
+      imageUrl: null,
+      location: region.location,
+    });
   }
 
   // Only the open plot's own result counts (a stale one shows the skeleton).
@@ -954,6 +1050,10 @@ export function AuthenticatedExploreMapPage() {
         }}
         plots={mapPlots}
         onPlotClick={handleMapPlotClick}
+        regions={mapRegions}
+        regionsMaxZoom={VIEWPORT_PLOTS_MIN_ZOOM}
+        onRegionClick={handleMapRegionClick}
+        onViewChange={setMapView}
       />
 
       {hasMapError && !isErrorDismissed ? (

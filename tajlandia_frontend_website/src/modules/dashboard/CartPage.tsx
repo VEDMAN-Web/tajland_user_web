@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { isAbortError } from "@/lib/api/browser-client";
 import { isApiError } from "@/lib/api/errors";
 import { notifyCartChanged } from "@/lib/cart/cart-events";
@@ -18,6 +18,7 @@ import type { CartItem, CartSummary } from "./schemas/cart.schema";
 import {
   clearCart,
   getCart,
+  getCartCoupons,
   getOrderSummary,
   removeCartItem,
 } from "./services/cart.client";
@@ -65,7 +66,18 @@ export function CartPage() {
   const [removingIds, setRemovingIds] = useState<string[]>([]);
   const [isClearing, setIsClearing] = useState(false);
   const [actionError, setActionError] = useState("");
-  const [coupon, setCoupon] = useState("");
+  // Confirm dialogs (Figma "Remove this plot?" / "Clear your selection?").
+  const [pendingRemove, setPendingRemove] = useState<CartItem | null>(null);
+  const [isClearDialogOpen, setIsClearDialogOpen] = useState(false);
+  // Discount code: what's typed, and the coupon applied to the summary (by id).
+  const [couponInput, setCouponInput] = useState("");
+  const [appliedCoupon, setAppliedCoupon] = useState<{ id: string; code: string } | null>(
+    null,
+  );
+  // Mirror for the cart reload, so totals keep the coupon after a remove.
+  const appliedCouponRef = useRef<{ id: string; code: string } | null>(null);
+  const [couponError, setCouponError] = useState("");
+  const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) router.replace(routes.login);
@@ -82,7 +94,22 @@ export function CartPage() {
           setCart({ status: "empty" });
           return;
         }
-        const summary = await getOrderSummary(controller.signal);
+        const couponId = appliedCouponRef.current?.id;
+        let summary: CartSummary;
+        try {
+          summary = await getOrderSummary({ couponId, signal: controller.signal });
+        } catch (error) {
+          // The cart changed and the coupon no longer fits: drop it, show plain totals.
+          if (
+            !couponId ||
+            !isApiError(error) ||
+            (error.status !== 400 && error.status !== 404)
+          )
+            throw error;
+          setCoupon(null);
+          setCouponError("Your discount code no longer applies to this cart.");
+          summary = await getOrderSummary({ signal: controller.signal });
+        }
         setCart({ status: "ready", data: { ...summary, items } });
       })
       .catch((error: unknown) => {
@@ -104,6 +131,64 @@ export function CartPage() {
     setReloadKey((key) => key + 1);
   }
 
+  function setCoupon(next: { id: string; code: string } | null) {
+    appliedCouponRef.current = next;
+    setAppliedCoupon(next);
+  }
+
+  // The typed code is matched against `GET /coupons` (never listed to the user),
+  // then its id goes to `GET /cart/order-summary?couponId=` for the new totals.
+  async function applyCoupon() {
+    const code = couponInput.trim().toUpperCase();
+    if (isApplyingCoupon || cart.status !== "ready") return;
+    if (!code) {
+      setCouponError("Enter a discount code.");
+      return;
+    }
+    setCouponError("");
+    setIsApplyingCoupon(true);
+    try {
+      const coupons = await getCartCoupons();
+      const match = coupons.find((item) => item.code.toUpperCase() === code);
+      if (!match) {
+        setCouponError("Invalid discount code.");
+        return;
+      }
+      let summary: CartSummary;
+      try {
+        summary = await getOrderSummary({ couponId: match.id });
+      } catch (error) {
+        // 400 / 404 here: the coupon doesn't fit this cart's Rai.
+        if (isApiError(error) && (error.status === 400 || error.status === 404)) {
+          setCouponError("This code doesn't apply to your cart.");
+          return;
+        }
+        throw error;
+      }
+      setCoupon({ id: match.id, code: match.code });
+      setCouponInput(match.code);
+      setCart((current) =>
+        current.status === "ready"
+          ? { status: "ready", data: { ...summary, items: current.data.items } }
+          : current,
+      );
+    } catch (error) {
+      if (isApiError(error) && error.code === "API_SESSION_EXPIRED") return;
+      logError(error, "Failed to apply coupon");
+      setCouponError("Couldn't apply the code. Please try again.");
+    } finally {
+      setIsApplyingCoupon(false);
+    }
+  }
+
+  // Coupons only shape the summary request, so removing one is a plain reload.
+  function removeCoupon() {
+    setCoupon(null);
+    setCouponInput("");
+    setCouponError("");
+    setReloadKey((key) => key + 1);
+  }
+
   // After a change: reload the cart (totals come from the API) and the navbar badge.
   function cartChanged() {
     setReloadKey((key) => key + 1);
@@ -117,6 +202,7 @@ export function CartPage() {
     setReloadKey((key) => key + 1);
   }
 
+  // Confirmed in the dialog, which stays open (busy) until the API answers.
   async function removeItem(plotId: string) {
     if (removingIds.includes(plotId)) return;
     setActionError("");
@@ -128,6 +214,7 @@ export function CartPage() {
       handleActionError(error, "Failed to remove cart item");
     } finally {
       setRemovingIds((ids) => ids.filter((id) => id !== plotId));
+      setPendingRemove(null);
     }
   }
 
@@ -142,6 +229,7 @@ export function CartPage() {
       handleActionError(error, "Failed to clear cart");
     } finally {
       setIsClearing(false);
+      setIsClearDialogOpen(false);
     }
   }
 
@@ -185,13 +273,23 @@ export function CartPage() {
           ) : cart.status === "ready" ? (
             <FilledCart
               cart={cart.data}
-              coupon={coupon}
-              setCoupon={setCoupon}
+              coupon={{
+                input: couponInput,
+                applied: appliedCoupon,
+                error: couponError,
+                isApplying: isApplyingCoupon,
+                onInput: (value) => {
+                  setCouponInput(value);
+                  setCouponError("");
+                },
+                onApply: () => void applyCoupon(),
+                onRemove: removeCoupon,
+              }}
               removingIds={removingIds}
               isClearing={isClearing}
               actionError={actionError}
-              onClearAll={() => void clearAll()}
-              onRemove={(plotId) => void removeItem(plotId)}
+              onClearAll={() => setIsClearDialogOpen(true)}
+              onRemove={setPendingRemove}
               t={t}
             />
           ) : (
@@ -199,6 +297,25 @@ export function CartPage() {
           )}
         </section>
       </main>
+
+      {pendingRemove ? (
+        <RemovePlotDialog
+          item={pendingRemove}
+          isRemoving={removingIds.includes(pendingRemove.plotId)}
+          onConfirm={() => void removeItem(pendingRemove.plotId)}
+          onClose={() => setPendingRemove(null)}
+          t={t}
+        />
+      ) : null}
+      {isClearDialogOpen && cart.status === "ready" ? (
+        <ClearCartDialog
+          cart={cart.data}
+          isClearing={isClearing}
+          onConfirm={() => void clearAll()}
+          onClose={() => setIsClearDialogOpen(false)}
+          t={t}
+        />
+      ) : null}
     </div>
   );
 }
@@ -319,20 +436,18 @@ function CartSkeleton({ t }: { t: Translate }) {
 
 type FilledCartProps = {
   cart: CartView;
-  coupon: string;
-  setCoupon: (value: string) => void;
+  coupon: CouponControls;
   removingIds: string[];
   isClearing: boolean;
   actionError: string;
   onClearAll: () => void;
-  onRemove: (plotId: string) => void;
+  onRemove: (item: CartItem) => void;
   t: Translate;
 };
 
 function FilledCart({
   cart,
   coupon,
-  setCoupon,
   removingIds,
   isClearing,
   actionError,
@@ -375,7 +490,7 @@ function FilledCart({
                 key={item.plotId}
                 item={item}
                 isRemoving={removingIds.includes(item.plotId)}
-                onRemove={() => onRemove(item.plotId)}
+                onRemove={() => onRemove(item)}
                 t={t}
               />
             ))}
@@ -412,13 +527,7 @@ function FilledCart({
           </div>
         </section>
 
-        <OrderSummary
-          cart={cart}
-          coupon={coupon}
-          setCoupon={setCoupon}
-          remainingRai={remainingRai}
-          t={t}
-        />
+        <OrderSummary cart={cart} coupon={coupon} remainingRai={remainingRai} t={t} />
       </div>
     </>
   );
@@ -505,37 +614,134 @@ function ProgressBanner({ cart, t }: { cart: CartView; t: Translate }) {
   );
 }
 
+type CouponControls = {
+  input: string;
+  applied: { id: string; code: string } | null;
+  error: string;
+  isApplying: boolean;
+  onInput: (value: string) => void;
+  onApply: () => void;
+  onRemove: () => void;
+};
+
+/**
+ * Discount code (Figma "Coupon" / "Input"): a code field with Apply (pink and
+ * red when the code is invalid), or the applied coupon's green card with Remove.
+ */
+function CouponForm({
+  coupon,
+  discount,
+  t,
+}: {
+  coupon: CouponControls;
+  discount: number;
+  t: Translate;
+}) {
+  const hasError = Boolean(coupon.error);
+  const errorId = "coupon-error";
+
+  if (coupon.applied) {
+    return (
+      <div className="flex min-h-[58px] items-center justify-between gap-3 rounded-[14px] border border-[#bfe3c9] bg-[#e6f4ea] px-4 py-2.5">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <span className="shrink-0 text-[#15803d]">
+            <CheckCircleIcon />
+          </span>
+          <div className="min-w-0">
+            <p className="truncate font-manrope text-[14px] font-medium leading-5 text-[#14532d]">
+              {`${t("Coupon applied")} ${coupon.applied.code}`}
+            </p>
+            <p className="font-manrope text-[12px] font-medium leading-4 text-[#3f7a52]">
+              {`${t("Discount")} -${money(discount)}`}
+            </p>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={coupon.onRemove}
+          className="shrink-0 cursor-pointer font-manrope text-[12px] font-medium text-[#15803d] underline underline-offset-2 hover:text-[#14532d]"
+        >
+          {t("Remove")}
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <form
+        className="flex gap-2"
+        onSubmit={(event) => {
+          event.preventDefault();
+          coupon.onApply();
+        }}
+      >
+        <input
+          value={coupon.input}
+          onChange={(event) => coupon.onInput(event.target.value)}
+          placeholder={t("Enter Code")}
+          aria-label={t("Enter Code")}
+          aria-invalid={hasError}
+          aria-describedby={hasError ? errorId : undefined}
+          disabled={coupon.isApplying}
+          autoCapitalize="characters"
+          className={cn(
+            "h-14 min-w-0 flex-1 rounded-[12px] border px-4 py-3 font-manrope text-[16px] font-medium outline-none placeholder:text-[#b0b7c0] disabled:opacity-70",
+            hasError
+              ? "border-[#e11d2e] bg-[#ffdcdf] text-[#e11d2e]"
+              : "border-[#e4e9ef] bg-white text-navy focus:border-navy",
+          )}
+        />
+        <button
+          type="submit"
+          disabled={coupon.isApplying}
+          className="h-14 shrink-0 cursor-pointer rounded-[12px] bg-navy px-7 font-manrope text-[16px] font-medium text-white hover:bg-navy-deep disabled:cursor-wait disabled:opacity-70 sm:text-[18px]"
+        >
+          {t(coupon.isApplying ? "Applying..." : "Apply")}
+        </button>
+      </form>
+      {hasError ? (
+        <p
+          id={errorId}
+          role="alert"
+          className="mt-2 flex items-center gap-1.5 font-manrope text-[13px] font-medium text-[#e11d2e]"
+        >
+          <InfoCircleIcon />
+          {t(coupon.error)}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+function InfoCircleIcon() {
+  return (
+    <svg viewBox="0 0 16 16" aria-hidden="true" className="h-4 w-4 shrink-0">
+      <circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" strokeWidth="1.3" />
+      <path
+        d="M8 4.8v3.6M8 10.8v.2"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeWidth="1.5"
+      />
+    </svg>
+  );
+}
+
 function OrderSummary({
   cart,
   coupon,
-  setCoupon,
   remainingRai,
   t,
 }: {
   cart: CartView;
-  coupon: string;
-  setCoupon: (value: string) => void;
+  coupon: CouponControls;
   remainingRai: number;
   t: Translate;
 }) {
   return (
     <aside>
-      {/* TODO: `POST /cart/coupon` and `DELETE /cart/coupon`. */}
-      <div className="flex gap-2">
-        <input
-          value={coupon}
-          onChange={(event) => setCoupon(event.target.value)}
-          placeholder={t("Enter Code")}
-          aria-label={t("Enter Code")}
-          className="h-12 min-w-0 flex-1 rounded-[12px] border border-[#e4e9ef] bg-white px-4 font-manrope font-medium text-[14px] text-navy outline-none placeholder:text-[#b0b7c0] focus:border-navy"
-        />
-        <button
-          type="button"
-          className="h-12 shrink-0 cursor-pointer rounded-[12px] bg-navy px-7 font-manrope text-[16px] font-medium text-white hover:bg-navy-deep sm:text-[18px]"
-        >
-          {t("Apply")}
-        </button>
-      </div>
+      <CouponForm coupon={coupon} discount={cart.discount} t={t} />
       <div className="mt-3 rounded-[16px] border border-[#eef1f4] bg-white px-5 py-6 shadow-[0_8px_24px_rgba(11,31,77,0.05)] sm:px-7 sm:py-7">
         <h2 className="font-manrope text-[22px] leading-none font-semibold text-[#111111] sm:text-[24px]">
           {t("Order Summary")}
@@ -580,7 +786,9 @@ function OrderSummary({
         </p>
         {cart.discount > 0 ? (
           <p className="mt-3 flex items-center justify-between font-manrope text-[16px] font-medium text-[#6b7280]">
-            <span>{t("Discount")}</span>
+            <span>
+              {cart.coupon ? `${t("Discount")} · ${cart.coupon.code}` : t("Discount")}
+            </span>
             <span className="text-[#16a34a]">{`−${money(cart.discount)}`}</span>
           </p>
         ) : null}
@@ -728,6 +936,299 @@ function CartItemCard({
         </button>
       </div>
     </article>
+  );
+}
+
+type DialogShellProps = {
+  titleId: string;
+  /** While the action runs: no closing, Escape and the backdrop do nothing. */
+  busy: boolean;
+  onClose: () => void;
+  className: string;
+  children: ReactNode;
+};
+
+/** Centred modal over a dimmed page; Escape or a backdrop click closes it. */
+function DialogShell({ titleId, busy, onClose, className, children }: DialogShellProps) {
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    // The safe choice ("Keep …") takes focus, and the page behind can't scroll.
+    panelRef.current?.querySelector<HTMLElement>("[data-autofocus]")?.focus();
+    const { style } = document.body;
+    const previous = { overflow: style.overflow, paddingRight: style.paddingRight };
+    // Hiding the scrollbar widens the page; pad by its width so nothing shifts.
+    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+    style.overflow = "hidden";
+    if (scrollbarWidth > 0) style.paddingRight = `${scrollbarWidth}px`;
+    return () => {
+      style.overflow = previous.overflow;
+      style.paddingRight = previous.paddingRight;
+    };
+  }, []);
+
+  useEffect(() => {
+    function handleKey(event: KeyboardEvent) {
+      if (event.key === "Escape" && !busy) onClose();
+    }
+    document.addEventListener("keydown", handleKey);
+    return () => document.removeEventListener("keydown", handleKey);
+  }, [busy, onClose]);
+
+  return (
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-[#0b1f33]/40 px-4 py-6 backdrop-blur-[2px]"
+      onClick={() => {
+        if (!busy) onClose();
+      }}
+    >
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        onClick={(event) => event.stopPropagation()}
+        className={cn(
+          "relative max-h-[calc(100svh-3rem)] w-full max-w-[460px] overflow-y-auto bg-white shadow-[0_24px_60px_rgba(11,31,51,0.22)]",
+          className,
+        )}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function CloseButton({
+  onClick,
+  disabled,
+  label,
+}: {
+  onClick: () => void;
+  disabled: boolean;
+  label: string;
+}) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      onClick={onClick}
+      disabled={disabled}
+      className="flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-full text-[#9aa3ad] hover:bg-[#f3f4f6] hover:text-[#111111] disabled:cursor-not-allowed"
+    >
+      <svg viewBox="0 0 16 16" aria-hidden="true" className="h-3.5 w-3.5">
+        <path
+          d="M4 4 12 12M12 4 4 12"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.6"
+          strokeLinecap="round"
+        />
+      </svg>
+    </button>
+  );
+}
+
+const keepButton =
+  "h-11 cursor-pointer rounded-[10px] border border-[#e4e9ef] bg-white px-3 font-manrope text-[13px] font-medium text-[#111111] hover:border-[#cfd8e3] disabled:cursor-not-allowed disabled:opacity-60";
+const dangerButton =
+  "h-11 cursor-pointer rounded-[10px] bg-[#e11d2e] px-3 font-manrope text-[13px] font-medium text-white hover:bg-[#c81726] disabled:cursor-wait disabled:opacity-70";
+
+/** Figma "Remove this plot?": the plot's card, then Keep Plot / Remove Plot. */
+function RemovePlotDialog({
+  item,
+  isRemoving,
+  onConfirm,
+  onClose,
+  t,
+}: {
+  item: CartItem;
+  isRemoving: boolean;
+  onConfirm: () => void;
+  onClose: () => void;
+  t: Translate;
+}) {
+  const titleId = "remove-plot-title";
+  const title = item.name ?? item.plotNumber ?? item.zone?.name ?? t("this plot");
+  const location = item.city ?? item.region?.name;
+  const tier = item.zone?.tier;
+
+  return (
+    <DialogShell
+      titleId={titleId}
+      busy={isRemoving}
+      onClose={onClose}
+      className="rounded-[24px] border border-[#e8e5df] p-5 sm:p-8"
+    >
+      <div className="flex items-start justify-between gap-3">
+        {tier ? (
+          <span className="rounded-[4px] bg-[#fdf0c4] px-2 py-[2px] font-manrope text-[10px] font-semibold uppercase leading-4 text-[#c9961a]">
+            {t(titleCase(tier))}
+          </span>
+        ) : (
+          <span />
+        )}
+        <CloseButton onClick={onClose} disabled={isRemoving} label={t("Close")} />
+      </div>
+      <h2
+        id={titleId}
+        className="mt-3 font-manrope text-[20px] font-semibold leading-7 text-[#111111] sm:text-[22px]"
+      >
+        {t("Remove this plot?")}
+      </h2>
+      <p className="mt-1.5 font-manrope text-[13px] font-medium leading-5 text-[#6b7280]">
+        {fill(t("Are you sure you want to remove {name} from your selection?"), {
+          name: title,
+        })}
+      </p>
+
+      <div className="mt-5 flex items-center gap-3 rounded-[12px] border border-[#eef1f4] bg-white p-3 shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
+        <Image
+          src={isAllowedRemoteImage(item.imageUrl) ? item.imageUrl : PLACEHOLDER_IMAGE}
+          alt=""
+          width={56}
+          height={56}
+          unoptimized={!isAllowedRemoteImage(item.imageUrl)}
+          className="h-12 w-12 shrink-0 rounded-[10px] bg-[#edf3f8] object-cover sm:h-14 sm:w-14"
+        />
+        <div className="min-w-0 flex-1">
+          <p className="truncate font-manrope text-[14px] font-semibold leading-5 text-navy sm:text-[15px]">
+            {title}
+          </p>
+          {location ? (
+            <p className="mt-0.5 inline-flex max-w-full items-center gap-1 rounded-[4px] border border-[#9ca3af] bg-[#f3f4f6] px-1.5 py-px font-manrope text-[9px] font-medium leading-4 text-[#6b7280]">
+              <PinIcon />
+              <span className="truncate">{location}</span>
+            </p>
+          ) : null}
+          <p className="mt-0.5 font-manrope text-[11px] font-medium leading-4">
+            <span className="font-bold text-[#e11d2e]">{`${item.sizeRai} ${t("Rai")}`}</span>
+            <span className="text-[#8b939e]">{` · ${money(item.pricePerRai)} / ${t("Rai")}`}</span>
+          </p>
+        </div>
+        <strong className="shrink-0 font-manrope text-[22px] font-semibold text-[#111111] sm:text-[26px]">
+          {money(item.subtotal)}
+        </strong>
+      </div>
+
+      <div className="mt-6 grid grid-cols-2 gap-3">
+        <button
+          type="button"
+          data-autofocus
+          onClick={onClose}
+          disabled={isRemoving}
+          className={keepButton}
+        >
+          {t("Keep Plot")}
+        </button>
+        <button
+          type="button"
+          onClick={onConfirm}
+          disabled={isRemoving}
+          className={dangerButton}
+        >
+          {t(isRemoving ? "Removing..." : "Remove Plot")}
+        </button>
+      </div>
+    </DialogShell>
+  );
+}
+
+/** Figma "Clear your selection?": what will be removed (zones, value), then confirm. */
+function ClearCartDialog({
+  cart,
+  isClearing,
+  onConfirm,
+  onClose,
+  t,
+}: {
+  cart: CartView;
+  isClearing: boolean;
+  onConfirm: () => void;
+  onClose: () => void;
+  t: Translate;
+}) {
+  const titleId = "clear-cart-title";
+
+  return (
+    <DialogShell
+      titleId={titleId}
+      busy={isClearing}
+      onClose={onClose}
+      className="rounded-[16px] border border-[#e9ecef] p-5 sm:p-8"
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h2
+            id={titleId}
+            className="font-manrope text-[18px] font-semibold leading-6 text-[#111111] sm:text-[20px]"
+          >
+            {t("Clear your selection?")}
+          </h2>
+          <p className="mt-1 font-manrope text-[12px] font-medium leading-5 text-[#6b7280]">
+            {t("This will remove all selected plots from your cart.")}
+          </p>
+        </div>
+        <CloseButton onClick={onClose} disabled={isClearing} label={t("Close")} />
+      </div>
+
+      <div className="mt-5 rounded-[12px] border border-[#eef1f4] bg-[#f9fafb] px-4 py-4">
+        <div className="flex items-center justify-between gap-3 font-manrope">
+          <span className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[#8b939e]">
+            {t("Items to be removed")}
+          </span>
+          <span className="text-[11px] font-semibold text-navy">
+            {`${cart.plots} ${t(cart.plots === 1 ? "Plot" : "Plots")} · ${cart.totalRai} ${t("Rai")}`}
+          </span>
+        </div>
+        <div className="mt-3 space-y-2 font-manrope text-[13px] font-medium">
+          {cart.zones.map((zone) => {
+            const color = ZONE_COLORS[zone.tier.toUpperCase()] ?? "#6b7785";
+            return (
+              <p key={zone.tier} className="flex items-center justify-between">
+                <span className="inline-flex items-center gap-2" style={{ color }}>
+                  <span
+                    aria-hidden="true"
+                    className="h-1.5 w-1.5 rounded-full"
+                    style={{ backgroundColor: color }}
+                  />
+                  {t(zone.name)}
+                </span>
+                <span className="text-[#6b7280]">{money(zone.amount)}</span>
+              </p>
+            );
+          })}
+        </div>
+        <div className="mt-3 flex items-center justify-between border-t border-[#e5e7eb] pt-3 font-manrope">
+          <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#111111]">
+            {t("Total value")}
+          </span>
+          <strong className="text-[14px] font-bold text-[#111111]">
+            {money(cart.subtotal)}
+          </strong>
+        </div>
+      </div>
+
+      <div className="mt-6 grid grid-cols-2 gap-3">
+        <button
+          type="button"
+          data-autofocus
+          onClick={onClose}
+          disabled={isClearing}
+          className={keepButton}
+        >
+          {t("Keep My Selection")}
+        </button>
+        <button
+          type="button"
+          onClick={onConfirm}
+          disabled={isClearing}
+          className={dangerButton}
+        >
+          {t(isClearing ? "Clearing..." : "Clear All")}
+        </button>
+      </div>
+    </DialogShell>
   );
 }
 

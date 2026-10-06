@@ -202,6 +202,71 @@ const translations: Record<string, Record<Exclude<DashboardLanguage, "EN">, stri
     PL: "Twój wybór spełnia minimum {min} rai.",
     TH: "การเลือกของคุณถึงขั้นต่ำ {min} ไร่แล้ว",
   },
+  "Remove this plot?": {
+    PL: "Usunąć tę działkę?",
+    TH: "นำแปลงนี้ออกหรือไม่?",
+  },
+  "Are you sure you want to remove {name} from your selection?": {
+    PL: "Czy na pewno chcesz usunąć {name} ze swojego wyboru?",
+    TH: "คุณแน่ใจหรือไม่ว่าต้องการนำ {name} ออกจากรายการที่เลือก?",
+  },
+  "this plot": {
+    PL: "tę działkę",
+    TH: "แปลงนี้",
+  },
+  "Keep Plot": {
+    PL: "Zachowaj działkę",
+    TH: "เก็บแปลงไว้",
+  },
+  "Remove Plot": {
+    PL: "Usuń działkę",
+    TH: "นำแปลงออก",
+  },
+  "Clear your selection?": {
+    PL: "Wyczyścić wybór?",
+    TH: "ล้างรายการที่เลือกหรือไม่?",
+  },
+  "This will remove all selected plots from your cart.": {
+    PL: "Spowoduje to usunięcie wszystkich wybranych działek z koszyka.",
+    TH: "การดำเนินการนี้จะนำแปลงที่เลือกทั้งหมดออกจากรถเข็นของคุณ",
+  },
+  "Items to be removed": {
+    PL: "Pozycje do usunięcia",
+    TH: "รายการที่จะถูกนำออก",
+  },
+  "Total value": {
+    PL: "Łączna wartość",
+    TH: "มูลค่ารวม",
+  },
+  "Keep My Selection": {
+    PL: "Zachowaj mój wybór",
+    TH: "เก็บรายการที่เลือกไว้",
+  },
+  "Enter a discount code.": {
+    PL: "Wpisz kod rabatowy.",
+    TH: "กรุณากรอกรหัสส่วนลด",
+  },
+  "Invalid discount code.": {
+    PL: "Nieprawidłowy kod rabatowy.",
+    TH: "รหัสส่วนลดไม่ถูกต้อง",
+  },
+  "This code doesn't apply to your cart.": {
+    PL: "Ten kod nie dotyczy Twojego koszyka.",
+    TH: "รหัสนี้ใช้กับรถเข็นของคุณไม่ได้",
+  },
+  "Couldn't apply the code. Please try again.": {
+    PL: "Nie udało się zastosować kodu. Spróbuj ponownie.",
+    TH: "ไม่สามารถใช้รหัสได้ โปรดลองอีกครั้ง",
+  },
+  "Your discount code no longer applies to this cart.": {
+    PL: "Twój kod rabatowy nie dotyczy już tego koszyka.",
+    TH: "รหัสส่วนลดของคุณใช้กับรถเข็นนี้ไม่ได้แล้ว",
+  },
+  "Applying...": {
+    PL: "Stosowanie...",
+    TH: "กำลังใช้...",
+  },
+  "Coupon applied": { PL: "Zastosowano kupon", TH: "ใช้คูปองแล้ว" },
   "Your cart is empty": { PL: "Twój koszyk jest pusty", TH: "รถเข็นของคุณว่างเปล่า" },
   "You haven't selected any plots yet. Explore Thailand and discover a place to add to your collection.": {
     PL: "Nie wybrano jeszcze żadnych działek. Odkryj Tajlandię i znajdź miejsce do swojej kolekcji.",
