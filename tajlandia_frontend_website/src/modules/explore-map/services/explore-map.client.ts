@@ -143,6 +143,29 @@ export async function getPlotsInArea(
   return plots;
 }
 
+/** The API's largest viewport: `bbox` sides over this answer 400 VIEWPORT_TOO_LARGE. */
+export const MAX_VIEWPORT_DEGREES = 8;
+
+/** Every plot inside the map's visible box (`bbox`), following pagination. */
+export async function getPlotsInViewport(
+  bounds: { west: number; south: number; east: number; north: number },
+  signal?: AbortSignal,
+): Promise<ExplorePlot[]> {
+  const bbox = [bounds.west, bounds.south, bounds.east, bounds.north]
+    .map((value) => value.toFixed(5))
+    .join(",");
+  const plots: ExplorePlot[] = [];
+  for (let page = 1; page <= MAX_PLOT_PAGES; page += 1) {
+    const data = await authedGet("/explore/plots", explorePlotsPageSchema, {
+      query: { bbox, page, limit: PLOTS_PAGE_SIZE },
+      signal,
+    });
+    plots.push(...data.items);
+    if (page >= data.pagination.totalPages) break;
+  }
+  return plots;
+}
+
 /** Full details of one plot (detail panel). 404 means the plot no longer exists. */
 export function getPlotDetail(
   plotId: string,

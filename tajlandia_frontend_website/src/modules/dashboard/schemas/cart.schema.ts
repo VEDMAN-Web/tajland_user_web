@@ -37,8 +37,32 @@ export const cartSummarySchema = z.object({
   minimumPurchase: z
     .object({ reached: z.boolean(), title: z.string(), message: z.string() })
     .optional(),
+  // Present when the summary was asked for with `?couponId=`.
+  coupon: z
+    .object({
+      id: z.string(),
+      name: z.string(),
+      code: z.string(),
+      discountPercentage: z.number(),
+    })
+    .nullish(),
+});
+
+/** Real `GET /coupons` `data`: coupons whose Rai range fits the current cart. */
+export const cartCouponsSchema = z.object({
+  sizeRai: z.number(),
+  coupons: z.array(
+    z.object({
+      id: z.string().min(1),
+      name: z.string(),
+      code: z.string(),
+      discountPercentage: z.number(),
+      description: z.string().nullish(),
+    }),
+  ),
 });
 
 export type Cart = z.infer<typeof cartSchema>;
 export type CartItem = z.infer<typeof cartItemSchema>;
 export type CartSummary = z.infer<typeof cartSummarySchema>;
+export type CartCoupon = z.infer<typeof cartCouponsSchema>["coupons"][number];

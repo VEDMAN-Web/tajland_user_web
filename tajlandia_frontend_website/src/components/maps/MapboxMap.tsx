@@ -108,6 +108,48 @@ export type MapPlot = {
   label?: string;
 };
 
+/** A region shown as a photo pill on the zoomed-out map (see `regionsMaxZoom`). */
+export type MapRegion = {
+  id: string;
+  name: string;
+  center: [number, number];
+  /** Same-origin URL (e.g. through `/_next/image`); the CSP blocks remote images. */
+  imageSrc?: string;
+};
+
+/** What the camera shows, reported after each move. */
+export type MapView = { zoom: number; bounds: LngLatBounds };
+
+function regionMarkerElement(region: MapRegion, onClick: () => void) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.setAttribute("aria-label", region.name);
+  button.style.cssText =
+    "display:flex;align-items:center;gap:6px;padding:3px 10px 3px 3px;border:0;border-radius:999px;" +
+    "background:#ffffff;box-shadow:0 4px 14px rgba(11,31,77,.22);cursor:pointer;" +
+    "font:600 12px/1 var(--font-manrope),sans-serif;color:#001f54;white-space:nowrap;";
+  if (region.imageSrc) {
+    const image = document.createElement("img");
+    image.src = region.imageSrc;
+    image.alt = "";
+    image.style.cssText = "width:26px;height:26px;border-radius:999px;object-fit:cover;";
+    button.append(image);
+  } else {
+    const dot = document.createElement("span");
+    dot.style.cssText =
+      "width:10px;height:10px;margin:8px 0 8px 6px;border-radius:999px;background:#001f54;";
+    button.append(dot);
+  }
+  const label = document.createElement("span");
+  label.textContent = region.name;
+  button.append(label);
+  button.addEventListener("click", (event) => {
+    event.stopPropagation();
+    onClick();
+  });
+  return button;
+}
+
 const PLOT_LABEL_IMAGE = "plot-label-pill";
 // Labels appear once a region fills the screen, so Thailand-wide views stay clean.
 const PLOT_LABEL_MIN_ZOOM = 9;
@@ -265,6 +307,12 @@ type MapboxMapProps = {
   plots?: MapPlot[];
   /** Called with a plot's id when its dot, shape or label is clicked. */
   onPlotClick?: (plotId: string) => void;
+  /** Regions drawn as photo pills while zoomed out (below `regionsMaxZoom`). */
+  regions?: MapRegion[];
+  regionsMaxZoom?: number;
+  onRegionClick?: (regionId: string) => void;
+  /** Called once the map loads and after every move / zoom ends. */
+  onViewChange?: (view: MapView) => void;
 };
 
 const CLICKABLE_PLOT_LAYERS = ["plot-areas-fill", "plot-points", "plot-labels"];
@@ -285,6 +333,10 @@ export const MapboxMap = forwardRef<MapboxMapHandle, MapboxMapProps>(function Ma
     },
     plots,
     onPlotClick,
+    regions,
+    regionsMaxZoom = 8,
+    onRegionClick,
+    onViewChange,
   },
   ref,
 ) {
@@ -306,6 +358,15 @@ export const MapboxMap = forwardRef<MapboxMapHandle, MapboxMapProps>(function Ma
   useEffect(() => {
     onPlotClickRef.current = onPlotClick;
   }, [onPlotClick]);
+  const onRegionClickRef = useRef(onRegionClick);
+  const onViewChangeRef = useRef(onViewChange);
+  useEffect(() => {
+    onRegionClickRef.current = onRegionClick;
+    onViewChangeRef.current = onViewChange;
+  }, [onRegionClick, onViewChange]);
+  const regionMarkersRef = useRef<mapboxgl.Marker[]>([]);
+  const regionsMaxZoomRef = useRef(regionsMaxZoom);
+  regionsMaxZoomRef.current = regionsMaxZoom;
 
   useEffect(() => {
     onStatusChange?.(status);
@@ -410,6 +471,28 @@ export const MapboxMap = forwardRef<MapboxMapHandle, MapboxMapProps>(function Ma
     map.once("idle", () => {
       if (!disposed) setStatus("ready");
     });
+    function reportView() {
+      const bounds = map.getBounds();
+      if (!bounds) return;
+      onViewChangeRef.current?.({
+        zoom: map.getZoom(),
+        bounds: {
+          west: bounds.getWest(),
+          south: bounds.getSouth(),
+          east: bounds.getEast(),
+          north: bounds.getNorth(),
+        },
+      });
+    }
+    map.once("load", reportView);
+    map.on("moveend", reportView);
+    // Region pills only while zoomed out; plots take over closer in.
+    map.on("zoom", () => {
+      const visible = map.getZoom() < regionsMaxZoomRef.current;
+      for (const marker of regionMarkersRef.current) {
+        marker.getElement().style.display = visible ? "flex" : "none";
+      }
+    });
     map.on("error", (event) => {
       console.error("Mapbox failed to load", event.error);
       if (!map.isStyleLoaded() && !disposed) setStatus("error");
@@ -423,6 +506,26 @@ export const MapboxMap = forwardRef<MapboxMapHandle, MapboxMapProps>(function Ma
       loadedRef.current = false;
     };
   }, []);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !regions) return;
+    const visible = map.getZoom() < regionsMaxZoomRef.current;
+    const markers = regions.map((region) => {
+      const element = regionMarkerElement(region, () =>
+        onRegionClickRef.current?.(region.id),
+      );
+      element.style.display = visible ? "flex" : "none";
+      return new mapboxgl.Marker({ element, anchor: "center" })
+        .setLngLat(region.center)
+        .addTo(map);
+    });
+    regionMarkersRef.current = markers;
+    return () => {
+      for (const marker of markers) marker.remove();
+      regionMarkersRef.current = [];
+    };
+  }, [regions]);
 
   useEffect(() => {
     plotsRef.current = plots;

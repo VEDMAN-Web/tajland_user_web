@@ -1,9 +1,11 @@
 import { z } from "zod";
 import { authedDelete, authedGet } from "@/lib/api/browser-client";
 import {
+  cartCouponsSchema,
   cartSchema,
   cartSummarySchema,
   type Cart,
+  type CartCoupon,
   type CartSummary,
 } from "../schemas/cart.schema";
 
@@ -29,8 +31,21 @@ export async function clearCart(): Promise<void> {
 
 /**
  * The cart's totals: plots, zone amounts, subtotal, discount, total and the
- * 100 Rai minimum check. 404 when the cart has no plots, so skip it when empty.
+ * 100 Rai minimum check. With `couponId` the discount is applied (400 when the
+ * coupon doesn't fit the cart's Rai, 404 when it doesn't exist). 404 for an
+ * empty cart, so skip it then.
  */
-export function getOrderSummary(signal?: AbortSignal): Promise<CartSummary> {
-  return authedGet("/cart/order-summary", cartSummarySchema, { signal });
+export function getOrderSummary(
+  options: { couponId?: string; signal?: AbortSignal } = {},
+): Promise<CartSummary> {
+  return authedGet("/cart/order-summary", cartSummarySchema, {
+    query: { couponId: options.couponId },
+    signal: options.signal,
+  });
+}
+
+/** Coupons that fit the current cart's Rai (only used to turn a typed code into its id). */
+export async function getCartCoupons(signal?: AbortSignal): Promise<CartCoupon[]> {
+  const data = await authedGet("/coupons", cartCouponsSchema, { signal });
+  return data.coupons;
 }
