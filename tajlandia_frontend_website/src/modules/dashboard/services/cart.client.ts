@@ -1,10 +1,16 @@
 import { z } from "zod";
-import { authedDelete, authedGet } from "@/lib/api/browser-client";
+import { authedDelete, authedGet, authedPost } from "@/lib/api/browser-client";
 import {
   cartCouponsSchema,
   cartSchema,
   cartSummarySchema,
+  checkoutResultSchema,
+  orderSchema,
+  paymentResultSchema,
   type Cart,
+  type Order,
+  type PaymentResult,
+  type CheckoutInput,
   type CartCoupon,
   type CartSummary,
 } from "../schemas/cart.schema";
@@ -48,4 +54,44 @@ export function getOrderSummary(
 export async function getCartCoupons(signal?: AbortSignal): Promise<CartCoupon[]> {
   const data = await authedGet("/coupons", cartCouponsSchema, { signal });
   return data.coupons;
+}
+
+/**
+ * Creates the pending order from the cart (prices re-checked on the server).
+ * 400: below the minimum / coupon doesn't fit; 404: coupon or plots gone;
+ * 409: a plot's reservation expired.
+ */
+export async function createCheckout(input: CheckoutInput): Promise<string> {
+  const data = await authedPost("/checkout", input, checkoutResultSchema);
+  return data.orderId;
+}
+
+/** Card fields `POST /payments` accepts. Never a full card number or CVC (the API rejects them). */
+export type CardPaymentInput = {
+  brand: string;
+  last4: string;
+  expMonth: number;
+  expYear: number;
+  holderName: string;
+  country: string;
+};
+
+/**
+ * Pays a pending order by card. 400: the order expired; 404: no such order;
+ * 409: it isn't pending any more (e.g. already paid).
+ */
+export function payOrderByCard(
+  orderId: string,
+  paymentDetails: CardPaymentInput,
+): Promise<PaymentResult> {
+  return authedPost(
+    "/payments",
+    { orderId, method: "card", paymentDetails },
+    paymentResultSchema,
+  );
+}
+
+/** One of the user's orders with its payment status and certificate link. */
+export function getOrder(orderId: string): Promise<Order> {
+  return authedGet(`/orders/${encodeURIComponent(orderId)}`, orderSchema);
 }

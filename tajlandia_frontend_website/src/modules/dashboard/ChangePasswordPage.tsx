@@ -12,6 +12,7 @@ import { strongPasswordSchema } from "@/lib/validation/password";
 import { AccountMenu } from "./AccountMenu";
 import { DashboardNavbar } from "./DashboardNavbar";
 import { useDashboardLanguage } from "./DashboardLanguageContext";
+import { PageLoader } from "@/components/ui/PageLoader";
 import { changePassword } from "./services/change-password.client";
 
 type PasswordValues = { currentPassword: string; newPassword: string; confirmPassword: string };
@@ -67,7 +68,7 @@ export function ChangePasswordPage() {
   const strength = getPasswordStrength(values.newPassword);
 
   if (isLoading) {
-    return <main className="flex min-h-[100svh] items-center justify-center bg-[#f7f9fc] text-sm text-muted">{t("Loading...")}</main>;
+    return <PageLoader label={t("Loading...")} />;
   }
 
   if (!isAuthenticated) {

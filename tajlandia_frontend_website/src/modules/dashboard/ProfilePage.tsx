@@ -8,6 +8,7 @@ import { useAuth, type AuthUser } from "@/lib/hooks/useAuth";
 import { AccountMenu } from "./AccountMenu";
 import { DashboardNavbar } from "./DashboardNavbar";
 import { useDashboardLanguage } from "./DashboardLanguageContext";
+import { PageLoader } from "@/components/ui/PageLoader";
 
 function memberSince(user: AuthUser) {
   const raw = user.createdAt ?? user.memberSince;
@@ -23,7 +24,7 @@ export function ProfilePage() {
   const { t } = useDashboardLanguage();
 
   if (isLoading) {
-    return <main className="flex min-h-[100svh] items-center justify-center bg-[#f7f9fc] text-sm text-muted">{t("Loading profile...")}</main>;
+    return <PageLoader label={t("Loading profile...")} />;
   }
 
   if (!isAuthenticated || !user) {

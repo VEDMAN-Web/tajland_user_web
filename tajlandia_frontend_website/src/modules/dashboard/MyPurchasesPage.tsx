@@ -9,6 +9,7 @@ import { DashboardNavbar } from "./DashboardNavbar";
 import { useAuth } from "@/lib/hooks/useAuth";
 import { routes } from "@/lib/constants/routes";
 import { useDashboardLanguage } from "./DashboardLanguageContext";
+import { PageLoader } from "@/components/ui/PageLoader";
 
 type Purchase = {
   id?: string;
@@ -256,9 +257,7 @@ export function MyLandPage() {
 
   if (isLoading)
     return (
-      <main className="flex min-h-[100svh] items-center justify-center bg-[#f7fafc] text-sm text-muted">
-        {t("Loading land...")}
-      </main>
+      <PageLoader label={t("Loading land...")} />
     );
   if (!isAuthenticated) {
     router.replace(routes.login);
@@ -523,9 +522,7 @@ export function MyPurchasesPage() {
 
   if (isLoading)
     return (
-      <main className="flex min-h-[100svh] items-center justify-center bg-[#f7f9fc] text-sm text-muted">
-        {t("Loading purchases...")}
-      </main>
+      <PageLoader label={t("Loading purchases...")} />
     );
   if (!isAuthenticated) {
     router.replace(routes.login);

@@ -1054,3 +1054,115 @@ nextjs-portal {
     scroll-behavior: auto !important;
   }
 }
+
+/* Page loader (components/ui/PageLoader.tsx): the logo card floats with two
+   ripples, its shadow breathes with it, a bar slides and the dots bounce. */
+@keyframes page-loader-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes page-loader-shadow {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scaleX(1);
+  }
+  50% {
+    opacity: 0.55;
+    transform: scaleX(0.8);
+  }
+}
+
+@keyframes page-loader-ring {
+  0% {
+    opacity: 0.7;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.35, 1.8);
+  }
+}
+
+@keyframes page-loader-bar {
+  0% {
+    transform: translateX(-110%);
+  }
+  100% {
+    transform: translateX(260%);
+  }
+}
+
+@keyframes page-loader-dot {
+  0%,
+  60%,
+  100% {
+    opacity: 0.35;
+    transform: translateY(0);
+  }
+  30% {
+    opacity: 1;
+    transform: translateY(-3px);
+  }
+}
+
+@keyframes page-loader-glow {
+  0%,
+  100% {
+    opacity: 0.7;
+    transform: scale(0.95);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+}
+
+.page-loader-float {
+  animation: page-loader-float 2.2s ease-in-out infinite;
+}
+
+.page-loader-shadow {
+  animation: page-loader-shadow 2.2s ease-in-out infinite;
+}
+
+.page-loader-ring {
+  animation: page-loader-ring 2.2s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+}
+
+.page-loader-bar {
+  animation: page-loader-bar 1.4s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+}
+
+.page-loader-dot {
+  animation: page-loader-dot 1.2s ease-in-out infinite;
+}
+
+.page-loader-glow {
+  animation: page-loader-glow 4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page-loader-float,
+  .page-loader-shadow,
+  .page-loader-dot,
+  .page-loader-glow {
+    animation: none !important;
+  }
+
+  .page-loader-ring {
+    display: none;
+  }
+
+  /* A slow pulse instead of the sliding bar, so there's still a sign of life. */
+  .page-loader-bar {
+    width: 100%;
+    animation: fade-in 1.6s ease-in-out infinite alternate !important;
+  }
+}

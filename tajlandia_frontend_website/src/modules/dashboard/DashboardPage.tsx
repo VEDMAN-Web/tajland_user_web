@@ -14,6 +14,7 @@ import { ScrollAnimatedElement } from "@/components/animations/ScrollAnimatedEle
 import { useAuth } from "@/lib/hooks/useAuth";
 import { DashboardNavbar } from "./DashboardNavbar";
 import { useDashboardLanguage } from "./DashboardLanguageContext";
+import { PageLoader } from "@/components/ui/PageLoader";
 import type { DashboardData, FeaturedRegion } from "./schemas/dashboard.schema";
 import { getDashboard } from "./services/dashboard.client";
 
@@ -50,14 +51,6 @@ function regionExploreHref(region: FeaturedRegion) {
   return `${routes.dashboardExplore}?${query.toString()}`;
 }
 
-function LoadingSpinner() {
-  return (
-    <div className="flex min-h-[100svh] items-center justify-center bg-white text-sm text-muted">
-      Loading dashboard...
-    </div>
-  );
-}
-
 export function DashboardPage() {
   const router = useRouter();
   const { isAuthenticated, user, isLoading } = useAuth();
@@ -90,7 +83,7 @@ export function DashboardPage() {
   }, [isAuthenticated, reloadKey]);
 
   if (!isLoading && !isAuthenticated) return null;
-  if (isLoading) return <LoadingSpinner />;
+  if (isLoading) return <PageLoader label={t("Loading dashboard...")} />;
 
   const data = dashboard.status === "ready" ? dashboard.data : null;
   // The signed-in name shows until the dashboard answers.
@@ -172,6 +165,7 @@ export function DashboardPage() {
               {collection && spent ? (
                 <>
                   <Stat
+                    href={routes.land}
                     icon="/images/dashboard/cards/ic_land.svg"
                     background="/images/dashboard/stat-land-bg.png"
                     value={numberFormat.format(Math.round(collection.totalLandSqFt))}
@@ -179,12 +173,14 @@ export function DashboardPage() {
                     label={`${t("Total Land")} (${numberFormat.format(collection.totalLandRai)} ${t("Rai")})`}
                   />
                   <Stat
+                    href={routes.land}
                     icon="/images/dashboard/cards/ic_plot.svg"
                     background="/images/dashboard/stat-plots-bg.png"
                     value={numberFormat.format(collection.plotsClaimed)}
                     label={t("Plots Claimed")}
                   />
                   <Stat
+                    href={routes.dashboardExplore}
                     icon="/images/dashboard/cards/ic_region.svg"
                     background="/images/dashboard/regions-bg.png"
                     // Two digits, as in Figma ("05").
@@ -192,6 +188,7 @@ export function DashboardPage() {
                     label={t("Regions")}
                   />
                   <Stat
+                    href={routes.land}
                     icon="/images/dashboard/cards/ic_total-spent.svg"
                     background="/images/dashboard/stat-spent-bg.png"
                     value={spent.value}
@@ -275,7 +272,10 @@ export function DashboardPage() {
   );
 }
 
+// Hover / focus: red border, the card lifts with a red glow, its art and icon
+// grow, an arrow slides in and a red line sweeps along the bottom.
 function Stat({
+  href,
   icon,
   background,
   value,
@@ -283,6 +283,7 @@ function Stat({
   prefix,
   suffix,
 }: {
+  href: string;
   icon: string;
   background: string;
   value: string;
@@ -291,24 +292,58 @@ function Stat({
   suffix?: string;
 }) {
   return (
-    <article className="relative h-[132px] overflow-hidden rounded-[16px] border border-[#e7edf3] bg-white px-4 py-4 shadow-[0_8px_24px_rgba(11,31,77,0.05)]">
+    <Link
+      href={href}
+      className="group relative block h-[132px] overflow-hidden rounded-[16px] border border-[#e7edf3] bg-white px-4 py-4 shadow-[0_8px_24px_rgba(11,31,77,0.05)] outline-none transition-[transform,border-color,box-shadow] duration-300 ease-out hover:-translate-y-1 hover:border-[#e11d2e] hover:shadow-[0_18px_40px_-12px_rgba(225,29,46,0.35)] focus-visible:-translate-y-1 focus-visible:border-[#e11d2e] focus-visible:ring-4 focus-visible:ring-[#e11d2e]/15 active:translate-y-0 active:scale-[0.99] motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:focus-visible:translate-y-0"
+    >
+      <span
+        aria-hidden="true"
+        className="pointer-events-none absolute -left-10 -top-10 h-40 w-40 rounded-full bg-[radial-gradient(circle,rgba(225,29,46,0.12)_0%,transparent_70%)] opacity-0 transition-opacity duration-300 group-hover:opacity-100 group-focus-visible:opacity-100"
+      />
       <Image
         src={background}
         alt=""
         width={150}
         height={120}
-        className="pointer-events-none absolute bottom-1 right-1 h-[72%] w-auto object-contain object-right-bottom opacity-80"
+        className="pointer-events-none absolute bottom-1 right-1 h-[72%] w-auto origin-bottom-right object-contain object-right-bottom opacity-80 transition-[transform,opacity] duration-500 ease-out group-hover:scale-110 group-hover:opacity-100 group-focus-visible:scale-110 group-focus-visible:opacity-100 motion-reduce:transition-none motion-reduce:group-hover:scale-100"
       />
+      <span
+        aria-hidden="true"
+        className="absolute right-3 top-3 z-10 flex h-8 w-8 -translate-x-2 items-center justify-center rounded-full bg-[#e11d2e] text-white opacity-0 shadow-[0_6px_14px_rgba(225,29,46,0.35)] transition-[transform,opacity] duration-300 ease-out group-hover:translate-x-0 group-hover:opacity-100 group-focus-visible:translate-x-0 group-focus-visible:opacity-100 motion-reduce:transition-none"
+      >
+        <svg viewBox="0 0 16 16" className="h-3.5 w-3.5 -rotate-45">
+          <path
+            d="M3 8h10m-4-4 4 4-4 4"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </span>
       <div className="relative z-10">
-        <Image src={icon} alt="" width={38} height={38} className="h-[38px] w-[38px]" />
+        <Image
+          src={icon}
+          alt=""
+          width={38}
+          height={38}
+          className="h-[38px] w-[38px] transition-transform duration-300 ease-out group-hover:-rotate-6 group-hover:scale-110 group-focus-visible:scale-110 motion-reduce:transition-none motion-reduce:group-hover:rotate-0 motion-reduce:group-hover:scale-100"
+        />
         <p className="font-manrope mt-3 text-[26px] font-bold leading-none tracking-[-0.03em] text-[#1a1a1a]">
           {prefix ? <span className="text-[0.72em]">{prefix}</span> : null}
           {value}
           {suffix ? <span className="ml-1 text-[13px] font-semibold tracking-normal">{suffix}</span> : null}
         </p>
-        <p className="font-manrope mt-2 text-[13px] font-medium text-[#8b939e]">{label}</p>
+        <p className="font-manrope mt-2 text-[13px] font-medium text-[#8b939e] transition-colors duration-300 group-hover:text-[#e11d2e] group-focus-visible:text-[#e11d2e]">
+          {label}
+        </p>
       </div>
-    </article>
+      <span
+        aria-hidden="true"
+        className="absolute inset-x-0 bottom-0 h-[3px] origin-left scale-x-0 bg-gradient-to-r from-[#e11d2e] to-[#ff6b6b] transition-transform duration-500 ease-out group-hover:scale-x-100 group-focus-visible:scale-x-100 motion-reduce:transition-none"
+      />
+    </Link>
   );
 }
 
