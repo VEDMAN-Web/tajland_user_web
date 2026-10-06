@@ -19,6 +19,7 @@ import {
 } from "@/components/maps/MapboxMap";
 import { isAllowedRemoteImage } from "@/lib/config/remote-images";
 import { useDashboardLanguage } from "@/modules/dashboard/DashboardLanguageContext";
+import { PageLoader } from "@/components/ui/PageLoader";
 import { FilterPlotsPanel } from "./components/FilterPlotsPanel";
 import { MapErrorDialog } from "./components/MapErrorDialog";
 import { MapUnavailableState } from "./components/MapUnavailableState";
@@ -1014,9 +1015,7 @@ export function AuthenticatedExploreMapPage() {
 
   if (isLoading)
     return (
-      <main className="flex min-h-[100svh] items-center justify-center bg-white text-sm text-muted">
-        {t("Loading map...")}
-      </main>
+      <PageLoader label={t("Loading map...")} />
     );
   if (!isAuthenticated) {
     router.replace(routes.login);
@@ -1262,6 +1261,7 @@ export function AuthenticatedExploreMapPage() {
                       onFocusPlot={() => focusPlot(openDetail.plot)}
                       isAddingToCart={addingPlotIds.includes(openDetail.plot.id)}
                       onAddToCart={() => void addToCart(openDetail.plot.id)}
+                      onBack={() => setDetailPlotId(null)}
                       t={t}
                     />
                   ) : openDetail?.status === "error" ? (

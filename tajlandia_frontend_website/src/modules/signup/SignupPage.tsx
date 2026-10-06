@@ -153,7 +153,19 @@ export function SignupPage() {
 
         <div className="flex items-center px-1 py-2 sm:px-4">
           <ScrollAnimatedElement animation="slide-in-right" duration={600} className="mx-auto w-full max-w-[440px]">
-            <h2 className="text-[28px] font-semibold tracking-[-0.03em] text-navy sm:text-[30px]">Create your account</h2>
+            <Link
+              href={routes.home}
+              className="group inline-flex items-center gap-2 rounded-full border border-[#e6e8ef] bg-white py-1 pl-1 pr-3.5 text-[13px] font-medium text-navy shadow-[0_1px_2px_rgba(11,31,77,0.06)] transition-colors hover:border-navy/25 hover:bg-[#f5f7fb] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy"
+            >
+              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#f1f4f9] transition-colors group-hover:bg-navy group-hover:text-white">
+                <svg viewBox="0 0 16 16" aria-hidden="true" className="h-3.5 w-3.5 transition-transform group-hover:-translate-x-0.5 motion-reduce:transition-none">
+                  <path d="M13 8H3m4-4L3 8l4 4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </span>
+              Back to Home
+            </Link>
+
+            <h2 className="mt-8 text-[28px] font-semibold tracking-[-0.03em] text-navy sm:text-[30px]">Create your account</h2>
             <p className="mt-2 text-[14px] text-[#8b939e]">start your journey and claim your little piece of Thailand.</p>
 
             <form className="mt-7" noValidate onSubmit={handleSubmit}>

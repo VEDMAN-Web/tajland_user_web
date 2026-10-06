@@ -6,6 +6,7 @@ import { DashboardNavbar } from "./DashboardNavbar";
 import { useAuth } from "@/lib/hooks/useAuth";
 import { routes } from "@/lib/constants/routes";
 import { useDashboardLanguage } from "./DashboardLanguageContext";
+import { PageLoader } from "@/components/ui/PageLoader";
 
 type Dialog = "download" | "share" | null;
 
@@ -22,9 +23,7 @@ export function CertificateDetailsPage({ certificateId }: { certificateId: strin
 
   if (isLoading)
     return (
-      <main className="flex min-h-[100svh] items-center justify-center bg-[#f5f9fc] text-sm text-muted">
-        {t("Loading certificate...")}
-      </main>
+      <PageLoader label={t("Loading certificate...")} />
     );
   if (!isAuthenticated) return null;
 

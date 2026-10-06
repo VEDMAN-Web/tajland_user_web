@@ -107,6 +107,15 @@ const translations: Record<string, Record<Exclude<DashboardLanguage, "EN">, stri
     TH: "ไม่สามารถโหลดแปลงนี้ได้ในขณะนี้",
   },
   "Back to plots": { PL: "Wróć do działek", TH: "กลับไปที่รายการแปลง" },
+  Back: { PL: "Wstecz", TH: "กลับ" },
+  Leaderboard: { PL: "Ranking", TH: "กระดานผู้นำ" },
+  "Loading leaderboard...": { PL: "Ładowanie rankingu...", TH: "กำลังโหลดกระดานผู้นำ..." },
+  "Coming soon": { PL: "Wkrótce", TH: "เร็วๆ นี้" },
+  "See who holds the most land across Thailand. Rankings are on their way.": {
+    PL: "Zobacz, kto posiada najwięcej ziemi w całej Tajlandii. Ranking już wkrótce.",
+    TH: "ดูว่าใครถือครองที่ดินมากที่สุดทั่วประเทศไทย อันดับกำลังจะมาเร็วๆ นี้",
+  },
+  "Back to Home": { PL: "Wróć do strony głównej", TH: "กลับหน้าหลัก" },
   "Loading Map": { PL: "Ładowanie mapy", TH: "กำลังโหลดแผนที่" },
   "Preparing Thailand for exploration...": {
     PL: "Przygotowujemy Tajlandię do eksploracji...",
@@ -267,6 +276,319 @@ const translations: Record<string, Record<Exclude<DashboardLanguage, "EN">, stri
     TH: "กำลังใช้...",
   },
   "Coupon applied": { PL: "Zastosowano kupon", TH: "ใช้คูปองแล้ว" },
+  "Loading checkout...": {
+    PL: "Ładowanie płatności...",
+    TH: "กำลังโหลดการชำระเงิน...",
+  },
+  "Complete your purchase": {
+    PL: "Dokończ zakup",
+    TH: "ทำการซื้อให้เสร็จสมบูรณ์",
+  },
+  "You're just one step away from owning your piece of Thailand.": {
+    PL: "Jesteś o krok od posiadania swojego kawałka Tajlandii.",
+    TH: "อีกเพียงขั้นตอนเดียวคุณก็จะได้เป็นเจ้าของผืนดินในประเทศไทย",
+  },
+  "Who is this purchase for?": {
+    PL: "Dla kogo jest ten zakup?",
+    TH: "การซื้อนี้สำหรับใคร?",
+  },
+  "My Self": {
+    PL: "Dla mnie",
+    TH: "ตัวฉันเอง",
+  },
+  "Someone else": {
+    PL: "Ktoś inny",
+    TH: "คนอื่น",
+  },
+  "Your Information": {
+    PL: "Twoje dane",
+    TH: "ข้อมูลของคุณ",
+  },
+  "Gift this collection": {
+    PL: "Podaruj tę kolekcję",
+    TH: "มอบคอลเลกชันนี้เป็นของขวัญ",
+  },
+  "First Name": {
+    PL: "Imię",
+    TH: "ชื่อ",
+  },
+  "Email Address": {
+    PL: "Adres e-mail",
+    TH: "ที่อยู่อีเมล",
+  },
+  "Enter your first name": {
+    PL: "Wpisz imię",
+    TH: "กรอกชื่อของคุณ",
+  },
+  "Enter your last name": {
+    PL: "Wpisz nazwisko",
+    TH: "กรอกนามสกุลของคุณ",
+  },
+  "Enter your email": {
+    PL: "Wpisz e-mail",
+    TH: "กรอกอีเมลของคุณ",
+  },
+  "Personal Message": {
+    PL: "Wiadomość osobista",
+    TH: "ข้อความส่วนตัว",
+  },
+  "Write your personal message...": {
+    PL: "Napisz osobistą wiadomość...",
+    TH: "เขียนข้อความส่วนตัวของคุณ...",
+  },
+  "Send certificate to recipient directly": {
+    PL: "Wyślij certyfikat bezpośrednio do odbiorcy",
+    TH: "ส่งใบรับรองถึงผู้รับโดยตรง",
+  },
+  "First name is required.": {
+    PL: "Imię jest wymagane.",
+    TH: "กรุณากรอกชื่อ",
+  },
+  "Last name is required.": {
+    PL: "Nazwisko jest wymagane.",
+    TH: "กรุณากรอกนามสกุล",
+  },
+  "Email is required.": {
+    PL: "E-mail jest wymagany.",
+    TH: "กรุณากรอกอีเมล",
+  },
+  "Enter a valid email address.": {
+    PL: "Wpisz poprawny adres e-mail.",
+    TH: "กรุณากรอกอีเมลที่ถูกต้อง",
+  },
+  "Phone number is required.": {
+    PL: "Numer telefonu jest wymagany.",
+    TH: "กรุณากรอกหมายเลขโทรศัพท์",
+  },
+  "Pay": {
+    PL: "Zapłać",
+    TH: "ชำระ",
+  },
+  "Your cart doesn't meet the minimum yet.": {
+    PL: "Twój koszyk nie spełnia jeszcze minimum.",
+    TH: "รถเข็นของคุณยังไม่ถึงขั้นต่ำ",
+  },
+  "Some plots are no longer reserved for you. Please review your cart.": {
+    PL: "Niektóre działki nie są już dla Ciebie zarezerwowane. Sprawdź koszyk.",
+    TH: "บางแปลงไม่ได้ถูกจองไว้ให้คุณแล้ว โปรดตรวจสอบรถเข็น",
+  },
+  "Your cart changed and can't be checked out as it is. Please review your cart.": {
+    PL: "Twój koszyk się zmienił i nie można go teraz opłacić. Sprawdź koszyk.",
+    TH: "รถเข็นของคุณมีการเปลี่ยนแปลงและยังชำระเงินไม่ได้ โปรดตรวจสอบรถเข็น",
+  },
+  "Couldn't place your order. Please try again.": {
+    PL: "Nie udało się złożyć zamówienia. Spróbuj ponownie.",
+    TH: "ไม่สามารถสั่งซื้อได้ โปรดลองอีกครั้ง",
+  },
+  "Your cart is empty. Add plots before checking out.": {
+    PL: "Twój koszyk jest pusty. Dodaj działki przed zakupem.",
+    TH: "รถเข็นของคุณว่างเปล่า เพิ่มแปลงก่อนชำระเงิน",
+  },
+  "Couldn't load your order summary.": {
+    PL: "Nie udało się załadować podsumowania zamówienia.",
+    TH: "ไม่สามารถโหลดสรุปคำสั่งซื้อได้",
+  },
+  "Confirm Checkout": {
+    PL: "Potwierdź zamówienie",
+    TH: "ยืนยันการสั่งซื้อ",
+  },
+  "Confirming...": {
+    PL: "Potwierdzanie...",
+    TH: "กำลังยืนยัน...",
+  },
+  "Payment Method": {
+    PL: "Metoda płatności",
+    TH: "วิธีการชำระเงิน",
+  },
+  "Card": {
+    PL: "Karta",
+    TH: "บัตร",
+  },
+  "Apple Pay": {
+    PL: "Apple Pay",
+    TH: "Apple Pay",
+  },
+  "Google Pay": {
+    PL: "Google Pay",
+    TH: "Google Pay",
+  },
+  "Touch ID / Face ID": {
+    PL: "Touch ID / Face ID",
+    TH: "Touch ID / Face ID",
+  },
+  "Fast Checkout": {
+    PL: "Szybka płatność",
+    TH: "ชำระเงินด่วน",
+  },
+  "Card Details": {
+    PL: "Dane karty",
+    TH: "รายละเอียดบัตร",
+  },
+  "Cardholder Name": {
+    PL: "Imię i nazwisko posiadacza karty",
+    TH: "ชื่อผู้ถือบัตร",
+  },
+  "Name on card": {
+    PL: "Imię i nazwisko na karcie",
+    TH: "ชื่อบนบัตร",
+  },
+  "Card Number": {
+    PL: "Numer karty",
+    TH: "หมายเลขบัตร",
+  },
+  "Expiration Date": {
+    PL: "Data ważności",
+    TH: "วันหมดอายุ",
+  },
+  "CVC": {
+    PL: "CVC",
+    TH: "CVC",
+  },
+  "Billing Country": {
+    PL: "Kraj rozliczeniowy",
+    TH: "ประเทศสำหรับการเรียกเก็บเงิน",
+  },
+  "Enter your country": {
+    PL: "Wpisz kraj",
+    TH: "กรอกประเทศของคุณ",
+  },
+  "Cardholder name is required.": {
+    PL: "Imię i nazwisko posiadacza jest wymagane.",
+    TH: "กรุณากรอกชื่อผู้ถือบัตร",
+  },
+  "Card number is required.": {
+    PL: "Numer karty jest wymagany.",
+    TH: "กรุณากรอกหมายเลขบัตร",
+  },
+  "Enter a valid card number.": {
+    PL: "Wpisz poprawny numer karty.",
+    TH: "กรุณากรอกหมายเลขบัตรที่ถูกต้อง",
+  },
+  "Expiration date is required.": {
+    PL: "Data ważności jest wymagana.",
+    TH: "กรุณากรอกวันหมดอายุ",
+  },
+  "Use MM / YY.": {
+    PL: "Użyj formatu MM / RR.",
+    TH: "ใช้รูปแบบ MM / YY",
+  },
+  "This card has expired.": {
+    PL: "Ta karta wygasła.",
+    TH: "บัตรนี้หมดอายุแล้ว",
+  },
+  "CVC is required.": {
+    PL: "CVC jest wymagany.",
+    TH: "กรุณากรอก CVC",
+  },
+  "Billing country is required.": {
+    PL: "Kraj rozliczeniowy jest wymagany.",
+    TH: "กรุณากรอกประเทศสำหรับการเรียกเก็บเงิน",
+  },
+  "Processing Payment...": {
+    PL: "Przetwarzanie płatności...",
+    TH: "กำลังดำเนินการชำระเงิน...",
+  },
+  "Your order expired. Please check out again.": {
+    PL: "Twoje zamówienie wygasło. Złóż je ponownie.",
+    TH: "คำสั่งซื้อของคุณหมดอายุแล้ว โปรดชำระเงินอีกครั้ง",
+  },
+  "Payment didn't go through. Please try again.": {
+    PL: "Płatność nie powiodła się. Spróbuj ponownie.",
+    TH: "การชำระเงินไม่สำเร็จ โปรดลองอีกครั้ง",
+  },
+  "Purchase complete": {
+    PL: "Zakup zakończony",
+    TH: "ซื้อสำเร็จ",
+  },
+  "Gift purchase complete": {
+    PL: "Zakup prezentu zakończony",
+    TH: "ซื้อของขวัญสำเร็จ",
+  },
+  "Your piece of Thailand is now yours.": {
+    PL: "Twój kawałek Tajlandii jest teraz Twój.",
+    TH: "ผืนดินในประเทศไทยของคุณเป็นของคุณแล้ว",
+  },
+  "Your gift is on its way.": {
+    PL: "Twój prezent jest w drodze.",
+    TH: "ของขวัญของคุณกำลังส่งไป",
+  },
+  "Share your verified Tajlandia ownership record with colleagues, banks, or legal counsel.": {
+    PL: "Udostępnij potwierdzony zapis własności Tajlandia współpracownikom, bankom lub prawnikom.",
+    TH: "แชร์บันทึกกรรมสิทธิ์ Tajlandia ที่ยืนยันแล้วกับเพื่อนร่วมงาน ธนาคาร หรือที่ปรึกษากฎหมาย",
+  },
+  "You've gifted a verified piece of Thailand to someone special.": {
+    PL: "Podarowałeś potwierdzony kawałek Tajlandii komuś wyjątkowemu.",
+    TH: "คุณได้มอบผืนดินในประเทศไทยที่ยืนยันแล้วให้กับคนพิเศษ",
+  },
+  "Order Number": {
+    PL: "Numer zamówienia",
+    TH: "หมายเลขคำสั่งซื้อ",
+  },
+  "Items": {
+    PL: "Pozycje",
+    TH: "รายการ",
+  },
+  "Total Paid": {
+    PL: "Zapłacono łącznie",
+    TH: "ยอดชำระทั้งหมด",
+  },
+  "Gift sent successfully": {
+    PL: "Prezent wysłany",
+    TH: "ส่งของขวัญสำเร็จ",
+  },
+  "The gift certificate and claim link have been prepared for the recipient.": {
+    PL: "Certyfikat prezentu i link do odbioru zostały przygotowane dla odbiorcy.",
+    TH: "ใบรับรองของขวัญและลิงก์รับสิทธิ์ถูกเตรียมไว้สำหรับผู้รับแล้ว",
+  },
+  "Share Link": {
+    PL: "Udostępnij link",
+    TH: "แชร์ลิงก์",
+  },
+  "Link copied": {
+    PL: "Link skopiowany",
+    TH: "คัดลอกลิงก์แล้ว",
+  },
+  "View Ownership": {
+    PL: "Zobacz własność",
+    TH: "ดูกรรมสิทธิ์",
+  },
+  "Couldn't share the link. Please try again.": {
+    PL: "Nie udało się udostępnić linku. Spróbuj ponownie.",
+    TH: "ไม่สามารถแชร์ลิงก์ได้ โปรดลองอีกครั้ง",
+  },
+  "Go directly to My Land registry": {
+    PL: "Przejdź do rejestru Moja ziemia",
+    TH: "ไปที่ทะเบียนที่ดินของฉัน",
+  },
+  "Tajlandia ownership": {
+    PL: "Własność Tajlandia",
+    TH: "กรรมสิทธิ์ Tajlandia",
+  },
+  "Purchase Confirmed": {
+    PL: "Zakup potwierdzony",
+    TH: "ยืนยันการซื้อแล้ว",
+  },
+  "Your little piece of Thailand is now yours.": {
+    PL: "Twój mały kawałek Tajlandii jest teraz Twój.",
+    TH: "ผืนดินเล็ก ๆ ในประเทศไทยเป็นของคุณแล้ว",
+  },
+  "Your purchase has been successfully completed.": {
+    PL: "Twój zakup został pomyślnie zakończony.",
+    TH: "การซื้อของคุณเสร็จสมบูรณ์แล้ว",
+  },
+  sqm: { PL: "m²", TH: "ตร.ม." },
+  "Enter a {digits}-digit phone number.": {
+    PL: "Wpisz {digits}-cyfrowy numer telefonu.",
+    TH: "กรอกหมายเลขโทรศัพท์ {digits} หลัก",
+  },
+  "Card number must be 16 digits.": {
+    PL: "Numer karty musi mieć 16 cyfr.",
+    TH: "หมายเลขบัตรต้องมี 16 หลัก",
+  },
+  "CVC must be 3 digits.": {
+    PL: "CVC musi mieć 3 cyfry.",
+    TH: "CVC ต้องมี 3 หลัก",
+  },
   "Your cart is empty": { PL: "Twój koszyk jest pusty", TH: "รถเข็นของคุณว่างเปล่า" },
   "You haven't selected any plots yet. Explore Thailand and discover a place to add to your collection.": {
     PL: "Nie wybrano jeszcze żadnych działek. Odkryj Tajlandię i znajdź miejsce do swojej kolekcji.",

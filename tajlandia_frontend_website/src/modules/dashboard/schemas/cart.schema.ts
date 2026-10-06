@@ -66,3 +66,73 @@ export type Cart = z.infer<typeof cartSchema>;
 export type CartItem = z.infer<typeof cartItemSchema>;
 export type CartSummary = z.infer<typeof cartSummarySchema>;
 export type CartCoupon = z.infer<typeof cartCouponsSchema>["coupons"][number];
+
+/** Real `POST /checkout` `data`: the pending order (paid in the next step). */
+export const checkoutResultSchema = z.object({ orderId: z.string().min(1) });
+
+export type CheckoutContact = {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+};
+
+/** `POST /checkout` body. `recipient` only for a gift. */
+export type CheckoutInput = {
+  purchaseType: "self" | "gift";
+  buyer: CheckoutContact;
+  recipient?: CheckoutContact & {
+    personalMessage?: string;
+    sendCertificateDirectly: boolean;
+  };
+  couponId?: string;
+};
+
+/** Real `POST /payments` `data` (the dummy provider answers "succeeded" at once). */
+export const paymentResultSchema = z.object({
+  id: z.string(),
+  orderId: z.string(),
+  // Set once the payment succeeded, e.g. "ORD-2026-00001".
+  orderNo: z.string().nullish(),
+  status: z.string(),
+  amount: z.number(),
+  currency: z.string(),
+});
+
+/** `GET /orders/{id}` `data` (fields the confirmation uses; Swagger `OrderResponseDto`). */
+export const orderSchema = z.object({
+  id: z.string(),
+  orderNo: z.string().nullish(),
+  purchaseType: z.enum(["self", "gift"]),
+  items: z.array(
+    z.object({
+      plotId: z.string(),
+      // Zone tier, e.g. "ICON".
+      zone: z.string(),
+      rai: z.number(),
+      price: z.number(),
+      plotNumber: z.string().nullish(),
+      name: z.string().nullish(),
+      imageUrl: z.string().nullish(),
+      // City name, e.g. "Phuket".
+      location: z.string().nullish(),
+      sizeSquareFeet: z.number().nullish(),
+      pricePerRai: z.number().nullish(),
+    }),
+  ),
+  totalPlots: z.number(),
+  totalRai: z.number(),
+  total: z.number(),
+  currency: z.string(),
+  // pending_payment | paid | failed | cancelled | expired
+  status: z.string(),
+  recipient: z
+    .object({ firstName: z.string(), lastName: z.string(), email: z.string() })
+    .partial()
+    .nullish(),
+  // Certificate image, set once the order is paid.
+  certificateUrl: z.string().nullish(),
+});
+
+export type PaymentResult = z.infer<typeof paymentResultSchema>;
+export type Order = z.infer<typeof orderSchema>;

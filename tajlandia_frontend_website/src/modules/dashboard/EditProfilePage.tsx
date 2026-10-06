@@ -12,6 +12,7 @@ import { countryCodes, defaultCountry, findCountry, formatNationalNumber, phoneP
 import { AccountMenu } from "./AccountMenu";
 import { DashboardNavbar } from "./DashboardNavbar";
 import { useDashboardLanguage } from "./DashboardLanguageContext";
+import { PageLoader } from "@/components/ui/PageLoader";
 import { editProfileSchema, type EditProfileErrors } from "./schemas/edit-profile.schema";
 
 type FormValues = { firstName: string; lastName: string; email: string; countryCode: string; phone: string };
@@ -62,7 +63,7 @@ export function EditProfilePage() {
   }, [countryOpen]);
 
   if (isLoading) {
-    return <main className="flex min-h-[100svh] items-center justify-center bg-[#f7f9fc] text-sm text-muted">{t("Loading profile...")}</main>;
+    return <PageLoader label={t("Loading profile...")} />;
   }
 
   if (!isAuthenticated) {

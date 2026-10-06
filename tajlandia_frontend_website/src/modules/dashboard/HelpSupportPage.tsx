@@ -8,6 +8,7 @@ import { useAuth } from "@/lib/hooks/useAuth";
 import { AccountMenu } from "./AccountMenu";
 import { DashboardNavbar } from "./DashboardNavbar";
 import { useDashboardLanguage } from "./DashboardLanguageContext";
+import { PageLoader } from "@/components/ui/PageLoader";
 
 const faqs = [
   {
@@ -50,7 +51,7 @@ export function HelpSupportPage() {
   const [sent, setSent] = useState(false);
 
   if (isLoading) {
-    return <main className="flex min-h-[100svh] items-center justify-center bg-[#f7f9fc] text-sm text-muted">{t("Loading support...")}</main>;
+    return <PageLoader label={t("Loading support...")} />;
   }
 
   if (!isAuthenticated) {

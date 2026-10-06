@@ -8,6 +8,7 @@ import { DashboardNavbar } from "./DashboardNavbar";
 import { useAuth } from "@/lib/hooks/useAuth";
 import { routes } from "@/lib/constants/routes";
 import { useDashboardLanguage } from "./DashboardLanguageContext";
+import { PageLoader } from "@/components/ui/PageLoader";
 
 const plots = [
   { badge: "ICON", color: "#e11d2e" },
@@ -24,9 +25,7 @@ export function OrderDetailsPage({ orderId }: { orderId: string }) {
 
   if (isLoading) {
     return (
-      <main className="flex min-h-[100svh] items-center justify-center bg-[#f7f9fc] text-sm text-muted">
-        {t("Loading order...")}
-      </main>
+      <PageLoader label={t("Loading order...")} />
     );
   }
   if (!isAuthenticated) {

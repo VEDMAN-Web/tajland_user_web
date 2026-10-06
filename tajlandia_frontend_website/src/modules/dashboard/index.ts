@@ -11,3 +11,5 @@ export { MyCertificatesPage } from "./MyCertificatesPage";
 export { CertificateDetailsPage } from "./CertificateDetailsPage";
 export { OrderDetailsPage } from "./OrderDetailsPage";
 export { CartPage } from "./CartPage";
+export { CheckoutPage } from "./CheckoutPage";
+export { LeaderboardPage } from "./LeaderboardPage";

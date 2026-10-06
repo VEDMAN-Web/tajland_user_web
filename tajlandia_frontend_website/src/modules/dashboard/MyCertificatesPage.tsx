@@ -8,6 +8,7 @@ import { DashboardNavbar } from "./DashboardNavbar";
 import { useAuth } from "@/lib/hooks/useAuth";
 import { routes } from "@/lib/constants/routes";
 import { useDashboardLanguage } from "./DashboardLanguageContext";
+import { PageLoader } from "@/components/ui/PageLoader";
 
 type Certificate = {
   id?: string;
@@ -113,9 +114,7 @@ export function MyCertificatesPage() {
 
   if (isLoading)
     return (
-      <main className="flex min-h-[100svh] items-center justify-center bg-white text-sm text-muted">
-        {t("Loading certificates...")}
-      </main>
+      <PageLoader label={t("Loading certificates...")} />
     );
   if (!isAuthenticated) {
     router.replace(routes.login);

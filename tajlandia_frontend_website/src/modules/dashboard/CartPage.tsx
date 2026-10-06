@@ -12,8 +12,20 @@ import { routes } from "@/lib/constants/routes";
 import { useAuth } from "@/lib/hooks/useAuth";
 import { logError } from "@/lib/logging/logger";
 import { cn } from "@/lib/utils/cn";
+import {
+  CheckCircleIcon,
+  CouponForm,
+  type CouponControls,
+  fill,
+  money,
+  OrderSummaryCard,
+  WarningIcon,
+  ZONE_COLORS,
+} from "./CartSummaryCard";
+import { readAppliedCoupon, saveAppliedCoupon, type AppliedCoupon } from "./cart-coupon";
 import { DashboardNavbar } from "./DashboardNavbar";
 import { useDashboardLanguage } from "./DashboardLanguageContext";
+import { PageLoader } from "@/components/ui/PageLoader";
 import type { CartItem, CartSummary } from "./schemas/cart.schema";
 import {
   clearCart,
@@ -28,28 +40,17 @@ type Translate = (source: string) => string;
 const PLACEHOLDER_IMAGE = "/images/explore/place-placeholder.svg";
 const bone = "animate-pulse rounded-[8px] bg-[#eef1f5] motion-reduce:animate-none";
 
-// Order Summary dot / label colour per zone tier (Figma).
-const ZONE_COLORS: Record<string, string> = {
-  ICON: "#c9961a",
-  POPULAR: "#16807f",
-  STANDARD: "#6b7785",
-};
-
 // What the page shows: the items (`GET /cart`) with their totals (`GET /cart/order-summary`).
 type CartView = CartSummary & { items: CartItem[] };
 
-function money(amount: number) {
-  return `$${amount.toFixed(2)}`;
-}
-
-/** Puts values into a translated "{name}" template. */
-function fill(template: string, values: Record<string, string | number>) {
-  return template.replace(/\{(\w+)\}/g, (match, key: string) =>
-    key in values ? String(values[key]) : match,
-  );
-}
-
 const titleCase = (value: string) => value.charAt(0) + value.slice(1).toLowerCase();
+
+/** Checkout page link, carrying the applied coupon (its totals come from the API again). */
+function checkoutHref(couponId: string | undefined) {
+  return couponId
+    ? `${routes.checkout}?${new URLSearchParams({ couponId }).toString()}`
+    : routes.checkout;
+}
 
 export function CartPage() {
   const router = useRouter();
@@ -71,11 +72,11 @@ export function CartPage() {
   const [isClearDialogOpen, setIsClearDialogOpen] = useState(false);
   // Discount code: what's typed, and the coupon applied to the summary (by id).
   const [couponInput, setCouponInput] = useState("");
-  const [appliedCoupon, setAppliedCoupon] = useState<{ id: string; code: string } | null>(
-    null,
-  );
+  // Starts with the coupon saved for this tab (applied here or on checkout).
+  const [initialCoupon] = useState(readAppliedCoupon);
+  const [appliedCoupon, setAppliedCoupon] = useState<AppliedCoupon | null>(initialCoupon);
   // Mirror for the cart reload, so totals keep the coupon after a remove.
-  const appliedCouponRef = useRef<{ id: string; code: string } | null>(null);
+  const appliedCouponRef = useRef<AppliedCoupon | null>(initialCoupon);
   const [couponError, setCouponError] = useState("");
   const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
 
@@ -131,9 +132,10 @@ export function CartPage() {
     setReloadKey((key) => key + 1);
   }
 
-  function setCoupon(next: { id: string; code: string } | null) {
+  function setCoupon(next: AppliedCoupon | null) {
     appliedCouponRef.current = next;
     setAppliedCoupon(next);
+    saveAppliedCoupon(next);
   }
 
   // The typed code is matched against `GET /coupons` (never listed to the user),
@@ -233,12 +235,7 @@ export function CartPage() {
     }
   }
 
-  if (isLoading)
-    return (
-      <main className="flex min-h-[100svh] items-center justify-center bg-[#f7fafc] text-sm text-muted">
-        {t("Loading cart...")}
-      </main>
-    );
+  if (isLoading) return <PageLoader label={t("Loading cart...")} />;
   if (!isAuthenticated) return null;
 
   return (
@@ -552,7 +549,7 @@ function ProgressBanner({ cart, t }: { cart: CartView; t: Translate }) {
             <CheckCircleIcon />
             {t(reached ? "Minimum order completed!" : "Complete your selection")}
           </h2>
-          <p className="mt-1 max-w-[360px] font-manrope font-medium text-[11px] leading-4 text-[#8b939e]">
+          <p className="mt-1 max-w-[520px] font-manrope font-medium text-[13px] leading-5 text-[#8b939e]">
             {fill(
               t(
                 reached
@@ -566,17 +563,17 @@ function ProgressBanner({ cart, t }: { cart: CartView; t: Translate }) {
         <div className="flex shrink-0 items-center gap-2 sm:flex-col sm:items-end sm:gap-1">
           <p className="font-manrope font-medium">
             <span className="text-[20px] font-semibold text-navy">{cart.totalRai}</span>
-            <span className="text-[11px] text-[#8b939e]">{` / ${cart.minimumRai} ${t("Rai")}`}</span>
+            <span className="text-[13px] text-[#8b939e]">{` / ${cart.minimumRai} ${t("Rai")}`}</span>
           </p>
           {reached ? (
-            <span className="rounded-full bg-[#dcfce7] px-2 py-0.5 font-manrope text-[9px] font-semibold text-[#16a34a]">
+            <span className="rounded-full bg-[#dcfce7] px-2 py-0.5 font-manrope text-[11px] font-semibold text-[#16a34a]">
               {t("Minimum Reached")}
             </span>
           ) : null}
         </div>
       </div>
 
-      <div className="mt-4 flex items-center justify-between gap-3 font-manrope font-medium text-[12px] text-navy">
+      <div className="mt-4 flex items-center justify-between gap-3 font-manrope font-medium text-[14px] text-navy">
         <span>
           {`${plotCount} ${t(plotCount === 1 ? "Plot" : "Plots")} · ${cart.totalRai} ${t("Rai")}`}
         </span>
@@ -597,7 +594,7 @@ function ProgressBanner({ cart, t }: { cart: CartView; t: Translate }) {
           style={{ width: `${progress}%` }}
         />
       </div>
-      <div className="mt-2 flex flex-col gap-1 font-manrope font-medium text-[11px] leading-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+      <div className="mt-2 flex flex-col gap-1 font-manrope font-medium text-[13px] leading-5 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
         {reached ? (
           <span />
         ) : (
@@ -606,125 +603,11 @@ function ProgressBanner({ cart, t }: { cart: CartView; t: Translate }) {
           </span>
         )}
         <span className="text-[#8b939e] sm:text-right">
-          <strong className="font-semibold text-navy">{t("NEXT STEP:")}</strong>{" "}
+          <strong className="font-semibold text-navy">{t("NEXT STEP : ")}</strong>{" "}
           {t("Select parcels from any province zone to unlock settlement.")}
         </span>
       </div>
     </section>
-  );
-}
-
-type CouponControls = {
-  input: string;
-  applied: { id: string; code: string } | null;
-  error: string;
-  isApplying: boolean;
-  onInput: (value: string) => void;
-  onApply: () => void;
-  onRemove: () => void;
-};
-
-/**
- * Discount code (Figma "Coupon" / "Input"): a code field with Apply (pink and
- * red when the code is invalid), or the applied coupon's green card with Remove.
- */
-function CouponForm({
-  coupon,
-  discount,
-  t,
-}: {
-  coupon: CouponControls;
-  discount: number;
-  t: Translate;
-}) {
-  const hasError = Boolean(coupon.error);
-  const errorId = "coupon-error";
-
-  if (coupon.applied) {
-    return (
-      <div className="flex min-h-[58px] items-center justify-between gap-3 rounded-[14px] border border-[#bfe3c9] bg-[#e6f4ea] px-4 py-2.5">
-        <div className="flex min-w-0 items-center gap-2.5">
-          <span className="shrink-0 text-[#15803d]">
-            <CheckCircleIcon />
-          </span>
-          <div className="min-w-0">
-            <p className="truncate font-manrope text-[14px] font-medium leading-5 text-[#14532d]">
-              {`${t("Coupon applied")} ${coupon.applied.code}`}
-            </p>
-            <p className="font-manrope text-[12px] font-medium leading-4 text-[#3f7a52]">
-              {`${t("Discount")} -${money(discount)}`}
-            </p>
-          </div>
-        </div>
-        <button
-          type="button"
-          onClick={coupon.onRemove}
-          className="shrink-0 cursor-pointer font-manrope text-[12px] font-medium text-[#15803d] underline underline-offset-2 hover:text-[#14532d]"
-        >
-          {t("Remove")}
-        </button>
-      </div>
-    );
-  }
-
-  return (
-    <div>
-      <form
-        className="flex gap-2"
-        onSubmit={(event) => {
-          event.preventDefault();
-          coupon.onApply();
-        }}
-      >
-        <input
-          value={coupon.input}
-          onChange={(event) => coupon.onInput(event.target.value)}
-          placeholder={t("Enter Code")}
-          aria-label={t("Enter Code")}
-          aria-invalid={hasError}
-          aria-describedby={hasError ? errorId : undefined}
-          disabled={coupon.isApplying}
-          autoCapitalize="characters"
-          className={cn(
-            "h-14 min-w-0 flex-1 rounded-[12px] border px-4 py-3 font-manrope text-[16px] font-medium outline-none placeholder:text-[#b0b7c0] disabled:opacity-70",
-            hasError
-              ? "border-[#e11d2e] bg-[#ffdcdf] text-[#e11d2e]"
-              : "border-[#e4e9ef] bg-white text-navy focus:border-navy",
-          )}
-        />
-        <button
-          type="submit"
-          disabled={coupon.isApplying}
-          className="h-14 shrink-0 cursor-pointer rounded-[12px] bg-navy px-7 font-manrope text-[16px] font-medium text-white hover:bg-navy-deep disabled:cursor-wait disabled:opacity-70 sm:text-[18px]"
-        >
-          {t(coupon.isApplying ? "Applying..." : "Apply")}
-        </button>
-      </form>
-      {hasError ? (
-        <p
-          id={errorId}
-          role="alert"
-          className="mt-2 flex items-center gap-1.5 font-manrope text-[13px] font-medium text-[#e11d2e]"
-        >
-          <InfoCircleIcon />
-          {t(coupon.error)}
-        </p>
-      ) : null}
-    </div>
-  );
-}
-
-function InfoCircleIcon() {
-  return (
-    <svg viewBox="0 0 16 16" aria-hidden="true" className="h-4 w-4 shrink-0">
-      <circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" strokeWidth="1.3" />
-      <path
-        d="M8 4.8v3.6M8 10.8v.2"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeWidth="1.5"
-      />
-    </svg>
   );
 }
 
@@ -742,103 +625,40 @@ function OrderSummary({
   return (
     <aside>
       <CouponForm coupon={coupon} discount={cart.discount} t={t} />
-      <div className="mt-3 rounded-[16px] border border-[#eef1f4] bg-white px-5 py-6 shadow-[0_8px_24px_rgba(11,31,77,0.05)] sm:px-7 sm:py-7">
-        <h2 className="font-manrope text-[22px] leading-none font-semibold text-[#111111] sm:text-[24px]">
-          {t("Order Summary")}
-        </h2>
-        <div className="mt-5 space-y-3 font-manrope text-[16px] font-medium text-[#6b7280]">
-          <p className="flex items-center justify-between">
-            <span>{t("Plots")}</span>
-            <strong className="font-bold text-navy">{cart.plots}</strong>
-          </p>
-          <p className="flex items-center justify-between">
-            <span>{t("Total Rai")}</span>
-            <strong className="font-bold text-[#e11d2e]">{cart.totalRai}</strong>
-          </p>
-        </div>
-        {cart.zones.length ? <div className="my-5 border-t border-[#e5e7eb]" /> : null}
-        {/* Zone split as the API sends it (every tier, including those at $0). */}
-        <div className="space-y-3 font-manrope text-[16px] font-medium">
-          {cart.zones.map((zone) => {
-            const color = ZONE_COLORS[zone.tier.toUpperCase()] ?? "#6b7785";
-            return (
-              <p key={zone.tier} className="flex items-center justify-between">
-                <span
-                  className="inline-flex items-center gap-2 font-semibold"
-                  style={{ color }}
-                >
-                  <span
-                    aria-hidden="true"
-                    className="h-1.5 w-1.5 rounded-full"
-                    style={{ backgroundColor: color }}
-                  />
-                  {t(zone.name)}
-                </span>
-                <span className="text-[#6b7280]">{money(zone.amount)}</span>
-              </p>
-            );
-          })}
-        </div>
-        <div className="my-5 border-t border-[#e5e7eb]" />
-        <p className="flex items-center justify-between font-manrope text-[16px] font-medium text-[#6b7280]">
-          <span>{t("Subtotal")}</span>
-          <span>{money(cart.subtotal)}</span>
-        </p>
-        {cart.discount > 0 ? (
-          <p className="mt-3 flex items-center justify-between font-manrope text-[16px] font-medium text-[#6b7280]">
-            <span>
-              {cart.coupon ? `${t("Discount")} · ${cart.coupon.code}` : t("Discount")}
-            </span>
-            <span className="text-[#16a34a]">{`−${money(cart.discount)}`}</span>
-          </p>
-        ) : null}
-        <div className="my-5 border-t border-[#e5e7eb]" />
-        <p className="flex items-center justify-between font-manrope font-medium text-[16px] text-[#6b7280]">
-          <span>{t("Total")}</span>
-          <strong className="text-[28px] font-bold leading-none text-[#111111] sm:text-[32px]">
-            {money(cart.total)}
-          </strong>
-        </p>
-        {/* Figma "Minimum purchase reached" note, once the cart can check out. */}
-        {remainingRai === 0 ? (
-          <div className="mt-5 flex items-start gap-2 rounded-[10px] border border-[#bbf7d0] bg-[#f0fdf4] px-3 py-2.5">
-            <span className="mt-0.5 text-[#15803d]">
-              <CheckCircleIcon />
-            </span>
-            <div>
-              <p className="font-manrope text-[13px] font-semibold leading-5 text-[#15803d]">
-                {t("Minimum purchase reached")}
-              </p>
-              <p className="font-manrope font-medium text-[11px] leading-4 text-[#16a34a]">
-                {fill(t("Your selection meets the {min} Rai minimum."), {
-                  min: cart.minimumRai,
-                })}
-              </p>
-            </div>
-          </div>
-        ) : null}
-        {/* TODO: `POST /cart/validate` and `POST /cart/checkout`. */}
-        <button
-          type="button"
-          disabled={!cart.checkoutEligible}
-          className="mt-6 h-12 w-full cursor-pointer rounded-[12px] bg-navy font-manrope text-[15px] font-medium text-white hover:bg-navy-deep disabled:cursor-not-allowed disabled:bg-[#d9dde3] disabled:text-[#9aa3ad]"
-        >
-          {t("Proceed to checkout →")}
-        </button>
-        <Link
-          href={routes.dashboardExplore}
-          className="mt-3 flex h-12 items-center justify-center rounded-[12px] border border-[#e4e9ef] bg-white font-manrope text-[15px] font-medium text-[#111111] hover:border-[#cfd8e3]"
-        >
-          {t("Continue Exploring")}
-        </Link>
-        {remainingRai > 0 ? (
-          <p className="mt-3 flex items-center justify-center gap-1.5 text-center font-manrope font-medium text-[11px] text-[#e11d2e]">
-            <WarningIcon />
-            {fill(t("Requires {rai} more Rai to activate checkout"), {
-              rai: remainingRai,
-            })}
-          </p>
-        ) : null}
+      <div className="mt-3">
+        <OrderSummaryCard summary={cart} t={t}>
+          {/* The checkout page reads the applied coupon from the URL. */}
+          {cart.checkoutEligible ? (
+            <Link
+              href={checkoutHref(cart.coupon?.id)}
+              className="mt-6 flex h-12 w-full items-center justify-center rounded-[12px] bg-navy font-manrope text-[15px] font-medium text-white hover:bg-navy-deep"
+            >
+              {t("Proceed to checkout →")}
+            </Link>
+          ) : (
+            <button
+              type="button"
+              disabled
+              className="mt-6 h-12 w-full cursor-not-allowed rounded-[12px] bg-[#d9dde3] font-manrope text-[15px] font-medium text-[#9aa3ad]"
+            >
+              {t("Proceed to checkout →")}
+            </button>
+          )}
+          <Link
+            href={routes.dashboardExplore}
+            className="mt-3 flex h-12 items-center justify-center rounded-[12px] border border-[#e4e9ef] bg-white font-manrope text-[15px] font-medium text-[#111111] hover:border-[#cfd8e3]"
+          >
+            {t("Continue Exploring")}
+          </Link>
+          {remainingRai > 0 ? (
+            <p className="mt-3 flex items-center justify-center gap-1.5 text-center font-manrope font-medium text-[11px] text-[#e11d2e]">
+              <WarningIcon />
+              {fill(t("Requires {rai} more Rai to activate checkout"), {
+                rai: remainingRai,
+              })}
+            </p>
+          ) : null}
+        </OrderSummaryCard>
       </div>
     </aside>
   );
@@ -1267,49 +1087,6 @@ function TrashIcon() {
       <path
         d="M3.5 0h3l.5 1H10v1.25H0V1h3L3.5 0ZM.75 3h8.5l-.6 8.1a1 1 0 0 1-1 .9H2.35a1 1 0 0 1-1-.9L.75 3Z"
         fill="currentColor"
-      />
-    </svg>
-  );
-}
-
-function CheckCircleIcon() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-4 w-4 shrink-0">
-      <circle
-        cx="12"
-        cy="12"
-        r="8.5"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.8"
-      />
-      <path
-        d="m8.5 12.2 2.3 2.3 4.7-5"
-        fill="none"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth="1.8"
-      />
-    </svg>
-  );
-}
-
-function WarningIcon() {
-  return (
-    <svg viewBox="0 0 16 16" aria-hidden="true" className="h-3.5 w-3.5 shrink-0">
-      <path
-        d="M8 2.5 14 13H2L8 2.5Z"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.3"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M8 6.5v3M8 11.3v.2"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeWidth="1.4"
       />
     </svg>
   );

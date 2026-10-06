@@ -14,7 +14,7 @@ import { useDashboardLanguage } from "./DashboardLanguageContext";
 import { getCart } from "./services/cart.client";
 
 type DashboardNavbarProps = {
-  active: "home" | "explore" | "my-land" | "none";
+  active: "home" | "explore" | "leaderboard" | "my-land" | "none";
   overlay?: boolean;
 };
 
@@ -118,6 +118,12 @@ export function DashboardNavbar({ active, overlay = false }: DashboardNavbarProp
               className={`inline-flex h-9 items-center rounded-full px-4 font-manrope text-[14px] font-medium leading-none ${active === "explore" ? activeClass : "text-navy"}`}
             >
               {t("Explore Map")}
+            </Link>
+            <Link
+              href={routes.leaderboard}
+              className={`inline-flex h-9 items-center rounded-full px-4 font-manrope text-[14px] font-medium leading-none ${active === "leaderboard" ? activeClass : "text-navy"}`}
+            >
+              {t("Leaderboard")}
             </Link>
             <Link
               href={routes.land}
@@ -262,6 +268,13 @@ export function DashboardNavbar({ active, overlay = false }: DashboardNavbarProp
               className={`rounded-[9px] px-3 py-3 text-[13px] ${active === "explore" ? "bg-navy text-white" : "text-navy hover:bg-[#f5f7fa]"}`}
             >
               {t("Explore Map")}
+            </Link>
+            <Link
+              href={routes.leaderboard}
+              onClick={() => setIsMobileMenuOpen(false)}
+              className={`rounded-[9px] px-3 py-3 text-[13px] ${active === "leaderboard" ? "bg-navy text-white" : "text-navy hover:bg-[#f5f7fa]"}`}
+            >
+              {t("Leaderboard")}
             </Link>
             <Link
               href={routes.land}

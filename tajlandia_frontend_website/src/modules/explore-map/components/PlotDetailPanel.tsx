@@ -16,6 +16,8 @@ type PlotDetailPanelProps = {
   /** True while this plot's Add to Cart request runs. */
   isAddingToCart: boolean;
   onAddToCart: () => void;
+  /** Back to the area's plot list. */
+  onBack: () => void;
   t: Translate;
 };
 
@@ -151,6 +153,7 @@ export function PlotDetailPanel({
   onFocusPlot,
   isAddingToCart,
   onAddToCart,
+  onBack,
   t,
 }: PlotDetailPanelProps) {
   const statusKey = plotCardStatus(plot.status, plot.isOwned, plot.isInCart);
@@ -169,6 +172,16 @@ export function PlotDetailPanel({
           aria-hidden="true"
           className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.6)_0%,rgba(0,0,0,0)_45%,rgba(0,0,0,0.2)_100%)]"
         />
+        {/* Top-left, opposite the status badge. */}
+        <button
+          type="button"
+          onClick={onBack}
+          aria-label={t("Back to plots")}
+          className="absolute left-3 top-3 flex h-[26px] cursor-pointer items-center gap-1 rounded-full bg-white pl-2 pr-2.5 text-[11px] font-semibold text-[#001f54] shadow-[0_2px_8px_rgba(0,0,0,0.15)] transition-colors hover:bg-[#f1f4f9] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+        >
+          <Chevron direction="left" />
+          {t("Back")}
+        </button>
         <span
           className={cn(
             // Figma: top-right of the image (sharing lives in the title row).
