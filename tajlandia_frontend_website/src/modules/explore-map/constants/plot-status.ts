@@ -4,8 +4,12 @@ export const PLOT_STATUS_COLORS = {
   LOCKED: "#e7b52c",
   // CLAIMED and SOLD both show as "Taken" in the legend.
   TAKEN: "#d64242",
-  OWNED: "#0b1f4d",
+  // Figma "Theme 2 Logo/Blue" (the My Plot outline).
+  OWNED: "#001f54",
 } as const;
+
+// Figma "My Plot": a light blue shape inside the navy outline.
+export const OWNED_PLOT_FILL = { color: "#b5d3ff", opacity: 0.6 } as const;
 
 export type PlotCardStatus = "available" | "inCart" | "locked" | "taken" | "owned";
 

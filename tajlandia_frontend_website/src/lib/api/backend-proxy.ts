@@ -15,6 +15,7 @@ const ALLOWED_PREFIXES = new Set([
   "checkout",
   "payments",
   "orders",
+  "lands",
 ]);
 // Single endpoints whose area is otherwise off-limits (e.g. `dashboard/admin/*`).
 const ALLOWED_EXACT_PATHS = new Set(["dashboard", "coupons"]);

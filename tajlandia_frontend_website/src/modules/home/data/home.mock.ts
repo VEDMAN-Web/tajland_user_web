@@ -23,15 +23,15 @@ export const homePageContent: HomePageContent = {
     film: {
       desktop: {
         framePath: "/images/home/hero-film-demo/desktop/frame-{frame}.webp",
-        frameCount: 170,
+        frameCount: 383,
       },
       mobile: {
         framePath: "/images/home/hero-film-demo/mobile/frame-{frame}.webp",
-        frameCount: 170,
+        frameCount: 383,
       },
       poster: {
         src: "/images/home/hero-film-demo/desktop/frame-0001.webp",
-        alt: "Aerial view above the clouds over a city skyline",
+        alt: "Aerial view through the clouds over a tropical coastline and bay",
         width: 1600,
         height: 900,
       },

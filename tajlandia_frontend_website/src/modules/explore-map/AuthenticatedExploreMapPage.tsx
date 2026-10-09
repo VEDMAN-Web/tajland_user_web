@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useEffectEvent, useMemo, useRef, useState } from "react";
 import { isAbortError } from "@/lib/api/browser-client";
 import { isApiError } from "@/lib/api/errors";
 import { notifyCartChanged } from "@/lib/cart/cart-events";
@@ -33,7 +33,7 @@ import { RecentSearchRow } from "./components/RecentSearchRow";
 import { SearchResultRow } from "./components/SearchResultRow";
 import { SortPlotsPanel } from "./components/SortPlotsPanel";
 import { DEFAULT_PLOT_FILTERS, toPlotFilterQuery } from "./constants/explore-filters";
-import { plotColor } from "./constants/plot-status";
+import { OWNED_PLOT_FILL, PLOT_STATUS_COLORS, plotColor } from "./constants/plot-status";
 import { exploreFiltersMock } from "./data/explore-filters.mock";
 import {
   addPlotToCart,
@@ -129,6 +129,10 @@ function plotFocusPadding() {
 const VIEWPORT_PLOTS_MIN_ZOOM = 8;
 // Wait for the camera to settle before asking for the plots in view.
 const VIEWPORT_DEBOUNCE_MS = 300;
+// After a My Land link's plots load, its dot stays this long before zooming in,
+// and the zoom in to its outline is slower than a click's.
+const LINKED_PLOT_ZOOM_DELAY_MS = 800;
+const LINKED_PLOT_ZOOM_DURATION_MS = 2200;
 
 /** Region pill image through the Next image proxy (the CSP blocks remote images). */
 function regionImageSrc(imageUrl: string | null | undefined) {
@@ -157,6 +161,7 @@ function toMapPlot(plot: ExplorePlot): MapPlot {
     center: [plot.coordinates.lng, plot.coordinates.lat],
     polygon: plot.geometry?.coordinates,
     label: plot.plotNumber,
+    fill: plot.isOwned ? OWNED_PLOT_FILL : undefined,
   };
 }
 
@@ -315,9 +320,18 @@ export function AuthenticatedExploreMapPage() {
   const showViewportPlots =
     plotScope === null && mapView !== null && mapView.zoom >= VIEWPORT_PLOTS_MIN_ZOOM;
   // An open area shows its own (filtered, sorted) plots; otherwise what's in view.
+  // While an area's plots load, the plots already in view stay drawn, so the
+  // map doesn't go blank mid-zoom (e.g. opening a plot seen while browsing).
+  const areaPlotsPending = plotScope !== null && plotsStatus === "loading" && !plots.length;
   const mapPlots = useMemo(
-    () => (plotScope ? plots : showViewportPlots ? viewportPlots : []).map(toMapPlot),
-    [plotScope, plots, showViewportPlots, viewportPlots],
+    () =>
+      (plotScope && !areaPlotsPending
+        ? plots
+        : plotScope || showViewportPlots
+          ? viewportPlots
+          : []
+      ).map(toMapPlot),
+    [plotScope, areaPlotsPending, plots, showViewportPlots, viewportPlots],
   );
   const { sortBy, sortOrder } =
     sortOptions.find((option) => option.key === plotSortKey)?.query ?? {};
@@ -342,11 +356,34 @@ export function AuthenticatedExploreMapPage() {
       return undefined;
     return {
       id: plotId,
+      label: searchParams.get("plotNumber") ?? "",
       coordinates: [longitude, latitude] as [number, number],
       zoom: Number.isFinite(zoom) ? zoom : 16,
     };
   }, [searchParams]);
   const hasSelectedPlot = Boolean(selectedPlot);
+  // A plot linked from My Land ("View Map"): its detail opens once it loads in view.
+  const linkedPlotIdRef = useRef(selectedPlot ? searchParams.get("plotId") : null);
+  const linkedPlotTimerRef = useRef<number | undefined>(undefined);
+  // Until the plots in view load, the linked plot is drawn from the link itself,
+  // so its dot and number show as soon as the map does.
+  const [showLinkedPreview, setShowLinkedPreview] = useState(hasSelectedPlot);
+  const shownMapPlots = useMemo<MapPlot[]>(
+    () =>
+      showLinkedPreview && selectedPlot
+        ? [
+            ...mapPlots,
+            {
+              id: selectedPlot.id,
+              color: PLOT_STATUS_COLORS.OWNED,
+              fill: OWNED_PLOT_FILL,
+              center: selectedPlot.coordinates,
+              label: selectedPlot.label,
+            },
+          ]
+        : mapPlots,
+    [mapPlots, selectedPlot, showLinkedPreview],
+  );
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -448,6 +485,22 @@ export function AuthenticatedExploreMapPage() {
     setFilterOptionsReloadKey((key) => key + 1);
   }
 
+  // First plots in view after a My Land link: open the linked plot (only that first time).
+  const openLinkedPlot = useEffectEvent((items: ExplorePlot[]) => {
+    const linkedId = linkedPlotIdRef.current;
+    if (!linkedId) return;
+    linkedPlotIdRef.current = null;
+    setShowLinkedPreview(false);
+    const linked = items.find((item) => item.id === linkedId);
+    if (!linked) return;
+    linkedPlotTimerRef.current = window.setTimeout(
+      () => openViewportPlot(linked, LINKED_PLOT_ZOOM_DURATION_MS),
+      LINKED_PLOT_ZOOM_DELAY_MS,
+    );
+  });
+
+  useEffect(() => () => window.clearTimeout(linkedPlotTimerRef.current), []);
+
   // Browsing (no area open, zoomed in): load the plots in view once the camera settles.
   useEffect(() => {
     if (!isAuthenticated || !showViewportPlots || !mapView) return;
@@ -461,7 +514,10 @@ export function AuthenticatedExploreMapPage() {
     const controller = new AbortController();
     const timer = window.setTimeout(() => {
       getPlotsInViewport(bounds, controller.signal)
-        .then(setViewportPlots)
+        .then((items) => {
+          setViewportPlots(items);
+          openLinkedPlot(items);
+        })
         .catch((error: unknown) => {
           // Best effort: keep what's drawn; the next move tries again.
           if (isAbortError(error)) return;
@@ -653,21 +709,24 @@ export function AuthenticatedExploreMapPage() {
     plotScope !== null && trimmedSearch === plotAreaName && !hasMapError;
 
   // Zoom the map to fit the plot's outline (its centre at a fixed zoom if it has none).
-  function focusPlot(plot: Pick<ExplorePlot, "coordinates" | "geometry">) {
+  function focusPlot(
+    plot: Pick<ExplorePlot, "coordinates" | "geometry">,
+    duration = 1200,
+  ) {
     hasNavigatedRef.current = true;
     const bounds = polygonBounds(plot);
     if (bounds) {
       mapRef.current?.fitBounds(bounds, {
         padding: plotFocusPadding(),
         maxZoom: PLOT_FOCUS_MAX_ZOOM,
-        duration: 1200,
+        duration,
       });
       return;
     }
     void mapRef.current?.flyToView({
       center: [plot.coordinates.lng, plot.coordinates.lat],
       zoom: 15,
-      duration: 1200,
+      duration,
     });
   }
 
@@ -718,6 +777,15 @@ export function AuthenticatedExploreMapPage() {
     }
   }
 
+  // Back to the area's list: zoom out so all its plots show again (the detail zoomed to one).
+  function closePlotDetail() {
+    setDetailPlotId(null);
+    const bounds = plotsBounds(plots);
+    if (!bounds) return;
+    hasNavigatedRef.current = true;
+    mapRef.current?.fitBounds(bounds, { padding: plotFocusPadding(), duration: 1200 });
+  }
+
   function retryPlotDetail() {
     if (!detailPlotId) return;
     setPlotDetail({ id: detailPlotId, status: "loading" });
@@ -730,9 +798,12 @@ export function AuthenticatedExploreMapPage() {
       openPlotDetail(plot);
       return;
     }
-    // A plot seen while browsing: open its region's list, then its detail.
     const inView = viewportPlots.find((item) => item.id === plotId);
-    if (!inView) return;
+    if (inView) openViewportPlot(inView);
+  }
+
+  // A plot seen while browsing: open its region's list, then its detail.
+  function openViewportPlot(inView: ExplorePlot, zoomDuration?: number) {
     if (inView.region) {
       hasNavigatedRef.current = true;
       showAreaPlots({ param: "regionId", id: inView.region.id }, inView.region.name);
@@ -742,7 +813,7 @@ export function AuthenticatedExploreMapPage() {
     setPlotDetail({ id: inView.id, status: "loading" });
     setDetailPlotId(inView.id);
     setIsSearchExpanded(true);
-    focusPlot(inView);
+    focusPlot(inView, zoomDuration);
   }
 
   // Region pill: the same as picking the region in search.
@@ -1047,7 +1118,7 @@ export function AuthenticatedExploreMapPage() {
           title: t("Loading Map"),
           subtitle: t("Preparing Thailand for exploration..."),
         }}
-        plots={mapPlots}
+        plots={shownMapPlots}
         onPlotClick={handleMapPlotClick}
         regions={mapRegions}
         regionsMaxZoom={VIEWPORT_PLOTS_MIN_ZOOM}
@@ -1261,14 +1332,14 @@ export function AuthenticatedExploreMapPage() {
                       onFocusPlot={() => focusPlot(openDetail.plot)}
                       isAddingToCart={addingPlotIds.includes(openDetail.plot.id)}
                       onAddToCart={() => void addToCart(openDetail.plot.id)}
-                      onBack={() => setDetailPlotId(null)}
+                      onBack={closePlotDetail}
                       t={t}
                     />
                   ) : openDetail?.status === "error" ? (
                     <PlotDetailError
                       notFound={openDetail.notFound}
                       onRetry={retryPlotDetail}
-                      onBack={() => setDetailPlotId(null)}
+                      onBack={closePlotDetail}
                       t={t}
                     />
                   ) : (

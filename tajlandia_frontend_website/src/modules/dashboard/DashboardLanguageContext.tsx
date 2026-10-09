@@ -965,6 +965,23 @@ const translations: Record<string, Record<Exclude<DashboardLanguage, "EN">, stri
   "Tajlandia Certificate": { PL: "Certyfikat Tajlandia", TH: "ใบรับรอง Tajlandia" },
   "Share certificate": { PL: "Udostępnij certyfikat", TH: "แชร์ใบรับรอง" },
   "Share order": { PL: "Udostępnij zamówienie", TH: "แชร์คำสั่งซื้อ" },
+  "Total Lands": { PL: "Łącznie lokalizacji", TH: "ที่ดินทั้งหมด" },
+  "Loading land...": { PL: "Ładowanie ziemi...", TH: "กำลังโหลดที่ดิน..." },
+  "We couldn't load your land.": { PL: "Nie udało się załadować Twojej ziemi.", TH: "ไม่สามารถโหลดที่ดินของคุณได้" },
+  "Please check your connection and try again.": { PL: "Sprawdź połączenie i spróbuj ponownie.", TH: "โปรดตรวจสอบการเชื่อมต่อแล้วลองอีกครั้ง" },
+  "No Land yet": { PL: "Nie masz jeszcze ziemi", TH: "ยังไม่มีที่ดิน" },
+  "You don't have any land in your collection yet. Explore Thailand and find a place you'd love to own.": { PL: "Nie masz jeszcze ziemi w swojej kolekcji. Odkryj Tajlandię i znajdź miejsce, które chcesz mieć.", TH: "คุณยังไม่มีที่ดินในคอลเลกชัน สำรวจประเทศไทยและค้นหาสถานที่ที่คุณอยากเป็นเจ้าของ" },
+  "No plots match the selected filters.": { PL: "Żadna działka nie pasuje do wybranych filtrów.", TH: "ไม่มีแปลงที่ตรงกับตัวกรองที่เลือก" },
+  "No plots match your search.": { PL: "Żadna działka nie pasuje do wyszukiwania.", TH: "ไม่มีแปลงที่ตรงกับการค้นหาของคุณ" },
+  "Clear filters": { PL: "Wyczyść filtry", TH: "ล้างตัวกรอง" },
+  "Couldn't load more plots. Please try again.": { PL: "Nie udało się załadować kolejnych działek. Spróbuj ponownie.", TH: "ไม่สามารถโหลดแปลงเพิ่มเติมได้ โปรดลองอีกครั้ง" },
+  "Load more": { PL: "Załaduj więcej", TH: "โหลดเพิ่มเติม" },
+  "Narrow down the plots you own": { PL: "Zawęź swoje działki", TH: "กรองแปลงที่คุณเป็นเจ้าของ" },
+  "Amount paid": { PL: "Zapłacona kwota", TH: "ยอดที่ชำระ" },
+  "Enter a number of 0 or more.": { PL: "Wpisz liczbę 0 lub większą.", TH: "กรอกตัวเลขตั้งแต่ 0 ขึ้นไป" },
+  "Min can't be more than max.": { PL: "Minimum nie może być większe niż maksimum.", TH: "ค่าต่ำสุดต้องไม่มากกว่าค่าสูงสุด" },
+  "Certificate not ready yet": { PL: "Certyfikat nie jest jeszcze gotowy", TH: "ใบรับรองยังไม่พร้อม" },
+  "Search your plots, provinces, deeds...": { PL: "Szukaj działek, prowincji, aktów...", TH: "ค้นหาแปลง จังหวัด โฉนด..." },
 };
 
 type DashboardLanguageContextValue = {

@@ -1,22 +1,33 @@
 import Image from "next/image";
 import { brand } from "@/lib/constants/brand";
+import { cn } from "@/lib/utils/cn";
 
 type PageLoaderProps = {
   /** Already translated, e.g. `t("Loading cart...")`; the trailing dots are animated. */
   label: string;
+  /** Cover the page (fixed, above the header) instead of standing in for it. */
+  overlay?: boolean;
+  /** Extra classes on the root, e.g. a fade-out once loading is done. */
+  className?: string;
 };
 
 // Full-screen loader for signed-in pages: the logo floating on a card, an
 // indeterminate bar and the label. Animations live in `globals.css`.
-export function PageLoader({ label }: PageLoaderProps) {
+export function PageLoader({ label, overlay = false, className }: PageLoaderProps) {
   const text = label.replace(/(\.{3}|…)$/, "");
+  // An overlay sits inside a page that already has its own <main>.
+  const Root = overlay ? "div" : "main";
 
   return (
-    <main
+    <Root
       role="status"
       aria-live="polite"
       aria-label={label}
-      className="relative flex min-h-[100svh] flex-col items-center justify-center overflow-hidden bg-[#f7f9fc] px-6"
+      className={cn(
+        "flex min-h-[100svh] flex-col items-center justify-center overflow-hidden bg-[#f7f9fc] px-6",
+        overlay ? "fixed inset-0 z-[120]" : "relative",
+        className,
+      )}
     >
       <span
         aria-hidden
@@ -51,6 +62,6 @@ export function PageLoader({ label }: PageLoaderProps) {
           <span className="page-loader-dot size-1 rounded-full bg-current [animation-delay:0.3s]" />
         </span>
       </p>
-    </main>
+    </Root>
   );
 }

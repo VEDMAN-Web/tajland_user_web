@@ -106,6 +106,8 @@ export type MapPlot = {
   polygon?: number[][][];
   /** Shown in a pill above the plot, e.g. its plot number. */
   label?: string;
+  /** The shape's fill; `color` at 40% when not set. */
+  fill?: { color: string; opacity: number };
 };
 
 /** A region shown as a photo pill on the zoomed-out map (see `regionsMaxZoom`). */
@@ -198,7 +200,12 @@ function plotCollections(plots: MapPlot[]) {
       .map((plot) => ({
         type: "Feature",
         id: plot.id,
-        properties: { id: plot.id, color: plot.color },
+        properties: {
+          id: plot.id,
+          color: plot.color,
+          fillColor: plot.fill?.color ?? plot.color,
+          fillOpacity: plot.fill?.opacity ?? 0.4,
+        },
         geometry: { type: "Polygon", coordinates: plot.polygon! },
       })),
   };
@@ -234,7 +241,7 @@ function drawPlots(map: mapboxgl.Map, plots: MapPlot[]) {
     type: "fill",
     source: PLOT_AREAS_SOURCE,
     minzoom: PLOT_SHAPE_MIN_ZOOM,
-    paint: { "fill-color": ["get", "color"], "fill-opacity": 0.4 },
+    paint: { "fill-color": ["get", "fillColor"], "fill-opacity": ["get", "fillOpacity"] },
   });
   map.addLayer({
     id: "plot-areas-outline",
@@ -298,8 +305,8 @@ type MapboxMapProps = {
   initialZoom?: number;
   /** "globe" shows the Earth as a sphere when zoomed out (blends to flat when zoomed in). */
   projection?: "mercator" | "globe";
+  /** Where the map starts (e.g. a plot linked from My Land); no pin is drawn. */
   selectedLocation?: {
-    id: string;
     coordinates: [number, number];
     zoom?: number;
   };
@@ -459,14 +466,6 @@ export const MapboxMap = forwardRef<MapboxMapHandle, MapboxMapProps>(function Ma
           map.getCanvas().style.cursor = "";
         });
       }
-    });
-    map.once("load", () => {
-      if (!selectedLocation) return;
-      focusLocation(
-        selectedLocation.coordinates,
-        selectedLocation.zoom ?? 16,
-        selectedLocation.id,
-      );
     });
     map.once("idle", () => {
       if (!disposed) setStatus("ready");

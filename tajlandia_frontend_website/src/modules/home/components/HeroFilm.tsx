@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { PageLoader } from "@/components/ui/PageLoader";
 import { cn } from "@/lib/utils/cn";
 import type { HomeHeroFilm } from "../types/home.types";
 import {
@@ -31,6 +32,12 @@ const FRAME_MS = 1000 / 60;
 const SETTLE_EPSILON = 0.0002;
 const LOAD_CONCURRENCY = 6;
 const LINE_STAGGER = 0.012;
+// The page loader stays up until the first coarse pass (every 16th frame,
+// the first step of `frameLoadOrder`) has loaded, or this long at most.
+const WARMUP_STEP = 16;
+const WARMUP_MAX_MS = 8000;
+// Matches the loader's fade-out duration below.
+const LOADER_FADE_MS = 500;
 
 type FrameStore = (HTMLImageElement | null)[];
 
@@ -81,16 +88,39 @@ export function HeroFilm({ film, poster, finale, children, className }: HeroFilm
   const rootRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  // "loading" -> "fading" -> "done": the loader covers the page until enough
+  // frames are in, so the film never starts on a half-loaded sequence.
+  const [loader, setLoader] = useState<"loading" | "fading" | "done">("loading");
+
+  useEffect(() => {
+    if (loader !== "fading") return;
+    const timer = window.setTimeout(() => setLoader("done"), LOADER_FADE_MS);
+    return () => window.clearTimeout(timer);
+  }, [loader]);
+
+  // No scrolling under the loader.
+  useEffect(() => {
+    if (loader !== "loading") return;
+    const html = document.documentElement;
+    const previous = html.style.overflow;
+    html.style.overflow = "hidden";
+    return () => {
+      html.style.overflow = previous;
+    };
+  }, [loader]);
 
   useEffect(() => {
     const root = rootRef.current;
     const stage = stageRef.current;
     const canvas = canvasRef.current;
+    const finishWarmup = () => setLoader((state) => (state === "loading" ? "fading" : state));
     if (!root || !stage || !canvas || typeof window.matchMedia !== "function") {
+      finishWarmup();
       return;
     }
     const context = canvas.getContext("2d", { alpha: false });
     if (!context) {
+      finishWarmup();
       return;
     }
 
@@ -281,6 +311,18 @@ export function HeroFilm({ film, poster, finale, children, className }: HeroFilm
     };
 
     // ---- Frame loading (coarse-to-fine, limited concurrency) -----------
+    // Loaded or failed, both count: a missing frame must not hold the loader.
+    const warmupCount = Math.ceil(frameCount / WARMUP_STEP);
+    let settledCount = 0;
+    const warmupTimer = window.setTimeout(finishWarmup, WARMUP_MAX_MS);
+    const settle = () => {
+      settledCount += 1;
+      if (settledCount >= warmupCount) {
+        window.clearTimeout(warmupTimer);
+        finishWarmup();
+      }
+    };
+
     const loadFrame = (index: number) =>
       new Promise<void>((resolve) => {
         const image = new Image();
@@ -297,12 +339,16 @@ export function HeroFilm({ film, poster, finale, children, className }: HeroFilm
             drawnKey = "";
             requestTick();
           }
+          settle();
           resolve();
         };
         image
           .decode()
           .then(done)
-          .catch(() => resolve());
+          .catch(() => {
+            settle();
+            resolve();
+          });
       });
 
     // Frame 0 is loaded first on its own; the rest stream in afterwards.
@@ -340,6 +386,7 @@ export function HeroFilm({ film, poster, finale, children, className }: HeroFilm
       disposed = true;
       cancelAnimationFrame(rafId);
       window.clearTimeout(idleHandle);
+      window.clearTimeout(warmupTimer);
       window.removeEventListener("scroll", onScroll);
       window.removeEventListener("resize", onResize);
       delete document.documentElement.dataset.heroFilm;
@@ -361,6 +408,16 @@ export function HeroFilm({ film, poster, finale, children, className }: HeroFilm
         </div>
         {children}
       </div>
+      {loader !== "done" ? (
+        <PageLoader
+          overlay
+          label="Loading..."
+          className={cn(
+            "transition-opacity duration-500 ease-out",
+            loader === "fading" && "pointer-events-none opacity-0",
+          )}
+        />
+      ) : null}
     </div>
   );
 }
