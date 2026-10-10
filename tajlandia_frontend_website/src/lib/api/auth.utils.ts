@@ -40,6 +40,15 @@ export function setAuthUser(user: Record<string, unknown>, rememberMe = true): v
   }
 }
 
+/** True when the session was saved with "remember me" (localStorage). */
+export function isRememberedSession(): boolean {
+  try {
+    return Boolean(localStorage.getItem(TOKEN_KEY));
+  } catch {
+    return false;
+  }
+}
+
 export function clearAuth(): void {
   try {
     localStorage.removeItem(TOKEN_KEY);

@@ -15,56 +15,12 @@ import { logError } from "@/lib/logging/logger";
 import { useDashboardLanguage } from "./DashboardLanguageContext";
 import { PageLoader } from "@/components/ui/PageLoader";
 import type { LandOverview, LandPlot } from "./schemas/lands.schema";
+import type { OrderListEntry } from "./schemas/orders.schema";
 import { getLandOverview, getLandPlots, type LandPlotsQuery } from "./services/lands.client";
+import { getOrders } from "./services/orders.client";
 
-type Purchase = {
-  id?: string;
-  name?: string;
-  region?: string;
-  latitude?: number;
-  longitude?: number;
-  rai?: number;
-  amount?: number;
-  gifted?: boolean;
-  zone?: "Icon" | "Popular" | "Standard";
-  createdAt?: string;
-};
 type PurchaseSort =
   "recommended" | "price-low" | "price-high" | "area-small" | "area-large" | "newest";
-
-const defaultPurchases: Purchase[] = [
-  {
-    id: "1234-1",
-    name: "ORDER #1234",
-    region: "Phuket Sector 4",
-    rai: 120,
-    amount: 7700,
-    zone: "Icon",
-    createdAt: "2026-08-26",
-  },
-  {
-    id: "1234-2",
-    name: "ORDER #1234",
-    region: "Phuket Sector 4",
-    rai: 120,
-    amount: 7700,
-    gifted: true,
-    zone: "Icon",
-    createdAt: "2026-08-26",
-  },
-];
-
-function getPurchases(): Purchase[] {
-  try {
-    const stored = localStorage.getItem("tajlandia_purchases");
-    const parsed = stored ? JSON.parse(stored) : [];
-    return Array.isArray(parsed)
-      ? parsed.filter((item): item is Purchase => item && typeof item === "object")
-      : [];
-  } catch {
-    return [];
-  }
-}
 
 function SearchIcon() {
   return (
@@ -117,17 +73,68 @@ function SortIcon() {
   );
 }
 
-function formatPurchaseDate(value?: string) {
+function formatPurchaseDate(value?: string | null) {
   if (!value) return "";
-  const date = new Date(`${value}T00:00:00`);
-  if (Number.isNaN(date.getTime())) return value;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
   return new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "long", year: "numeric" }).format(date);
 }
 
-function formatPurchaseAmount(amount?: number) {
-  const value = amount ?? 0;
-  const hasCents = Math.round(value * 100) % 100 !== 0;
-  return `$${value.toLocaleString("en-US", { minimumFractionDigits: hasCents ? 2 : 0, maximumFractionDigits: 2 })}`;
+function formatPurchaseAmount(amount: number, currency: string) {
+  const hasCents = Math.round(amount * 100) % 100 !== 0;
+  const digits = { minimumFractionDigits: hasCents ? 2 : 0, maximumFractionDigits: 2 };
+  try {
+    return new Intl.NumberFormat("en-US", { style: "currency", currency, ...digits }).format(amount);
+  } catch {
+    // Unknown currency code from the API: show the code instead of a symbol.
+    return `${currency} ${amount.toLocaleString("en-US", digits)}`;
+  }
+}
+
+// Plot names in an order: "PH-0013, PH-0015 +1" past two.
+function orderPlotNames(order: OrderListEntry) {
+  const names = order.items
+    .map((item) => item.name?.trim() || item.plotNumber?.trim() || "")
+    .filter(Boolean);
+  const shown = names.slice(0, 2).join(", ");
+  return names.length > 2 ? `${shown} +${names.length - 2}` : shown;
+}
+
+const purchaseDate = (order: OrderListEntry) => Date.parse(order.paidAt ?? order.createdAt) || 0;
+
+/**
+ * My Purchases filters, done here because `GET /orders` takes no params.
+ * Zone matches when any plot in the order is in a ticked zone.
+ */
+function filterOrders(orders: OrderListEntry[], filters: LandFilters) {
+  const minRai = toBound(filters.minRai);
+  const maxRai = toBound(filters.maxRai);
+  const minPrice = toBound(filters.minPrice);
+  const maxPrice = toBound(filters.maxPrice);
+  const zones = filters.zones.map((zone) => zone.toUpperCase());
+  return orders.filter(
+    (order) =>
+      (order.purchaseType === "gift" ? filters.gifted : filters.myPlots) &&
+      (!zones.length || order.items.some((item) => zones.includes(item.zone?.type?.toUpperCase() ?? ""))) &&
+      (minRai === undefined || order.totalRai >= minRai) &&
+      (maxRai === undefined || order.totalRai <= maxRai) &&
+      (minPrice === undefined || order.total >= minPrice) &&
+      (maxPrice === undefined || order.total <= maxPrice),
+  );
+}
+
+// "recommended" keeps the API order (newest first).
+function sortOrders(orders: OrderListEntry[], sort: PurchaseSort) {
+  const compare: Record<PurchaseSort, ((a: OrderListEntry, b: OrderListEntry) => number) | null> = {
+    recommended: null,
+    "price-low": (a, b) => a.total - b.total,
+    "price-high": (a, b) => b.total - a.total,
+    "area-small": (a, b) => a.totalRai - b.totalRai,
+    "area-large": (a, b) => b.totalRai - a.totalRai,
+    newest: (a, b) => purchaseDate(b) - purchaseDate(a),
+  };
+  const by = compare[sort];
+  return by ? [...orders].sort(by) : orders;
 }
 
 function LayersIcon() {
@@ -804,69 +811,65 @@ function LandValue({ label, value }: { label: string; value: string }) {
   );
 }
 
+type OrdersState =
+  | { status: "loading" }
+  | { status: "ready"; orders: OrderListEntry[] }
+  | { status: "error" };
+
 export function MyPurchasesPage() {
   const router = useRouter();
   const { isAuthenticated, isLoading } = useAuth();
   const { t } = useDashboardLanguage();
-  const storedPurchases = getPurchases();
-  const purchases = storedPurchases.length ? storedPurchases : defaultPurchases;
   const [dialog, setDialog] = useState<"sort" | "filter" | null>(null);
   const [sort, setSort] = useState<PurchaseSort>("recommended");
   const [draftSort, setDraftSort] = useState<PurchaseSort>("recommended");
-  const [showMyPlots, setShowMyPlots] = useState(false);
-  const [showGifted, setShowGifted] = useState(true);
-  const [draftMyPlots, setDraftMyPlots] = useState(true);
-  const [draftGifted, setDraftGifted] = useState(true);
-  const [zoneFilters, setZoneFilters] = useState<string[]>(["Icon"]);
-  const [draftZones, setDraftZones] = useState<string[]>(["Icon"]);
-  const [minRai, setMinRai] = useState("1");
-  const [maxRai, setMaxRai] = useState("25");
-  const [draftMinRai, setDraftMinRai] = useState("1");
-  const [draftMaxRai, setDraftMaxRai] = useState("25");
-  const [minPrice, setMinPrice] = useState("200");
-  const [maxPrice, setMaxPrice] = useState("1000");
-  const [draftMinPrice, setDraftMinPrice] = useState("200");
-  const [draftMaxPrice, setDraftMaxPrice] = useState("1000");
-  const [filtersApplied, setFiltersApplied] = useState(false);
-  const filteredPurchases = purchases
-    .filter((purchase) => {
-      if (!filtersApplied) return true;
-      const typeAllowed = purchase.gifted ? showGifted : showMyPlots;
-      const zoneAllowed =
-        draftZones.length === 0 || draftZones.includes(purchase.zone ?? "Standard");
-      return (
-        typeAllowed &&
-        zoneAllowed &&
-        (purchase.rai ?? 0) >= Number(minRai) &&
-        (purchase.rai ?? 0) <= Number(maxRai) &&
-        (purchase.amount ?? 0) >= Number(minPrice) &&
-        (purchase.amount ?? 0) <= Number(maxPrice)
-      );
-    })
-    .sort((a, b) =>
-      sort === "price-low"
-        ? (a.amount ?? 0) - (b.amount ?? 0)
-        : sort === "price-high"
-          ? (b.amount ?? 0) - (a.amount ?? 0)
-          : sort === "area-small"
-            ? (a.rai ?? 0) - (b.rai ?? 0)
-            : sort === "area-large"
-              ? (b.rai ?? 0) - (a.rai ?? 0)
-              : sort === "newest"
-                ? Date.parse(b.createdAt ?? "") - Date.parse(a.createdAt ?? "")
-                : 0,
-    );
-  const totalRai = 250;
-  const totalSpent = 420.21;
-  const regions = 3;
+  const [filters, setFilters] = useState<LandFilters>(NO_LAND_FILTERS);
+  const [draftFilters, setDraftFilters] = useState<LandFilters>(NO_LAND_FILTERS);
+  // `GET /lands/overview` for the totals (same as My Land), `GET /orders` for the list.
+  const [overview, setOverview] = useState<LandOverviewState>({ status: "loading" });
+  const [ordersState, setOrdersState] = useState<OrdersState>({ status: "loading" });
+  const [reloadKey, setReloadKey] = useState(0);
 
-  if (isLoading)
-    return (
-      <PageLoader label={t("Loading purchases...")} />
-    );
-  if (!isAuthenticated) {
-    router.replace(routes.login);
-    return null;
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) router.replace(routes.login);
+  }, [isAuthenticated, isLoading, router]);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const controller = new AbortController();
+    getLandOverview(controller.signal)
+      .then((data) => setOverview({ status: "ready", data }))
+      .catch((error: unknown) => {
+        if (isQuietError(error)) return;
+        logError(error, "Failed to load purchase totals");
+        setOverview({ status: "error" });
+      });
+    getOrders(controller.signal)
+      .then((orders) => setOrdersState({ status: "ready", orders }))
+      .catch((error: unknown) => {
+        if (isQuietError(error)) return;
+        logError(error, "Failed to load orders");
+        setOrdersState({ status: "error" });
+      });
+    return () => controller.abort();
+  }, [isAuthenticated, reloadKey]);
+
+  if (isLoading || !isAuthenticated) return <PageLoader label={t("Loading purchases...")} />;
+
+  // Only completed purchases; pending, failed, cancelled and expired orders stay out.
+  const paidOrders =
+    ordersState.status === "ready" ? ordersState.orders.filter((order) => order.status === "paid") : [];
+  const visibleOrders = sortOrders(filterOrders(paidOrders, filters), sort);
+  const filtersActive = JSON.stringify(filters) !== JSON.stringify(NO_LAND_FILTERS);
+  const draftErrors = landFilterErrors(draftFilters);
+  const draftValid = !draftErrors.rai && !draftErrors.price;
+  const totals = overview.status === "ready" ? overview.data : null;
+  const statValue = (value: string) => (totals ? value : overview.status === "error" ? "—" : null);
+
+  function retry() {
+    setOverview({ status: "loading" });
+    setOrdersState({ status: "loading" });
+    setReloadKey((key) => key + 1);
   }
 
   function openSort() {
@@ -874,15 +877,10 @@ export function MyPurchasesPage() {
     setDialog("sort");
   }
   function openFilter() {
-    setDraftMyPlots(showMyPlots);
-    setDraftGifted(showGifted);
-    setDraftZones(zoneFilters);
-    setDraftMinRai(minRai);
-    setDraftMaxRai(maxRai);
-    setDraftMinPrice(minPrice);
-    setDraftMaxPrice(maxPrice);
+    setDraftFilters(filters);
     setDialog("filter");
   }
+
   return (
     <div className="min-h-[100svh] bg-[#f7f9fc] text-navy">
       <DashboardNavbar active="none" />
@@ -896,9 +894,21 @@ export function MyPurchasesPage() {
             {t("View your plots and purchase details in one place.")}
           </p>
           <div className="mt-6 grid gap-3 sm:grid-cols-3">
-            <PurchaseStat icon={<LayersIcon />} label={t("Total Owned")} value={`${totalRai} ${t("Rai")}`} />
-            <PurchaseStat icon={<PinIcon />} label={t("Regions")} value={`${String(regions).padStart(2, "0")} ${t("Location")}`} />
-            <PurchaseStat icon={<CoinsIcon />} label={t("Total Spent")} value={`$${totalSpent.toFixed(2)}`} />
+            <PurchaseStat
+              icon={<LayersIcon />}
+              label={t("Total Owned")}
+              value={statValue(`${landNumber.format(totals?.totalOwned ?? 0)} ${t("Rai")}`)}
+            />
+            <PurchaseStat
+              icon={<PinIcon />}
+              label={t("Regions")}
+              value={statValue(`${String(totals?.totalLands ?? 0).padStart(2, "0")} ${t("Location")}`)}
+            />
+            <PurchaseStat
+              icon={<CoinsIcon />}
+              label={t("Total Spent")}
+              value={statValue(formatLandMoney(totals?.totalSpent ?? 0, totals?.currency ?? "USD"))}
+            />
           </div>
           <div className="mt-7 flex flex-wrap items-center justify-between gap-3">
             <h2 className="font-manrope text-[16px] font-semibold text-navy">{t("All Purchases")}</h2>
@@ -906,7 +916,10 @@ export function MyPurchasesPage() {
               <button
                 type="button"
                 onClick={openFilter}
-                className="inline-flex h-9 items-center gap-1.5 rounded-[10px] border border-[#e4e9ef] bg-white px-3 font-manrope text-[12px] font-medium text-[#8b939e]"
+                disabled={ordersState.status !== "ready"}
+                className={`inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-[10px] border bg-white px-3 font-manrope text-[12px] font-medium disabled:cursor-not-allowed disabled:opacity-50 ${
+                  filtersActive ? "border-navy text-navy" : "border-[#e4e9ef] text-[#8b939e]"
+                }`}
               >
                 <FilterIcon />
                 {t("Filter")}
@@ -914,22 +927,70 @@ export function MyPurchasesPage() {
               <button
                 type="button"
                 onClick={openSort}
-                className="inline-flex h-9 items-center gap-1.5 rounded-[10px] border border-[#e4e9ef] bg-white px-3 font-manrope text-[12px] font-medium text-[#8b939e]"
+                disabled={ordersState.status !== "ready"}
+                className={`inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-[10px] border bg-white px-3 font-manrope text-[12px] font-medium disabled:cursor-not-allowed disabled:opacity-50 ${
+                  sort !== "recommended" ? "border-navy text-navy" : "border-[#e4e9ef] text-[#8b939e]"
+                }`}
               >
                 <SortIcon />
                 {t("Sort")}
               </button>
             </div>
           </div>
-          {filteredPurchases.length ? (
+          {ordersState.status === "loading" ? (
+            <div aria-busy="true" className="mt-3 space-y-3">
+              <span className="sr-only" role="status">
+                {t("Loading purchases...")}
+              </span>
+              {[0, 1, 2].map((key) => (
+                <div
+                  key={key}
+                  aria-hidden="true"
+                  className="h-[92px] animate-pulse rounded-[16px] border border-[#e8edf2] bg-white motion-reduce:animate-none"
+                />
+              ))}
+            </div>
+          ) : ordersState.status === "error" ? (
+            <div role="alert" className="mt-3 rounded-[16px] bg-white px-6 py-10 text-center">
+              <p className="font-manrope text-[15px] font-semibold text-[#1a1a1a]">{t("We couldn't load your purchases.")}</p>
+              <p className="mt-1 font-manrope text-[13px] text-[#8b939e]">{t("Please check your connection and try again.")}</p>
+              <button
+                type="button"
+                onClick={retry}
+                className="mt-4 inline-flex h-11 cursor-pointer items-center rounded-[12px] bg-navy px-5 font-manrope text-[13px] font-medium text-white"
+              >
+                {t("Try again")}
+              </button>
+            </div>
+          ) : !paidOrders.length ? (
+            <div className="mt-3 flex flex-col items-center rounded-[16px] bg-white px-6 py-10 text-center">
+              <p className="font-manrope text-[15px] font-semibold text-[#1a1a1a]">{t("No purchases yet")}</p>
+              <p className="mt-1 max-w-[300px] font-manrope text-[13px] text-[#8b939e]">
+                {t("Your completed purchases will appear here.")}
+              </p>
+              <Link
+                href={routes.dashboardExplore}
+                className="mt-4 inline-flex h-11 cursor-pointer items-center rounded-[12px] bg-navy px-5 font-manrope text-[13px] font-medium text-white"
+              >
+                {t("Explore Map")}
+              </Link>
+            </div>
+          ) : visibleOrders.length ? (
             <div className="mt-3 space-y-3">
-              {filteredPurchases.map((purchase, index) => (
-                <PurchaseRow key={purchase.id ?? index} purchase={purchase} />
+              {visibleOrders.map((order) => (
+                <PurchaseRow key={order.id} order={order} />
               ))}
             </div>
           ) : (
             <div className="mt-3 rounded-[16px] bg-white p-8 text-center font-manrope text-[13px] text-[#8b939e]">
               {t("No purchases match the selected filters.")}
+              <button
+                type="button"
+                onClick={() => setFilters(NO_LAND_FILTERS)}
+                className="mt-3 block w-full cursor-pointer font-manrope text-[13px] font-medium text-navy underline underline-offset-4"
+              >
+                {t("Clear filters")}
+              </button>
             </div>
           )}
         </section>
@@ -947,49 +1008,41 @@ export function MyPurchasesPage() {
       ) : null}
       {dialog === "filter" ? (
         <PurchaseFilterPanel
-          resultCount={filteredCount(draftZones)}
-          myPlots={draftMyPlots}
-          gifted={draftGifted}
-          zones={draftZones}
-          minRai={draftMinRai}
-          maxRai={draftMaxRai}
-          minPrice={draftMinPrice}
-          maxPrice={draftMaxPrice}
-          onMyPlotsChange={setDraftMyPlots}
-          onGiftedChange={setDraftGifted}
+          subtitle={t("Narrow down your purchases")}
+          priceDetail={t("Amount paid")}
+          resultCount={draftValid ? filterOrders(paidOrders, draftFilters).length : null}
+          resultLabel={t("purchases found")}
+          raiError={draftErrors.rai ? t(draftErrors.rai) : undefined}
+          priceError={draftErrors.price ? t(draftErrors.price) : undefined}
+          myPlots={draftFilters.myPlots}
+          gifted={draftFilters.gifted}
+          zones={draftFilters.zones}
+          minRai={draftFilters.minRai}
+          maxRai={draftFilters.maxRai}
+          minPrice={draftFilters.minPrice}
+          maxPrice={draftFilters.maxPrice}
+          onMyPlotsChange={(myPlots) => setDraftFilters((current) => ({ ...current, myPlots }))}
+          onGiftedChange={(gifted) => setDraftFilters((current) => ({ ...current, gifted }))}
           onZoneToggle={(zone) =>
-            setDraftZones((current) =>
-              zone === "all"
-                ? []
-                : current.includes(zone)
-                  ? current.filter((item) => item !== zone)
-                  : [...current, zone],
-            )
+            setDraftFilters((current) => ({
+              ...current,
+              zones:
+                zone === "all"
+                  ? []
+                  : current.zones.includes(zone)
+                    ? current.zones.filter((item) => item !== zone)
+                    : [...current.zones, zone],
+            }))
           }
-          setMinRai={setDraftMinRai}
-          setMaxRai={setDraftMaxRai}
-          setMinPrice={setDraftMinPrice}
-          setMaxPrice={setDraftMaxPrice}
+          setMinRai={(minRai) => setDraftFilters((current) => ({ ...current, minRai }))}
+          setMaxRai={(maxRai) => setDraftFilters((current) => ({ ...current, maxRai }))}
+          setMinPrice={(minPrice) => setDraftFilters((current) => ({ ...current, minPrice }))}
+          setMaxPrice={(maxPrice) => setDraftFilters((current) => ({ ...current, maxPrice }))}
           onClose={() => setDialog(null)}
-          onReset={() => {
-            setFiltersApplied(false);
-            setDraftMyPlots(false);
-            setDraftGifted(true);
-            setDraftZones(["Icon"]);
-            setDraftMinRai("1");
-            setDraftMaxRai("25");
-            setDraftMinPrice("200");
-            setDraftMaxPrice("1000");
-          }}
+          onReset={() => setDraftFilters(NO_LAND_FILTERS)}
           onApply={() => {
-            setShowMyPlots(draftMyPlots);
-            setShowGifted(draftGifted);
-            setZoneFilters(draftZones);
-            setMinRai(draftMinRai);
-            setMaxRai(draftMaxRai);
-            setMinPrice(draftMinPrice);
-            setMaxPrice(draftMaxPrice);
-            setFiltersApplied(true);
+            if (!draftValid) return;
+            setFilters(draftFilters);
             setDialog(null);
           }}
         />
@@ -1027,18 +1080,22 @@ function PurchaseStat({
   );
 }
 
-function PurchaseRow({ purchase }: { purchase: Purchase }) {
+function PurchaseRow({ order }: { order: OrderListEntry }) {
   const { t } = useDashboardLanguage();
-  const purchasedOn = formatPurchaseDate(purchase.createdAt);
+  const purchasedOn = formatPurchaseDate(order.paidAt ?? order.createdAt);
+  const gifted = order.purchaseType === "gift";
+  const plots = orderPlotNames(order);
 
   return (
     <article className="flex flex-col gap-4 rounded-[16px] border border-[#e8edf2] bg-white px-4 py-4 shadow-[0_8px_22px_rgba(11,31,77,0.05)] sm:flex-row sm:items-center">
       <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[12px] bg-[#edf3ff] text-navy">
-        {purchase.gifted ? <GiftIcon /> : <PersonIcon />}
+        {gifted ? <GiftIcon /> : <PersonIcon />}
       </span>
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-          <p className="font-manrope text-[14px] font-semibold leading-5 text-[#1a1a1a]">{purchase.name}</p>
+          <p className="font-manrope text-[14px] font-semibold uppercase leading-5 text-[#1a1a1a]">
+            {order.orderNo ? `${t("Order")} #${order.orderNo}` : t("Order")}
+          </p>
           <span className="rounded-full bg-[#e7f8ee] px-2 py-0.5 font-manrope text-[11px] font-semibold leading-4 text-[#16a34a]">
             {t("Completed")}
           </span>
@@ -1051,25 +1108,32 @@ function PurchaseRow({ purchase }: { purchase: Purchase }) {
         <p className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 font-manrope text-[12px] leading-4 text-[#8b939e]">
           <span className="inline-flex items-center gap-1.5">
             <PlotIcon />
-            {t("LAND SIZE:")} <strong className="font-semibold text-[#1a1a1a]">{purchase.rai} {t("Rai")}</strong>
+            {t("LAND SIZE:")}{" "}
+            <strong className="font-semibold text-[#1a1a1a]">
+              {landNumber.format(order.totalRai)} {t("Rai")}
+            </strong>
           </span>
-          <span aria-hidden="true">•</span>
-          <span className="inline-flex items-center gap-1.5">
-            <PinIcon className="h-3.5 w-3.5" />
-            {t("LOCATION:")} <strong className="font-semibold text-[#1a1a1a]">{purchase.region}</strong>
-          </span>
+          {plots ? (
+            <>
+              <span aria-hidden="true">•</span>
+              <span className="inline-flex min-w-0 items-center gap-1.5">
+                <PinIcon className="h-3.5 w-3.5 shrink-0" />
+                {t("LOCATION:")} <strong className="truncate font-semibold text-[#1a1a1a]">{plots}</strong>
+              </span>
+            </>
+          ) : null}
         </p>
       </div>
       <div className="flex items-center justify-between gap-4 sm:justify-end">
         <div className="text-right">
           <p className="font-manrope text-[10px] font-semibold uppercase tracking-[0.08em] text-[#9aa3ad]">{t("Amount")}</p>
           <strong className="mt-0.5 block font-manrope text-[18px] font-semibold leading-6 text-[#1a1a1a]">
-            {formatPurchaseAmount(purchase.amount)}
+            {formatPurchaseAmount(order.total, order.currency)}
           </strong>
         </div>
         <Link
-          href={`/dashboard/purchases/${purchase.id ?? "1234"}`}
-          className="inline-flex h-10 items-center rounded-[10px] bg-navy px-4 font-manrope text-[13px] font-medium text-white"
+          href={`/dashboard/purchases/${encodeURIComponent(order.id)}`}
+          className="inline-flex h-10 cursor-pointer items-center rounded-[10px] bg-navy px-4 font-manrope text-[13px] font-medium text-white"
         >
           {t("View Details")} →
         </Link>
@@ -1134,6 +1198,7 @@ function PurchaseFilterPanel({
   resultCount,
   raiError,
   priceError,
+  resultLabel,
   myPlots,
   gifted,
   zones,
@@ -1158,6 +1223,8 @@ function PurchaseFilterPanel({
   resultCount: number | null;
   raiError?: string;
   priceError?: string;
+  /** Words after the count, "plots found" by default. */
+  resultLabel?: string;
   myPlots: boolean;
   gifted: boolean;
   zones: string[];
@@ -1221,7 +1288,7 @@ function PurchaseFilterPanel({
         </button>
         <div className="flex items-center gap-3">
           <span aria-live="polite" className="font-manrope text-[12px] text-[#8b939e]">
-            {resultCount === null ? "…" : resultCount.toLocaleString("en-US")} {t("plots found")}
+            {resultCount === null ? "…" : resultCount.toLocaleString("en-US")} {resultLabel ?? t("plots found")}
           </span>
           <button
             type="button"
@@ -1237,9 +1304,6 @@ function PurchaseFilterPanel({
   );
 }
 
-function filteredCount(zones: string[]) {
-  return zones.length ? 77 : 1168;
-}
 function ChoiceMark({ checked }: { checked: boolean }) {
   return (
     <span className={`flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full border-[1.5px] ${checked ? "border-navy" : "border-[#d5dbe3]"}`}>

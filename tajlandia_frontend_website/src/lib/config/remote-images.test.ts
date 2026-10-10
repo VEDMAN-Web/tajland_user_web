@@ -13,4 +13,12 @@ describe("isAllowedRemoteImage", () => {
     expect(isAllowedRemoteImage(null)).toBe(false);
     expect(isAllowedRemoteImage(undefined)).toBe(false);
   });
+
+  it("accepts uploads from the backend host only", () => {
+    const apiUrl = "https://api.tajlandia.test/api/v1";
+    expect(isAllowedRemoteImage("https://api.tajlandia.test/uploads/userProfile/a.jpg", apiUrl)).toBe(true);
+    expect(isAllowedRemoteImage("https://api.tajlandia.test/api/v1/orders", apiUrl)).toBe(false);
+    expect(isAllowedRemoteImage("https://other.test/uploads/a.jpg", apiUrl)).toBe(false);
+    expect(isAllowedRemoteImage("https://api.tajlandia.test/uploads/a.jpg", "")).toBe(false);
+  });
 });

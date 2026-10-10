@@ -1,42 +1,64 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import Image from "next/image";
 import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { isAbortError } from "@/lib/api/browser-client";
+import { isApiError } from "@/lib/api/errors";
+import { isAllowedRemoteImage } from "@/lib/config/remote-images";
+import { routes } from "@/lib/constants/routes";
+import { useAuth } from "@/lib/hooks/useAuth";
+import { logError } from "@/lib/logging/logger";
+import { PageLoader } from "@/components/ui/PageLoader";
 import { AccountMenu } from "./AccountMenu";
 import { DashboardNavbar } from "./DashboardNavbar";
-import { useAuth } from "@/lib/hooks/useAuth";
-import { routes } from "@/lib/constants/routes";
 import { useDashboardLanguage } from "./DashboardLanguageContext";
-import { PageLoader } from "@/components/ui/PageLoader";
+import type { OrderListEntry } from "./schemas/orders.schema";
+import { downloadCertificate } from "./services/certificates.client";
+import { getOrders } from "./services/orders.client";
 
+// A certificate is a paid order's `certificateNo` + `certificateUrl` (no separate API).
 type Certificate = {
-  id?: string;
-  title?: string;
-  generatedAt?: string;
-  pdfUrl?: string;
-  previewUrl?: string;
-  gifted?: boolean;
+  orderId: string;
+  certificateNo: string;
+  imageUrl: string | null;
+  issuedAt: string;
+  gifted: boolean;
 };
 type SortOption = "recommended" | "oldest" | "newest" | "id-asc" | "id-desc";
+type CertificatesState =
+  | { status: "loading" }
+  | { status: "ready"; certificates: Certificate[] }
+  | { status: "error" };
 
-const defaultCertificates: Certificate[] = [
-  {
-    id: "TJ-100293",
-    generatedAt: "24 Aug 2024",
-    pdfUrl: "/api/certificates/TJ-100293",
-  },
-  {
-    id: "TJ-100293",
-    generatedAt: "24 Aug 2024",
-    pdfUrl: "/api/certificates/TJ-100293",
-  },
-  {
-    id: "TJ-100293",
-    generatedAt: "24 Aug 2024",
-    pdfUrl: "/api/certificates/TJ-100293",
-  },
-];
+const certificatePreview = "/images/certificates/my-certificates.png";
+
+const isQuietError = (error: unknown) =>
+  isAbortError(error) || (isApiError(error) && error.code === "API_SESSION_EXPIRED");
+
+function toCertificates(orders: OrderListEntry[]): Certificate[] {
+  return orders.flatMap((order) =>
+    order.status === "paid" && order.certificateNo
+      ? [
+          {
+            orderId: order.id,
+            certificateNo: order.certificateNo,
+            imageUrl: isAllowedRemoteImage(order.certificateUrl) ? order.certificateUrl : null,
+            issuedAt: order.paidAt ?? order.createdAt,
+            gifted: order.purchaseType === "gift",
+          },
+        ]
+      : [],
+  );
+}
+
+function formatIssued(value: string) {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime())
+    ? ""
+    : new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric" }).format(date);
+}
 
 function FilterGlyph() {
   return (
@@ -62,19 +84,6 @@ function DownloadGlyph() {
   );
 }
 
-function readCertificates(): Certificate[] {
-  try {
-    const stored = localStorage.getItem("tajlandia_certificates");
-    const parsed = stored ? JSON.parse(stored) : [];
-    const certificates = Array.isArray(parsed)
-      ? parsed.filter((item): item is Certificate => item && typeof item === "object")
-      : [];
-    return certificates.length ? certificates : defaultCertificates;
-  } catch {
-    return defaultCertificates;
-  }
-}
-
 const sortLabels: Array<{ value: SortOption; label: string; detail: string }> = [
   { value: "recommended", label: "Recommended", detail: "Curated by newly added" },
   { value: "oldest", label: "Date: Old to New", detail: "" },
@@ -87,39 +96,51 @@ export function MyCertificatesPage() {
   const router = useRouter();
   const { isAuthenticated, isLoading } = useAuth();
   const { t } = useDashboardLanguage();
-  const [certificates] = useState<Certificate[]>(() => readCertificates());
-  const [selectedPdf, setSelectedPdf] = useState<string | null>(null);
+  const [state, setState] = useState<CertificatesState>({ status: "loading" });
+  const [reloadKey, setReloadKey] = useState(0);
   const [dialog, setDialog] = useState<"sort" | "filter" | null>(null);
   const [sort, setSort] = useState<SortOption>("recommended");
   const [draftSort, setDraftSort] = useState<SortOption>("recommended");
-  const [showMyCertificates, setShowMyCertificates] = useState(false);
+  // Both ticked: every certificate.
+  const [showMyCertificates, setShowMyCertificates] = useState(true);
   const [showGifted, setShowGifted] = useState(true);
-  const [draftMyCertificates, setDraftMyCertificates] = useState(false);
+  const [draftMyCertificates, setDraftMyCertificates] = useState(true);
   const [draftGifted, setDraftGifted] = useState(true);
-  const [filtersApplied, setFiltersApplied] = useState(false);
+  const certificates = useMemo(() => (state.status === "ready" ? state.certificates : []), [state]);
+
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) router.replace(routes.login);
+  }, [isAuthenticated, isLoading, router]);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const controller = new AbortController();
+    getOrders(controller.signal)
+      .then((orders) => setState({ status: "ready", certificates: toCertificates(orders) }))
+      .catch((error: unknown) => {
+        if (isQuietError(error)) return;
+        logError(error, "Failed to load certificates");
+        setState({ status: "error" });
+      });
+    return () => controller.abort();
+  }, [isAuthenticated, reloadKey]);
 
   const visibleCertificates = useMemo(() => {
-    const filtered = certificates.filter((certificate) => {
-      if (!filtersApplied) return true;
-      return certificate.gifted ? showGifted : showMyCertificates;
-    });
+    const filtered = certificates.filter((certificate) =>
+      certificate.gifted ? showGifted : showMyCertificates,
+    );
     return [...filtered].sort((a, b) => {
       if (sort === "oldest") return dateValue(a) - dateValue(b);
       if (sort === "newest") return dateValue(b) - dateValue(a);
-      if (sort === "id-asc") return (a.id ?? "").localeCompare(b.id ?? "");
-      if (sort === "id-desc") return (b.id ?? "").localeCompare(a.id ?? "");
+      if (sort === "id-asc") return a.certificateNo.localeCompare(b.certificateNo);
+      if (sort === "id-desc") return b.certificateNo.localeCompare(a.certificateNo);
       return 0;
     });
-  }, [certificates, filtersApplied, showGifted, showMyCertificates, sort]);
+  }, [certificates, showGifted, showMyCertificates, sort]);
 
-  if (isLoading)
-    return (
-      <PageLoader label={t("Loading certificates...")} />
-    );
-  if (!isAuthenticated) {
-    router.replace(routes.login);
-    return null;
-  }
+  if (isLoading || !isAuthenticated) return <PageLoader label={t("Loading certificates...")} />;
+
+  const filtersActive = !showMyCertificates || !showGifted;
 
   function openSort() {
     setDraftSort(sort);
@@ -149,7 +170,10 @@ export function MyCertificatesPage() {
               <button
                 type="button"
                 onClick={openFilter}
-                className="inline-flex h-9 items-center gap-1.5 rounded-[10px] border border-[#e4e9ef] bg-white px-3 font-manrope text-[12px] font-medium text-[#8b939e]"
+                disabled={state.status !== "ready"}
+                className={`inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-[10px] border bg-white px-3 font-manrope text-[12px] font-medium disabled:cursor-not-allowed disabled:opacity-50 ${
+                  filtersActive ? "border-navy text-navy" : "border-[#e4e9ef] text-[#8b939e]"
+                }`}
               >
                 <FilterGlyph />
                 {t("Filter")}
@@ -157,20 +181,48 @@ export function MyCertificatesPage() {
               <button
                 type="button"
                 onClick={openSort}
-                className="inline-flex h-9 items-center gap-1.5 rounded-[10px] border border-[#e4e9ef] bg-white px-3 font-manrope text-[12px] font-medium text-[#8b939e]"
+                disabled={state.status !== "ready"}
+                className={`inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-[10px] border bg-white px-3 font-manrope text-[12px] font-medium disabled:cursor-not-allowed disabled:opacity-50 ${
+                  sort !== "recommended" ? "border-navy text-navy" : "border-[#e4e9ef] text-[#8b939e]"
+                }`}
               >
                 <SortGlyph />
                 {t("Sort")}
               </button>
             </div>
           </div>
-          {visibleCertificates.length ? (
-            <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-              {visibleCertificates.map((certificate, index) => (
-                <CertificateCard
-                  key={`${certificate.id ?? "certificate"}-${index}`}
-                  certificate={certificate}
+          {state.status === "loading" ? (
+            <div aria-busy="true" className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              <span className="sr-only" role="status">
+                {t("Loading certificates...")}
+              </span>
+              {[0, 1, 2].map((key) => (
+                <div
+                  key={key}
+                  aria-hidden="true"
+                  className="h-[330px] animate-pulse rounded-[16px] border border-[#eef1f4] bg-white motion-reduce:animate-none"
                 />
+              ))}
+            </div>
+          ) : state.status === "error" ? (
+            <div role="alert" className="mt-4 rounded-[16px] bg-white px-6 py-10 text-center">
+              <p className="font-manrope text-[15px] font-semibold text-[#1a1a1a]">{t("We couldn't load your certificates.")}</p>
+              <p className="mt-1 font-manrope text-[13px] text-[#8b939e]">{t("Please check your connection and try again.")}</p>
+              <button
+                type="button"
+                onClick={() => {
+                  setState({ status: "loading" });
+                  setReloadKey((key) => key + 1);
+                }}
+                className="mt-4 inline-flex h-11 cursor-pointer items-center rounded-[12px] bg-navy px-5 font-manrope text-[13px] font-medium text-white"
+              >
+                {t("Try again")}
+              </button>
+            </div>
+          ) : visibleCertificates.length ? (
+            <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {visibleCertificates.map((certificate) => (
+                <CertificateCard key={certificate.orderId} certificate={certificate} />
               ))}
             </div>
           ) : (
@@ -178,20 +230,29 @@ export function MyCertificatesPage() {
               <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[#edf4ff] text-2xl text-navy">
                 ▤
               </div>
-              <h2 className="mt-4 text-[19px] font-semibold text-[#171717]">
-                No certificates available
+              <h2 className="mt-4 font-manrope text-[19px] font-semibold text-[#171717]">
+                {certificates.length ? t("No certificates match the selected filters.") : t("No certificates available")}
               </h2>
-              <p className="mt-1 max-w-[320px] text-[11px] leading-4 text-[#7b858f]">
-                Certificates will appear here once a verified purchase has generated a
-                real PDF certificate.
-              </p>
+              {certificates.length ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowMyCertificates(true);
+                    setShowGifted(true);
+                  }}
+                  className="mt-3 cursor-pointer font-manrope text-[13px] font-medium text-navy underline underline-offset-4"
+                >
+                  {t("Clear filters")}
+                </button>
+              ) : (
+                <p className="mt-1 max-w-[320px] font-manrope text-[12px] leading-4 text-[#7b858f]">
+                  {t("Your certificate appears here as soon as a purchase is paid.")}
+                </p>
+              )}
             </div>
           )}
         </section>
       </main>
-      {selectedPdf ? (
-        <PdfViewer src={selectedPdf} onClose={() => setSelectedPdf(null)} />
-      ) : null}
       {dialog === "sort" ? (
         <SortDialog
           value={draftSort}
@@ -205,19 +266,19 @@ export function MyCertificatesPage() {
       ) : null}
       {dialog === "filter" ? (
         <FilterDialog
+          found={certificates.filter((certificate) => (certificate.gifted ? draftGifted : draftMyCertificates)).length}
           myCertificates={draftMyCertificates}
           gifted={draftGifted}
           onMyCertificatesChange={setDraftMyCertificates}
           onGiftedChange={setDraftGifted}
           onClose={() => setDialog(null)}
           onReset={() => {
-            setDraftMyCertificates(false);
+            setDraftMyCertificates(true);
             setDraftGifted(true);
           }}
           onApply={() => {
             setShowMyCertificates(draftMyCertificates);
             setShowGifted(draftGifted);
-            setFiltersApplied(true);
             setDialog(null);
           }}
         />
@@ -227,7 +288,7 @@ export function MyCertificatesPage() {
 }
 
 function dateValue(certificate: Certificate) {
-  const value = certificate.generatedAt ? Date.parse(certificate.generatedAt) : 0;
+  const value = Date.parse(certificate.issuedAt);
   return Number.isNaN(value) ? 0 : value;
 }
 
@@ -270,6 +331,7 @@ function SortDialog({
 }
 
 function FilterDialog({
+  found,
   myCertificates,
   gifted,
   onMyCertificatesChange,
@@ -278,6 +340,8 @@ function FilterDialog({
   onReset,
   onApply,
 }: {
+  /** Certificates the draft filter matches. */
+  found: number;
   myCertificates: boolean;
   gifted: boolean;
   onMyCertificatesChange: (value: boolean) => void;
@@ -287,10 +351,9 @@ function FilterDialog({
   onApply: () => void;
 }) {
   const { t } = useDashboardLanguage();
-  const found = myCertificates || gifted ? 77 : 0;
   return (
     <ModalShell>
-      <DialogHeader icon={<FilterGlyph />} title={t("Filter Plots")} subtitle={t("Narrow 1,168 parcels across Thailand")} onClose={onClose} />
+      <DialogHeader icon={<FilterGlyph />} title={t("Filter Certificates")} subtitle={t("Show your own or gifted certificates")} onClose={onClose} />
       <div className="border-b border-[#eef1f4] px-5 py-4">
         <p className="font-manrope text-[11px] font-semibold uppercase tracking-[0.08em] text-[#8b939e]">{t("Certificates")}</p>
         <div className="mt-3 grid grid-cols-2 gap-2">
@@ -299,12 +362,12 @@ function FilterDialog({
         </div>
       </div>
       <div className="flex items-center justify-between bg-[#f7f9fc] px-5 py-4">
-        <button type="button" onClick={onReset} className="font-manrope text-[13px] text-[#8b939e]">
+        <button type="button" onClick={onReset} className="cursor-pointer font-manrope text-[13px] text-[#8b939e]">
           {t("Clear All")}
         </button>
         <div className="flex items-center gap-3">
-          <span className="font-manrope text-[12px] text-[#8b939e]">{found} {t("plots found")}</span>
-          <button type="button" onClick={onApply} className="rounded-[10px] bg-navy px-4 py-2.5 font-manrope text-[13px] font-medium text-white">
+          <span className="font-manrope text-[12px] text-[#8b939e]">{found} {t("certificates found")}</span>
+          <button type="button" onClick={onApply} className="cursor-pointer rounded-[10px] bg-navy px-4 py-2.5 font-manrope text-[13px] font-medium text-white">
             {t("Apply Filters")}
           </button>
         </div>
@@ -374,19 +437,10 @@ function DialogHeader({
         <h2 className="font-manrope text-[18px] font-semibold leading-6 text-navy">{title}</h2>
         <p className="font-manrope text-[12px] leading-4 text-[#8b939e]">{subtitle}</p>
       </div>
-      <button type="button" onClick={onClose} aria-label={t("Close")} className="font-manrope text-[22px] leading-none text-[#9aa3ad]">
+      <button type="button" onClick={onClose} aria-label={t("Close")} className="cursor-pointer font-manrope text-[22px] leading-none text-[#9aa3ad]">
         ×
       </button>
     </div>
-  );
-}
-
-function CloseButton({ onClick }: { onClick: () => void }) {
-  const { t } = useDashboardLanguage();
-  return (
-    <button type="button" aria-label={t("Close")} onClick={onClick} className="font-manrope text-[22px] leading-none text-[#9aa3ad]">
-      ×
-    </button>
   );
 }
 
@@ -403,66 +457,77 @@ function DialogActions({
 }) {
   return (
     <div className="mt-2 flex items-center justify-between bg-[#f7f9fc] px-5 py-4">
-      <button type="button" onClick={onReset} className="font-manrope text-[13px] text-[#8b939e]">
+      <button type="button" onClick={onReset} className="cursor-pointer font-manrope text-[13px] text-[#8b939e]">
         {resetLabel}
       </button>
-      <button type="button" onClick={onApply} className="rounded-[10px] bg-navy px-5 py-2.5 font-manrope text-[13px] font-medium text-white">
+      <button type="button" onClick={onApply} className="cursor-pointer rounded-[10px] bg-navy px-5 py-2.5 font-manrope text-[13px] font-medium text-white">
         {applyLabel}
       </button>
     </div>
   );
 }
 
-function PdfViewer({ src, onClose }: { src: string; onClose: () => void }) {
-  return (
-    <div className="fixed inset-0 z-[110] flex items-center justify-center bg-[#071536]/55 p-4 backdrop-blur-sm">
-      <section
-        role="dialog"
-        aria-modal="true"
-        aria-label="Certificate PDF viewer"
-        className="flex h-[min(90vh,800px)] w-full max-w-[920px] flex-col overflow-hidden rounded-[12px] bg-white shadow-[0_20px_60px_rgba(11,31,77,0.25)]"
-      >
-        <div className="flex items-center justify-between border-b border-[#e5eaf0] px-4 py-3">
-          <h2 className="text-[13px] font-semibold text-navy">Certificate PDF</h2>
-          <CloseButton onClick={onClose} />
-        </div>
-        <iframe title="Certificate PDF" src={src} className="min-h-0 flex-1" />
-      </section>
-    </div>
-  );
-}
-
-const certificatePreview = "/images/certificates/my-certificates.png";
-
 function CertificateCard({ certificate }: { certificate: Certificate }) {
   const { t } = useDashboardLanguage();
-  const pdfUrl = certificate.pdfUrl ?? `/api/certificates/${certificate.id ?? "certificate"}`;
+  const router = useRouter();
+  const [downloading, setDownloading] = useState(false);
+  const [error, setError] = useState("");
+  const issued = formatIssued(certificate.issuedAt);
+
+  async function download() {
+    if (downloading) return;
+    setError("");
+    setDownloading(true);
+    const result = await downloadCertificate(certificate.orderId);
+    setDownloading(false);
+    if (result.ok) return;
+    if (result.sessionExpired) {
+      router.replace(routes.login);
+      return;
+    }
+    setError(t(result.message));
+  }
+
   return (
     <article className="rounded-[16px] border border-[#eef1f4] bg-white px-4 pb-4 pt-5 shadow-[0_10px_28px_rgba(11,31,77,0.06)]">
-      <img src={certificate.previewUrl || certificatePreview} alt="" className="mx-auto block h-auto w-[68%] max-w-[210px]" />
+      <div className="relative mx-auto aspect-[616/898] w-[68%] max-w-[210px]">
+        <Image
+          src={certificate.imageUrl ?? certificatePreview}
+          alt={`${t("Certificate ID")}: ${certificate.certificateNo}`}
+          fill
+          sizes="210px"
+          className="object-contain"
+        />
+      </div>
       <p className="mt-4 font-manrope text-[12px] leading-4 text-[#8b939e]">
-        {t("Generated on")} {certificate.generatedAt ?? ""}
+        {t("Generated on")} {issued}
       </p>
-      <h3 className="mt-1 font-manrope text-[14px] font-semibold leading-5 text-[#1a1a1a]">
-        {t("Certificate ID")}: <strong className="font-bold">{certificate.id ?? ""}</strong>
+      <h3 className="mt-1 break-all font-manrope text-[14px] font-semibold leading-5 text-[#1a1a1a]">
+        {t("Certificate ID")}: <strong className="font-bold">{certificate.certificateNo}</strong>
       </h3>
       <div className="mt-4 grid grid-cols-2 gap-2.5">
         <Link
-          href={`/dashboard/certificates/${certificate.id ?? "certificate"}`}
-          className="flex h-11 items-center justify-center rounded-[12px] bg-navy font-manrope text-[13px] font-medium text-white"
+          href={`${routes.certificates}/${encodeURIComponent(certificate.orderId)}`}
+          className="flex h-11 cursor-pointer items-center justify-center rounded-[12px] bg-navy font-manrope text-[13px] font-medium text-white"
         >
           {t("View →")}
         </Link>
-        <a
-          href={pdfUrl}
-          download
-          className="inline-flex h-11 items-center justify-center gap-1.5 rounded-[12px] border border-[#e6ebf0] bg-[#f7f9fc] font-manrope text-[13px] font-medium text-navy"
+        <button
+          type="button"
+          onClick={download}
+          disabled={downloading}
+          aria-busy={downloading}
+          className="inline-flex h-11 cursor-pointer items-center justify-center gap-1.5 rounded-[12px] border border-[#e6ebf0] bg-[#f7f9fc] font-manrope text-[13px] font-medium text-navy disabled:cursor-wait disabled:opacity-60"
         >
           <DownloadGlyph />
-          {t("Download")}
-        </a>
+          {downloading ? t("Downloading...") : t("Download")}
+        </button>
       </div>
+      {error ? (
+        <p role="alert" className="mt-2 font-manrope text-[12px] leading-4 text-[#e11d2e]">
+          {error}
+        </p>
+      ) : null}
     </article>
   );
 }
-

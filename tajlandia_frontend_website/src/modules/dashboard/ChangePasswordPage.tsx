@@ -214,14 +214,14 @@ export function ChangePasswordPage() {
               <div className="flex items-center justify-end gap-3">
                 <Link
                   href={routes.profile}
-                  className="inline-flex h-11 items-center justify-center rounded-[12px] border border-[#e4e9ef] bg-white px-5 font-manrope text-[14px] font-medium leading-none text-[#3d4650] transition hover:bg-[#f7f9fc]"
+                  className="inline-flex h-11 cursor-pointer items-center justify-center rounded-[12px] border border-[#e4e9ef] bg-white px-5 font-manrope text-[14px] font-medium leading-none text-[#3d4650] transition hover:bg-[#f7f9fc]"
                 >
                   {t("Cancel")}
                 </Link>
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="inline-flex h-11 items-center justify-center rounded-[12px] bg-navy px-5 font-manrope text-[14px] font-medium leading-none text-white transition hover:bg-navy-deep disabled:cursor-not-allowed disabled:opacity-70"
+                  className="inline-flex h-11 cursor-pointer items-center justify-center rounded-[12px] bg-navy px-5 font-manrope text-[14px] font-medium leading-none text-white transition hover:bg-navy-deep disabled:cursor-not-allowed disabled:opacity-70"
                 >
                   {t("Change Password")}
                 </button>
@@ -234,7 +234,7 @@ export function ChangePasswordPage() {
       {showSuccess ? (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#5c6770]/45 px-4">
           <div role="dialog" aria-modal="true" aria-labelledby="password-success-title" className="relative w-full max-w-[380px] rounded-[16px] bg-white px-6 pb-6 pt-5 text-center shadow-[0_18px_50px_rgba(17,24,39,0.18)]">
-            <button type="button" aria-label={t("Close")} onClick={() => setShowSuccess(false)} className="absolute right-4 top-4 text-[#9aa3ad]">
+            <button type="button" aria-label={t("Close")} onClick={() => setShowSuccess(false)} className="absolute right-4 top-4 cursor-pointer text-[#9aa3ad]">
               <svg viewBox="0 0 16 16" aria-hidden="true" className="h-4 w-4">
                 <path d="M4 4 12 12M12 4 4 12" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
               </svg>
@@ -246,7 +246,7 @@ export function ChangePasswordPage() {
             <p className="font-manrope mt-2 text-[13px] leading-5 text-[#8b939e]">
               {t("Your password has been updated successfully.")}
             </p>
-            <button type="button" onClick={() => setShowSuccess(false)} className="font-manrope mt-5 h-11 w-full rounded-[10px] bg-navy text-[14px] font-medium leading-none text-white">
+            <button type="button" onClick={() => setShowSuccess(false)} className="font-manrope mt-5 h-11 w-full cursor-pointer rounded-[10px] bg-navy text-[14px] font-medium leading-none text-white">
               {t("Okay")}
             </button>
           </div>
@@ -256,7 +256,7 @@ export function ChangePasswordPage() {
       {failure ? (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#5c6770]/45 px-4">
           <div role="dialog" aria-modal="true" aria-labelledby="password-error-title" className="relative w-full max-w-[380px] rounded-[16px] bg-white px-6 pb-6 pt-5 text-center shadow-[0_18px_50px_rgba(17,24,39,0.18)]">
-            <button type="button" aria-label={t("Close")} onClick={closeFailure} className="absolute right-4 top-4 text-[#9aa3ad]">
+            <button type="button" aria-label={t("Close")} onClick={closeFailure} className="absolute right-4 top-4 cursor-pointer text-[#9aa3ad]">
               <svg viewBox="0 0 16 16" aria-hidden="true" className="h-4 w-4">
                 <path d="M4 4 12 12M12 4 4 12" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
               </svg>
@@ -268,7 +268,7 @@ export function ChangePasswordPage() {
             <p className="font-manrope mt-2 text-[13px] leading-5 text-[#8b939e]">
               {t(failure.message)}
             </p>
-            <button type="button" onClick={closeFailure} className="font-manrope mt-5 h-11 w-full rounded-[10px] bg-navy text-[14px] font-medium leading-none text-white">
+            <button type="button" onClick={closeFailure} className="font-manrope mt-5 h-11 w-full cursor-pointer rounded-[10px] bg-navy text-[14px] font-medium leading-none text-white">
               {t(failure.sessionExpired ? "Okay" : "Try again")}
             </button>
           </div>
@@ -327,7 +327,7 @@ function PasswordField({
             event.preventDefault();
             onToggle();
           }}
-          className="ml-2 inline-flex h-8 w-8 shrink-0 items-center justify-center text-[#5c6770]"
+          className="ml-2 inline-flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center text-[#5c6770]"
         >
           <EyeIcon revealed={visible} />
         </button>
