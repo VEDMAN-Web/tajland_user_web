@@ -107,8 +107,12 @@ export const orderSchema = z.object({
   items: z.array(
     z.object({
       plotId: z.string(),
-      // Zone tier, e.g. "ICON".
-      zone: z.string(),
+      // Zone tier, e.g. "ICON". The API sends `{ id, name, slug, type }`; an
+      // older shape sent the tier alone, so both become the tier text.
+      zone: z.union([
+        z.string(),
+        z.object({ type: z.string().nullish() }).transform((zone) => zone.type ?? ""),
+      ]),
       rai: z.number(),
       price: z.number(),
       plotNumber: z.string().nullish(),

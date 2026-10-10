@@ -1,36 +1,33 @@
 "use client";
 
 import Image from "next/image";
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import { isAbortError } from "@/lib/api/browser-client";
+import { isApiError } from "@/lib/api/errors";
 import { routes } from "@/lib/constants/routes";
 import { useAuth } from "@/lib/hooks/useAuth";
+import { logError } from "@/lib/logging/logger";
 import { AccountMenu } from "./AccountMenu";
 import { DashboardNavbar } from "./DashboardNavbar";
 import { useDashboardLanguage } from "./DashboardLanguageContext";
 import { PageLoader } from "@/components/ui/PageLoader";
+import { SUPPORT_QUERY_MAX_LENGTH, type SupportTicket } from "./schemas/help-support.schema";
+import { createSupportTicket, getSupportTickets } from "./services/help-support.client";
 
-const faqs = [
-  {
-    question: "Do you provide customized modular kitchens?",
-    answer: "Yes. Every kitchen is custom-designed to match your space, cooking habits, and style preferences.",
-  },
-  {
-    question: "How do I choose a place to collect?",
-    answer: "Explore the map, review each destination, and contact our team when you find a place that feels right.",
-  },
-  {
-    question: "When will I receive my certificate?",
-    answer: "Your digital certificate is prepared after the collection details have been reviewed and confirmed.",
-  },
-  {
-    question: "Can I gift a Tajlandia collection?",
-    answer: "Yes. Contact support with the recipient details and our team will guide you through the gifting process.",
-  },
-] as const;
+type TicketsState =
+  | { status: "loading" }
+  | { status: "ready"; tickets: SupportTicket[] }
+  | { status: "error" };
 
-function wordCount(value: string) {
-  return value.trim() ? value.trim().split(/\s+/).length : 0;
+const isQuietError = (error: unknown) =>
+  isAbortError(error) || (isApiError(error) && error.code === "API_SESSION_EXPIRED");
+
+function formatAsked(value: string) {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime())
+    ? ""
+    : new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric" }).format(date);
 }
 
 function ChevronIcon({ open }: { open: boolean }) {
@@ -45,31 +42,73 @@ export function HelpSupportPage() {
   const router = useRouter();
   const { isAuthenticated, isLoading } = useAuth();
   const { t } = useDashboardLanguage();
-  const [openFaq, setOpenFaq] = useState(0);
+  // `GET /help-support`: the user's questions and the team's answers.
+  const [tickets, setTickets] = useState<TicketsState>({ status: "loading" });
+  const [reloadKey, setReloadKey] = useState(0);
+  const [openTicket, setOpenTicket] = useState<string | null>(null);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [sent, setSent] = useState(false);
+  const [sending, setSending] = useState(false);
 
-  if (isLoading) {
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) router.replace(routes.login);
+  }, [isAuthenticated, isLoading, router]);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const controller = new AbortController();
+    getSupportTickets(controller.signal)
+      .then((items) => {
+        setTickets({ status: "ready", tickets: items });
+        // The newest question starts open, like the first FAQ did.
+        setOpenTicket((current) => current ?? items[0]?._id ?? null);
+      })
+      .catch((loadError: unknown) => {
+        if (isQuietError(loadError)) return;
+        logError(loadError, "Failed to load support tickets");
+        setTickets({ status: "error" });
+      });
+    return () => controller.abort();
+  }, [isAuthenticated, reloadKey]);
+
+  if (isLoading || !isAuthenticated) {
     return <PageLoader label={t("Loading support...")} />;
   }
 
-  if (!isAuthenticated) {
-    router.replace(routes.login);
-    return null;
-  }
-
-  function submit(event: FormEvent<HTMLFormElement>) {
+  async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (wordCount(message) < 20) {
+    if (sending) return;
+    const query = message.trim();
+    if (!query) {
       setSent(false);
-      setError("Please enter at least 20 words.");
+      setError("Please enter your question.");
+      return;
+    }
+    if (query.length > SUPPORT_QUERY_MAX_LENGTH) {
+      setSent(false);
+      setError("Your question must be 1000 characters or fewer.");
       return;
     }
 
     setError("");
-    setSent(true);
-    setMessage("");
+    setSending(true);
+    try {
+      const ticket = await createSupportTicket(query);
+      setTickets((current) => ({
+        status: "ready",
+        tickets: [ticket, ...(current.status === "ready" ? current.tickets.filter((item) => item._id !== ticket._id) : [])],
+      }));
+      setOpenTicket(ticket._id);
+      setMessage("");
+      setSent(true);
+    } catch (sendError) {
+      if (isQuietError(sendError)) return;
+      logError(sendError, "Failed to send support ticket");
+      setError("We couldn't send your question. Please try again.");
+    } finally {
+      setSending(false);
+    }
   }
 
   function cancel() {
@@ -92,29 +131,81 @@ export function HelpSupportPage() {
             {t("Need help? We're here for you.")}
           </p>
 
-          <div className="mt-5 grid gap-2.5">
-            {faqs.map((faq, index) => {
-              const isOpen = openFaq === index;
-              return (
-                <div key={faq.question} className={`overflow-hidden rounded-[12px] bg-white shadow-[0_8px_28px_rgba(11,31,77,0.06)] ${isOpen ? "border-l-[3px] border-l-[#e11d2e]" : ""}`}>
-                  <button
-                    type="button"
-                    aria-expanded={isOpen}
-                    onClick={() => setOpenFaq(isOpen ? -1 : index)}
-                    className="flex min-h-[52px] w-full items-center justify-between gap-4 px-4 text-left"
-                  >
-                    <span className="font-manrope text-[14px] font-semibold leading-5 text-navy">{t(faq.question)}</span>
-                    <ChevronIcon open={isOpen} />
-                  </button>
-                  {isOpen ? (
-                    <p className="border-t border-[#eef2f6] px-4 py-3 font-manrope text-[13px] leading-5 text-[#8b939e]">
-                      {t(faq.answer)}
-                    </p>
-                  ) : null}
-                </div>
-              );
-            })}
-          </div>
+          {tickets.status === "loading" ? (
+            <div aria-busy="true" className="mt-5 grid gap-2.5">
+              <span className="sr-only" role="status">
+                {t("Loading support...")}
+              </span>
+              {[0, 1, 2].map((key) => (
+                <span
+                  key={key}
+                  aria-hidden="true"
+                  className="block h-[52px] animate-pulse rounded-[12px] bg-white motion-reduce:animate-none"
+                />
+              ))}
+            </div>
+          ) : tickets.status === "error" ? (
+            <div role="alert" className="mt-5 flex flex-col gap-3 rounded-[12px] bg-white px-4 py-4 shadow-[0_8px_28px_rgba(11,31,77,0.06)] sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="font-manrope text-[14px] font-semibold text-[#1a1a1a]">{t("We couldn't load your questions.")}</p>
+                <p className="font-manrope mt-0.5 text-[13px] text-[#8b939e]">{t("Please check your connection and try again.")}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setTickets({ status: "loading" });
+                  setReloadKey((key) => key + 1);
+                }}
+                className="inline-flex h-10 shrink-0 cursor-pointer items-center justify-center rounded-[10px] bg-navy px-4 font-manrope text-[13px] font-medium text-white"
+              >
+                {t("Try again")}
+              </button>
+            </div>
+          ) : tickets.tickets.length ? (
+            <div className="mt-5 grid gap-2.5">
+              {tickets.tickets.map((ticket) => {
+                const isOpen = openTicket === ticket._id;
+                const answer = ticket.answer?.trim();
+                const asked = formatAsked(ticket.createdAt);
+                return (
+                  <div key={ticket._id} className={`overflow-hidden rounded-[12px] bg-white shadow-[0_8px_28px_rgba(11,31,77,0.06)] ${isOpen ? "border-l-[3px] border-l-[#e11d2e]" : ""}`}>
+                    <button
+                      type="button"
+                      aria-expanded={isOpen}
+                      onClick={() => setOpenTicket(isOpen ? null : ticket._id)}
+                      className="flex min-h-[52px] w-full cursor-pointer items-center justify-between gap-4 px-4 py-3 text-left"
+                    >
+                      <span className="min-w-0 break-words font-manrope text-[14px] font-semibold leading-5 text-navy">{ticket.query}</span>
+                      <span className="flex shrink-0 items-center gap-2">
+                        {answer ? null : (
+                          <span className="rounded-full bg-[#fff7e6] px-2 py-0.5 font-manrope text-[11px] font-medium text-[#b7791f]">
+                            {t("Awaiting reply")}
+                          </span>
+                        )}
+                        <ChevronIcon open={isOpen} />
+                      </span>
+                    </button>
+                    {isOpen ? (
+                      <div className="border-t border-[#eef2f6] px-4 py-3 font-manrope text-[13px] leading-5">
+                        <p className="whitespace-pre-line break-words text-[#8b939e]">
+                          {answer || t("Our team will answer your question soon. You'll see the reply here.")}
+                        </p>
+                        {asked ? (
+                          <p className="mt-2 text-[11px] text-[#b0b7be]">
+                            {t("Asked on")} {asked}
+                          </p>
+                        ) : null}
+                      </div>
+                    ) : null}
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="mt-5 rounded-[12px] bg-white px-4 py-6 text-center font-manrope text-[13px] text-[#8b939e] shadow-[0_8px_28px_rgba(11,31,77,0.06)]">
+              {t("You haven't asked anything yet. Send your question below.")}
+            </p>
+          )}
 
           <form onSubmit={submit} className="mt-5" noValidate>
             <label htmlFor="support-message" className="font-manrope text-[14px] font-semibold leading-5 text-navy">
@@ -129,10 +220,14 @@ export function HelpSupportPage() {
                 setSent(false);
               }}
               placeholder={t("Send your Queries...")}
+              maxLength={SUPPORT_QUERY_MAX_LENGTH}
               aria-invalid={Boolean(error)}
               aria-describedby={error ? "support-message-error" : undefined}
               className={`font-manrope mt-2 h-[88px] w-full resize-none rounded-[12px] border bg-white px-4 py-3 text-[14px] leading-5 text-[#1a1a1a] outline-none placeholder:text-[#b0b7be] ${error ? "border-[#f3c3c8] bg-[#fff1f2]" : "border-[#e4e9ef] focus:border-navy"}`}
             />
+            <p className="font-manrope mt-1 text-right text-[11px] text-[#b0b7be]">
+              {message.length}/{SUPPORT_QUERY_MAX_LENGTH}
+            </p>
             {error ? (
               <p id="support-message-error" className="font-manrope mt-1.5 text-[12px] leading-4 text-[#d52b35]">
                 {t(error)}
@@ -140,7 +235,7 @@ export function HelpSupportPage() {
             ) : null}
             {sent ? (
               <p role="status" className="font-manrope mt-1.5 text-[12px] leading-4 text-[#1aae6f]">
-                {t("Message sent successfully.")}
+                {t("Your question has been sent. We'll reply here soon.")}
               </p>
             ) : null}
 
@@ -153,15 +248,17 @@ export function HelpSupportPage() {
                 <button
                   type="button"
                   onClick={cancel}
-                  className="inline-flex h-11 items-center justify-center rounded-[12px] border border-[#e4e9ef] bg-white px-5 font-manrope text-[14px] font-medium leading-none text-[#3d4650] transition hover:bg-[#f7f9fc]"
+                  className="inline-flex h-11 cursor-pointer items-center justify-center rounded-[12px] border border-[#e4e9ef] bg-white px-5 font-manrope text-[14px] font-medium leading-none text-[#3d4650] transition hover:bg-[#f7f9fc]"
                 >
                   {t("Cancel")}
                 </button>
                 <button
                   type="submit"
-                  className="inline-flex h-11 items-center justify-center rounded-[12px] bg-navy px-5 font-manrope text-[14px] font-medium leading-none text-white transition hover:bg-navy-deep"
+                  disabled={sending}
+                  aria-busy={sending}
+                  className="inline-flex h-11 cursor-pointer items-center justify-center rounded-[12px] bg-navy px-5 font-manrope text-[14px] font-medium leading-none text-white transition hover:bg-navy-deep disabled:cursor-wait disabled:opacity-70"
                 >
-                  {t("Send Message →")}
+                  {sending ? t("Sending...") : t("Send Message →")}
                 </button>
               </div>
             </div>

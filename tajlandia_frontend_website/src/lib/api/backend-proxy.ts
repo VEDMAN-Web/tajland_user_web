@@ -17,9 +17,10 @@ const ALLOWED_PREFIXES = new Set([
   "orders",
   "lands",
   "leaderboard",
+  "help-support",
 ]);
 // Single endpoints whose area is otherwise off-limits (e.g. `dashboard/admin/*`).
-const ALLOWED_EXACT_PATHS = new Set(["dashboard", "coupons"]);
+const ALLOWED_EXACT_PATHS = new Set(["dashboard", "coupons", "auth/me"]);
 const ALLOWED_METHODS = new Set(["GET", "POST", "PUT", "PATCH", "DELETE"]);
 const SAFE_SEGMENT = /^[\w-]{1,128}$/;
 // The backend can be slow to wake from idle, so this is longer than `client.ts`.
