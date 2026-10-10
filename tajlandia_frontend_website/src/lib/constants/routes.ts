@@ -25,3 +25,7 @@ export const routes = {
 } as const;
 
 export type AppRoute = (typeof routes)[keyof typeof routes];
+
+export function leaderboardOwnerPath(userId: string) {
+  return `${routes.leaderboard}/${encodeURIComponent(userId)}`;
+}

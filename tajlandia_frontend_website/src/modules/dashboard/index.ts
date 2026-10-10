@@ -13,3 +13,4 @@ export { OrderDetailsPage } from "./OrderDetailsPage";
 export { CartPage } from "./CartPage";
 export { CheckoutPage } from "./CheckoutPage";
 export { LeaderboardPage } from "./LeaderboardPage";
+export { LeaderboardOwnerPage } from "./LeaderboardOwnerPage";
