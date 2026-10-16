@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { createPageMetadata } from "@/lib/seo/metadata";
-import { FAQPage } from "@/modules/faq";
+import { FAQPage, fetchFaqs, type FaqItem } from "@/modules/faq";
 
 export const metadata: Metadata = createPageMetadata({
   title: "FAQ",
@@ -8,6 +8,14 @@ export const metadata: Metadata = createPageMetadata({
   path: "/faq",
 });
 
-export default function FAQRoute() {
-  return <FAQPage />;
+export default async function FAQRoute() {
+  let faqs: FaqItem[] | null = null;
+
+  try {
+    faqs = await fetchFaqs();
+  } catch {
+    // The page shows a retry message instead.
+  }
+
+  return <FAQPage faqs={faqs} />;
 }

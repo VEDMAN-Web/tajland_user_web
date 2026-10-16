@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { BlogPage } from "@/modules/blog";
+import { BlogPage, fetchBlogPage, type BlogListPage } from "@/modules/blog";
 import { createPageMetadata } from "@/lib/seo/metadata";
 import { routes } from "@/lib/constants/routes";
 
@@ -10,6 +10,14 @@ export const metadata: Metadata = createPageMetadata({
   index: false,
 });
 
-export default function Page() {
-  return <BlogPage />;
+export default async function Page() {
+  let initialPage: BlogListPage | null = null;
+
+  try {
+    initialPage = await fetchBlogPage(1);
+  } catch {
+    // The page shows a retry message instead.
+  }
+
+  return <BlogPage initialPage={initialPage} />;
 }

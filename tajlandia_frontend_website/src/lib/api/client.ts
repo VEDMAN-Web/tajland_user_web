@@ -10,12 +10,15 @@ export { ApiError, isApiError } from "./errors";
 const DEFAULT_TIMEOUT_MS = 8_000;
 const MAX_RESPONSE_BYTES = 1_000_000;
 
-export type ApiGetOptions = {
+export type ApiPostOptions = {
   fetchImpl?: typeof fetch;
   timeoutMs?: number;
 };
 
-export type ApiPostOptions = ApiGetOptions;
+export type ApiGetOptions = ApiPostOptions & {
+  /** Cache the response for this many seconds (public content only); default is no-store. */
+  revalidate?: number;
+};
 
 function resolveApiUrl(baseUrl: string, path: string): URL {
   const url = joinSameOriginUrl(baseUrl, path);
@@ -64,7 +67,9 @@ export async function apiGet<T>(
     response = await fetchImpl(url, {
       method: "GET",
       headers,
-      cache: "no-store",
+      ...(options.revalidate === undefined
+        ? { cache: "no-store" as const }
+        : { next: { revalidate: options.revalidate } }),
       signal: controller.signal,
     });
   } catch (error) {

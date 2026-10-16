@@ -2,7 +2,7 @@
 // `images.remotePatterns`; `next/image` throws for any other host, so UI code
 // checks `isAllowedRemoteImage` first and shows a placeholder otherwise.
 // TODO: replace once the backend moves images to its final CDN.
-export const REMOTE_IMAGE_HOSTS = ["i.postimg.cc"] as const;
+export const REMOTE_IMAGE_HOSTS = ["i.postimg.cc", "res.cloudinary.com"] as const;
 
 // Uploaded files (e.g. profile photos) are served by the backend itself, under
 // this path on the `NEXT_PUBLIC_API_URL` host.
