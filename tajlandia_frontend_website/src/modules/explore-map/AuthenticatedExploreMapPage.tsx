@@ -175,7 +175,7 @@ function inlineCompletion(typed: string, suggestion: string | undefined) {
 
 function SearchIcon() {
   return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-4 w-4">
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-5 w-5">
       <circle
         cx="10.8"
         cy="10.8"
@@ -1222,9 +1222,17 @@ export function AuthenticatedExploreMapPage() {
                 mapRef.current?.fitBounds(initialBoundsRef.current, { duration: 1200 });
                 hasNavigatedRef.current = false;
               }}
-              className="cursor-pointer text-lg leading-none text-[#8c96a3]"
+              className="flex cursor-pointer items-center justify-center text-[#8c96a3]"
             >
-              ×
+              <svg viewBox="0 0 24 24" aria-hidden="true" className="h-5 w-5">
+                <path
+                  d="m6 6 12 12M18 6 6 18"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeLinecap="round"
+                  strokeWidth="1.7"
+                />
+              </svg>
             </button>
           ) : null}
         </label>

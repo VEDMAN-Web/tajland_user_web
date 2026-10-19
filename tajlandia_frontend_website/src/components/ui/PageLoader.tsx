@@ -44,7 +44,7 @@ export function PageLoader({ label, overlay = false, className }: PageLoaderProp
             width={brand.logo.width}
             height={brand.logo.height}
             priority
-            className="h-[88px] w-auto object-contain"
+            className="h-[68px] w-auto object-contain"
           />
         </div>
         <span className="page-loader-shadow mt-5 h-2.5 w-36 rounded-full bg-navy/15 blur-[6px]" />
