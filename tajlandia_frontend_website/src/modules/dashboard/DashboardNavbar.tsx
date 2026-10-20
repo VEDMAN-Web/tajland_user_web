@@ -44,7 +44,8 @@ function Icon({
   );
 }
 
-// Items in the cart (`GET /cart`), reloaded whenever the cart changes elsewhere.
+// Items in the cart (`GET /cart`), reloaded whenever the cart changes elsewhere and
+// when the tab comes back into focus (reservations may have expired meanwhile).
 function useCartCount() {
   const [count, setCount] = useState(0);
 
@@ -65,9 +66,11 @@ function useCartCount() {
 
     load();
     window.addEventListener(CART_CHANGED_EVENT, load);
+    window.addEventListener("focus", load);
     return () => {
       controller?.abort();
       window.removeEventListener(CART_CHANGED_EVENT, load);
+      window.removeEventListener("focus", load);
     };
   }, []);
 

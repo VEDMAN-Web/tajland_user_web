@@ -1,8 +1,8 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { cn } from "@/lib/utils/cn";
-import type { CartSummary } from "./schemas/cart.schema";
+import type { ActiveReservation, CartSummary } from "./schemas/cart.schema";
 
 type Translate = (source: string) => string;
 
@@ -197,6 +197,99 @@ export function WarningIcon() {
       />
       <path
         d="M8 6.5v3M8 11.3v.2"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeWidth="1.4"
+      />
+    </svg>
+  );
+}
+
+// Under a minute left: the countdown turns red.
+const RESERVATION_WARNING_MS = 60_000;
+
+/**
+ * When each plot's lock ends (ms, by this device's clock), from the seconds the
+ * API says are left, so a wrong device clock can't skew it. Spent locks are left
+ * out: those plots are already released.
+ */
+export function reservationDeadlines(reservations: ActiveReservation[]) {
+  const now = Date.now();
+  const deadlines: Record<string, number> = {};
+  for (const reservation of reservations) {
+    if (reservation.remainingSeconds > 0)
+      deadlines[reservation.plotId] = now + reservation.remainingSeconds * 1000;
+  }
+  return deadlines;
+}
+
+function formatRemaining(ms: number) {
+  const seconds = Math.ceil(ms / 1000);
+  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
+}
+
+/**
+ * Live "mm:ss" until a plot reservation ends; `onExpire` runs once at zero.
+ * `template` holds `{time}`, e.g. "Reserved for {time}".
+ */
+export function ReservationCountdown({
+  deadline,
+  template,
+  onExpire,
+  t,
+  className,
+}: {
+  deadline: number;
+  template: string;
+  onExpire: () => void;
+  t: Translate;
+  className?: string;
+}) {
+  const [now, setNow] = useState(() => Date.now());
+  // Latest callback, so a new one from the page doesn't restart the timer.
+  const onExpireRef = useRef(onExpire);
+  useEffect(() => {
+    onExpireRef.current = onExpire;
+  });
+
+  useEffect(() => {
+    // Already over when shown: nothing to count down (and no reload loop).
+    if (deadline <= Date.now()) return;
+    const timer = window.setInterval(() => {
+      const current = Date.now();
+      setNow(current);
+      if (current >= deadline) {
+        window.clearInterval(timer);
+        onExpireRef.current();
+      }
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [deadline]);
+
+  const left = Math.max(0, deadline - now);
+  const urgent = left < RESERVATION_WARNING_MS;
+
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-manrope text-[11px] font-semibold tabular-nums",
+        urgent ? "bg-[#fdecec] text-[#e11d2e]" : "bg-[#fff4e0] text-[#b45309]",
+        className,
+      )}
+    >
+      <ClockIcon />
+      {left > 0 ? fill(t(template), { time: formatRemaining(left) }) : t("Reservation expired")}
+    </span>
+  );
+}
+
+function ClockIcon() {
+  return (
+    <svg viewBox="0 0 16 16" aria-hidden="true" className="h-3 w-3 shrink-0">
+      <circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" strokeWidth="1.4" />
+      <path
+        d="M8 4.8V8l2.2 1.4"
+        fill="none"
         stroke="currentColor"
         strokeLinecap="round"
         strokeWidth="1.4"

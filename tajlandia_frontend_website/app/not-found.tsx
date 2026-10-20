@@ -1,6 +1,12 @@
+import type { Metadata } from "next";
 import { BrandLogo } from "@/components/ui/BrandLogo";
 import { Button } from "@/components/ui/Button";
 import { routes } from "@/lib/constants/routes";
+
+// Next.js adds the `noindex` robots tag to not-found pages itself.
+export const metadata: Metadata = {
+  title: "Page Not Found",
+};
 
 export default function NotFound() {
   return (

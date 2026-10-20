@@ -210,6 +210,45 @@ function LocateIcon() {
   );
 }
 
+/** Location pin with a slash, for the "Current location" failure toast. */
+function LocationOffIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-4 w-4">
+      <path
+        d="M12 21s-6-5.4-6-11a6 6 0 0 1 10.2-4.3M18 10c0 5.6-6 11-6 11"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeWidth="1.7"
+      />
+      <path d="M4 4l16 16" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="1.7" />
+    </svg>
+  );
+}
+
+function CloseIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-3.5 w-3.5">
+      <path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="1.8" />
+    </svg>
+  );
+}
+
+// How long the "Current location" failure toast stays up.
+const LOCATION_NOTICE_MS = 6000;
+
+// Toast text for each way "Current location" can fail (translation keys).
+const LOCATION_NOTICES = {
+  denied: {
+    title: "Location access is off",
+    body: "Allow location for this site in your browser settings to see where you are on the map.",
+  },
+  unavailable: {
+    title: "Couldn't find your location",
+    body: "Make sure location is turned on for your device, then try again.",
+  },
+} as const;
+
 export function AuthenticatedExploreMapPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -227,6 +266,10 @@ export function AuthenticatedExploreMapPage() {
   });
   const [search, setSearch] = useState(linkedRegion?.name ?? "");
   const [isSearchExpanded, setIsSearchExpanded] = useState(Boolean(linkedRegion));
+  // While the browser looks up the user's location (can take a few seconds).
+  const [isLocating, setIsLocating] = useState(false);
+  // Why "Current location" failed, shown in a toast beside the map controls.
+  const [locationNotice, setLocationNotice] = useState<keyof typeof LOCATION_NOTICES | null>(null);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [isSortOpen, setIsSortOpen] = useState(false);
   // Applied values; they will drive the plot API once it is wired up.
@@ -500,6 +543,12 @@ export function AuthenticatedExploreMapPage() {
   });
 
   useEffect(() => () => window.clearTimeout(linkedPlotTimerRef.current), []);
+
+  useEffect(() => {
+    if (!locationNotice) return;
+    const timer = window.setTimeout(() => setLocationNotice(null), LOCATION_NOTICE_MS);
+    return () => window.clearTimeout(timer);
+  }, [locationNotice]);
 
   // Browsing (no area open, zoomed in): load the plots in view once the camera settles.
   useEffect(() => {
@@ -1520,17 +1569,57 @@ export function AuthenticatedExploreMapPage() {
         </span>
       </div>
 
+      {locationNotice ? (
+        // Beside the map controls, level with the "Current location" button.
+        <div
+          role="status"
+          className="absolute bottom-[7.5rem] right-[4.25rem] z-20 flex w-[min(320px,calc(100vw-6rem))] items-start gap-2.5 rounded-[12px] border border-[#fde2b8] bg-white p-3 shadow-[0_8px_24px_rgba(11,31,77,0.14)] sm:bottom-[7.75rem] sm:right-[5.25rem]"
+        >
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#fff4e5] text-[#b45309]">
+            <LocationOffIcon />
+          </span>
+          <div className="min-w-0 flex-1 font-manrope">
+            <p className="text-[13px] font-semibold leading-5 text-navy">
+              {t(LOCATION_NOTICES[locationNotice].title)}
+            </p>
+            <p className="mt-0.5 text-[12px] leading-[1.45] text-[#6b7785]">
+              {t(LOCATION_NOTICES[locationNotice].body)}
+            </p>
+          </div>
+          <button
+            type="button"
+            aria-label={t("Close")}
+            onClick={() => setLocationNotice(null)}
+            className="flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded-full text-[#8b939e] hover:bg-[#f4f7fa] hover:text-navy"
+          >
+            <CloseIcon />
+          </button>
+        </div>
+      ) : null}
+
       <div className="absolute bottom-9 right-5 flex flex-col items-center gap-3 sm:bottom-10 sm:right-8">
         <button
           type="button"
           aria-label={t("Current location")}
+          aria-busy={isLocating}
+          disabled={isLocating}
           onClick={() => {
+            if (!mapRef.current) return;
             hasNavigatedRef.current = true;
-            mapRef.current?.locate();
+            setLocationNotice(null);
+            setIsLocating(true);
+            void mapRef.current
+              .locate()
+              .then((result) => {
+                if (result !== "success") setLocationNotice(result);
+              })
+              .finally(() => setIsLocating(false));
           }}
-          className="cursor-pointer flex h-9 w-9 items-center justify-center rounded-full bg-white/95 shadow-[0_3px_12px_rgba(11,31,77,0.12)]"
+          className="cursor-pointer flex h-9 w-9 items-center justify-center rounded-full bg-white/95 shadow-[0_3px_12px_rgba(11,31,77,0.12)] disabled:cursor-wait"
         >
-          <LocateIcon />
+          <span className={isLocating ? "animate-pulse motion-reduce:animate-none" : undefined}>
+            <LocateIcon />
+          </span>
         </button>
         <div className="flex flex-col overflow-hidden rounded-full bg-white/95 shadow-[0_3px_12px_rgba(11,31,77,0.12)]">
           <button

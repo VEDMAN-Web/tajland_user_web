@@ -303,6 +303,11 @@ const landQueryKey = (filters: LandFilters, sort: PurchaseSort) =>
   JSON.stringify(landPlotsQuery(filters, sort));
 const NO_FILTERS_KEY = landQueryKey(NO_LAND_FILTERS, "recommended");
 
+/** "3 Plots" for the Regions card, so plots aren't read as regions. */
+function plotCountBadge(count: number | null, t: (key: string) => string) {
+  return count === null ? null : `${count} ${t(count === 1 ? "Plot" : "Plots")}`;
+}
+
 // A cancelled request is not an error, and 401 already redirects to login.
 const isQuietError = (error: unknown) =>
   isAbortError(error) || (isApiError(error) && error.code === "API_SESSION_EXPIRED");
@@ -320,6 +325,8 @@ export function MyLandPage() {
   // `GET /lands/overview` and pages of `GET /lands/plots`; `reloadKey` refetches after an error.
   const [overview, setOverview] = useState<LandOverviewState>({ status: "loading" });
   const [plots, setPlots] = useState<LandPlotsState>({ status: "loading" });
+  // All owned plots, unfiltered (`pagination.total`), for the Regions card badge.
+  const [plotCount, setPlotCount] = useState<number | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
   const [loadingMore, setLoadingMore] = useState(false);
   const [loadMoreFailed, setLoadMoreFailed] = useState(false);
@@ -348,6 +355,11 @@ export function MyLandPage() {
         if (isQuietError(error)) return;
         logError(error, "Failed to load land overview");
         setOverview({ status: "error" });
+      });
+    getLandPlots({ page: 1, limit: 1 }, controller.signal)
+      .then(({ pagination }) => setPlotCount(pagination.total))
+      .catch((error: unknown) => {
+        if (!isQuietError(error)) logError(error, "Failed to count land plots");
       });
     return () => controller.abort();
   }, [isAuthenticated, reloadKey]);
@@ -479,7 +491,7 @@ export function MyLandPage() {
             {t("My Land")}
           </h1>
           <p className="mt-2 font-manrope text-[14px] leading-5 text-[#8b939e]">
-            {t("Your collection of places across Thailand., all in one place.")}
+            {t("Your collection of places across Thailand, all in one place.")}
           </p>
           <div className="mt-6 grid gap-3 md:grid-cols-3">
             <PurchaseStat
@@ -489,8 +501,10 @@ export function MyLandPage() {
             />
             <PurchaseStat
               icon={<PinIcon />}
-              label={t("Total Lands")}
-              value={statValue(`${landNumber.format(totals?.totalLands ?? 0)} ${t("Location")}`)}
+              label={t("Regions")}
+              // `totalLands` counts regions, not plots. Two digits, as on the dashboard.
+              value={statValue(String(totals?.totalLands ?? 0).padStart(2, "0"))}
+              badge={plotCountBadge(plotCount, t)}
             />
             <PurchaseStat
               icon={<CoinsIcon />}
@@ -828,6 +842,8 @@ export function MyPurchasesPage() {
   // `GET /lands/overview` for the totals (same as My Land), `GET /orders` for the list.
   const [overview, setOverview] = useState<LandOverviewState>({ status: "loading" });
   const [ordersState, setOrdersState] = useState<OrdersState>({ status: "loading" });
+  // All owned plots (`GET /lands/plots` `pagination.total`), for the Regions card badge.
+  const [plotCount, setPlotCount] = useState<number | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
@@ -843,6 +859,11 @@ export function MyPurchasesPage() {
         if (isQuietError(error)) return;
         logError(error, "Failed to load purchase totals");
         setOverview({ status: "error" });
+      });
+    getLandPlots({ page: 1, limit: 1 }, controller.signal)
+      .then(({ pagination }) => setPlotCount(pagination.total))
+      .catch((error: unknown) => {
+        if (!isQuietError(error)) logError(error, "Failed to count land plots");
       });
     getOrders(controller.signal)
       .then((orders) => setOrdersState({ status: "ready", orders }))
@@ -902,7 +923,8 @@ export function MyPurchasesPage() {
             <PurchaseStat
               icon={<PinIcon />}
               label={t("Regions")}
-              value={statValue(`${String(totals?.totalLands ?? 0).padStart(2, "0")} ${t("Location")}`)}
+              value={statValue(String(totals?.totalLands ?? 0).padStart(2, "0"))}
+              badge={plotCountBadge(plotCount, t)}
             />
             <PurchaseStat
               icon={<CoinsIcon />}
@@ -1051,15 +1073,17 @@ export function MyPurchasesPage() {
   );
 }
 
-/** `value` null: still loading (a skeleton bar). */
+/** `value` null: still loading (a skeleton bar). `badge`: a small pill beside the value. */
 function PurchaseStat({
   icon,
   label,
   value,
+  badge,
 }: {
   icon: ReactNode;
   label: string;
   value: string | null;
+  badge?: string | null;
 }) {
   return (
     <div className="rounded-[16px] border border-[#e8edf2] bg-white px-4 py-4 shadow-[0_6px_18px_rgba(11,31,77,0.04)]">
@@ -1072,7 +1096,14 @@ function PurchaseStat({
           {value === null ? (
             <span className="mt-1.5 block h-5 w-24 animate-pulse rounded-[6px] bg-[#eef1f5] motion-reduce:animate-none" />
           ) : (
-            <strong className="mt-1 block font-manrope text-[20px] font-semibold leading-6 text-[#1a1a1a]">{value}</strong>
+            <div className="mt-1 flex flex-wrap items-center gap-2">
+              <strong className="block font-manrope text-[20px] font-semibold leading-6 text-[#1a1a1a]">{value}</strong>
+              {badge ? (
+                <span className="rounded-full bg-[#edf3ff] px-2 py-0.5 font-manrope text-[11px] font-semibold text-navy">
+                  {badge}
+                </span>
+              ) : null}
+            </div>
           )}
         </div>
       </div>
