@@ -83,6 +83,22 @@ const translations: Record<string, Record<Exclude<DashboardLanguage, "EN">, stri
     PL: "Nie można teraz wyszukać. Spróbuj ponownie.",
     TH: "ไม่สามารถค้นหาได้ในขณะนี้ โปรดลองอีกครั้ง",
   },
+  "Location access is off": {
+    PL: "Dostęp do lokalizacji jest wyłączony",
+    TH: "การเข้าถึงตำแหน่งปิดอยู่",
+  },
+  "Allow location for this site in your browser settings to see where you are on the map.": {
+    PL: "Zezwól tej stronie na dostęp do lokalizacji w ustawieniach przeglądarki, aby zobaczyć, gdzie jesteś na mapie.",
+    TH: "อนุญาตตำแหน่งสำหรับเว็บไซต์นี้ในการตั้งค่าเบราว์เซอร์ เพื่อดูว่าคุณอยู่ที่ใดบนแผนที่",
+  },
+  "Couldn't find your location": {
+    PL: "Nie udało się ustalić Twojej lokalizacji",
+    TH: "ไม่พบตำแหน่งของคุณ",
+  },
+  "Make sure location is turned on for your device, then try again.": {
+    PL: "Upewnij się, że lokalizacja jest włączona na Twoim urządzeniu, i spróbuj ponownie.",
+    TH: "ตรวจสอบว่าเปิดตำแหน่งบนอุปกรณ์ของคุณแล้ว จากนั้นลองอีกครั้ง",
+  },
   Zone: { PL: "Strefa", TH: "โซน" },
   Zones: { PL: "Strefy", TH: "โซน" },
   Plot: { PL: "Działka", TH: "แปลง" },
@@ -125,6 +141,11 @@ const translations: Record<string, Record<Exclude<DashboardLanguage, "EN">, stri
   "Rankings appear here once the first plots are purchased.": {
     PL: "Ranking pojawi się tutaj po zakupie pierwszych działek.",
     TH: "อันดับจะแสดงที่นี่เมื่อมีการซื้อแปลงแรก",
+  },
+  "Open spot": { PL: "Wolne miejsce", TH: "ตำแหน่งว่าง" },
+  "Buy land to claim this place.": {
+    PL: "Kup ziemię, aby zająć to miejsce.",
+    TH: "ซื้อที่ดินเพื่อครองตำแหน่งนี้",
   },
   "Tajlandia owner": { PL: "Właściciel Tajlandia", TH: "เจ้าของ Tajlandia" },
   "View Profile": { PL: "Zobacz profil", TH: "ดูโปรไฟล์" },
@@ -245,6 +266,14 @@ const translations: Record<string, Record<Exclude<DashboardLanguage, "EN">, stri
   "Select parcels from any province zone to unlock settlement.": {
     PL: "Wybierz działki z dowolnej strefy prowincji, aby odblokować rozliczenie.",
     TH: "เลือกแปลงจากโซนใดก็ได้เพื่อปลดล็อกการชำระ",
+  },
+  "Continue to checkout to complete your purchase.": {
+    PL: "Przejdź do kasy, aby dokończyć zakup.",
+    TH: "ไปที่ชำระเงินเพื่อดำเนินการซื้อให้เสร็จสมบูรณ์",
+  },
+  "Want more land? Add more places to your collection.": {
+    PL: "Chcesz więcej ziemi? Dodaj kolejne miejsca do swojej kolekcji.",
+    TH: "ต้องการที่ดินเพิ่มไหม? เพิ่มสถานที่ในคอลเลกชันของคุณ",
   },
   "Add more places to reach the {min} Rai threshold": {
     PL: "Dodaj więcej miejsc, aby osiągnąć próg {min} rai",
@@ -418,6 +447,35 @@ const translations: Record<string, Record<Exclude<DashboardLanguage, "EN">, stri
   "Your cart doesn't meet the minimum yet.": {
     PL: "Twój koszyk nie spełnia jeszcze minimum.",
     TH: "รถเข็นของคุณยังไม่ถึงขั้นต่ำ",
+  },
+  "Reserved for {time}": {
+    PL: "Zarezerwowano na {time}",
+    TH: "จองไว้อีก {time}",
+  },
+  "Complete checkout within {time} to keep all your plots": {
+    PL: "Dokończ zakup w ciągu {time}, aby zachować wszystkie działki",
+    TH: "ชำระเงินให้เสร็จภายใน {time} เพื่อเก็บแปลงทั้งหมดของคุณไว้",
+  },
+  "Reservation expired": {
+    PL: "Rezerwacja wygasła",
+    TH: "การจองหมดเวลาแล้ว",
+  },
+  "Each plot is held for you for 10 minutes after you add it.": {
+    PL: "Każda działka jest dla Ciebie zarezerwowana przez 10 minut od dodania.",
+    TH: "แต่ละแปลงจะถูกจองไว้ให้คุณ 10 นาทีหลังจากเพิ่ม",
+  },
+  "A plot's reservation expired, so your cart has been updated.": {
+    PL: "Rezerwacja działki wygasła, więc Twój koszyk został zaktualizowany.",
+    TH: "การจองแปลงหมดเวลาแล้ว รถเข็นของคุณจึงได้รับการอัปเดต",
+  },
+  "Your plot reservation expired.": {
+    PL: "Rezerwacja Twoich działek wygasła.",
+    TH: "การจองแปลงของคุณหมดเวลาแล้ว",
+  },
+  "Review your cart": { PL: "Sprawdź koszyk", TH: "ตรวจสอบรถเข็น" },
+  "A plot's reservation expired, so your cart is below the minimum.": {
+    PL: "Rezerwacja działki wygasła, więc Twój koszyk jest poniżej minimum.",
+    TH: "การจองแปลงหมดเวลาแล้ว รถเข็นของคุณจึงต่ำกว่าขั้นต่ำ",
   },
   "Some plots are no longer reserved for you. Please review your cart.": {
     PL: "Niektóre działki nie są już dla Ciebie zarezerwowane. Sprawdź koszyk.",
@@ -832,7 +890,7 @@ const translations: Record<string, Record<Exclude<DashboardLanguage, "EN">, stri
     PL: "Żadne certyfikaty nie pasują do wybranych filtrów.",
     TH: "ไม่มีใบรับรองที่ตรงกับตัวกรองที่เลือก",
   },
-  "Your collection of places across Thailand., all in one place.": {
+  "Your collection of places across Thailand, all in one place.": {
     PL: "Twoja kolekcja miejsc w Tajlandii w jednym miejscu.",
     TH: "คอลเลกชันสถานที่ของคุณทั่วประเทศไทยในที่เดียว",
   },

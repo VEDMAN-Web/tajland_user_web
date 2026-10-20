@@ -12,15 +12,20 @@ export async function generateMetadata({
   params,
 }: BlogDetailRouteProps): Promise<Metadata> {
   const { blogId } = await params;
-  const post = await fetchBlogPost(blogId).catch(() => null);
-
-  if (!post) {
+  let post: Awaited<ReturnType<typeof fetchBlogPost>>;
+  try {
+    post = await fetchBlogPost(blogId);
+  } catch {
+    // The API failed (not a missing post): the page shows its own error, keep generic tags.
     return createPageMetadata({
       title: "Blog",
       description: "Tajlandia stories and travel inspiration.",
       path: routes.blog,
     });
   }
+
+  // No such article: the not-found page's title and robots tag, not the blog's.
+  if (!post) notFound();
 
   return createPageMetadata({
     title: post.seo?.metaTitle || post.title,

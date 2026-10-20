@@ -1,12 +1,14 @@
 import { z } from "zod";
 import { authedDelete, authedGet, authedPost } from "@/lib/api/browser-client";
 import {
+  activeReservationsSchema,
   cartCouponsSchema,
   cartSchema,
   cartSummarySchema,
   checkoutResultSchema,
   orderSchema,
   paymentResultSchema,
+  type ActiveReservation,
   type Cart,
   type Order,
   type PaymentResult,
@@ -20,6 +22,11 @@ export function getCart(
   options: { signal?: AbortSignal; redirectOnUnauthorized?: boolean } = {},
 ): Promise<Cart> {
   return authedGet("/cart", cartSchema, options);
+}
+
+/** The user's live plot locks (one per cart plot), with the seconds each has left. */
+export function getActiveReservations(signal?: AbortSignal): Promise<ActiveReservation[]> {
+  return authedGet("/reservations/active", activeReservationsSchema, { signal });
 }
 
 // Delete responses aren't used; `.optional()` because Zod 4 requires a plain `z.unknown()` key.

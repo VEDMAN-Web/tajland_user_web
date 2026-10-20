@@ -62,7 +62,20 @@ export const cartCouponsSchema = z.object({
   ),
 });
 
+/**
+ * Real `GET /reservations/active` `data`: the 10-minute lock on each cart plot
+ * (`GET /cart` items don't carry `expiresAt`, though Swagger lists it).
+ */
+export const activeReservationsSchema = z.array(
+  z.object({
+    plotId: z.string().min(1),
+    expiresAt: z.string(),
+    remainingSeconds: z.number(),
+  }),
+);
+
 export type Cart = z.infer<typeof cartSchema>;
+export type ActiveReservation = z.infer<typeof activeReservationsSchema>[number];
 export type CartItem = z.infer<typeof cartItemSchema>;
 export type CartSummary = z.infer<typeof cartSummarySchema>;
 export type CartCoupon = z.infer<typeof cartCouponsSchema>["coupons"][number];

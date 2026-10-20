@@ -202,12 +202,13 @@ function PodiumCard({ owner, t }: { owner: Owner; t: (key: string) => string }) 
           alt=""
           width={trophy.width}
           height={trophy.height}
-          className="absolute left-1/2 top-[80%] h-auto w-[38%] -translate-x-1/2 drop-shadow-[0_4px_6px_rgba(0,0,0,0.12)]"
+          // Bottom-anchored on the pedestal (its gap below), since the trophies differ in height.
+          className="absolute -bottom-3 left-1/2 h-auto w-[38%] -translate-x-1/2 drop-shadow-[0_4px_6px_rgba(0,0,0,0.12)] sm:-bottom-7"
         />
       </div>
 
       {/* Pedestal box: perspective top face (the trophy stands on it) over a fading front face. */}
-      <div className="relative mt-[6px] w-full sm:mt-[15px]">
+      <div className="relative mt-3 w-full sm:mt-7">
         <span
           aria-hidden="true"
           className="block h-2.5 w-full bg-gradient-to-b from-[#e2eaf7] to-[#ebf1fa] [clip-path:polygon(3.5%_0,96.5%_0,100%_100%,0_100%)] sm:h-[14px]"
@@ -222,6 +223,49 @@ function PodiumCard({ owner, t }: { owner: Owner; t: (key: string) => string }) 
           <p className="relative z-20 mt-1 inline-flex items-center gap-1 font-manrope text-[10px] font-medium text-[#6b7785] sm:text-[14px]">
             <StackIcon />
             {formatRai(owner.rai)} {t("Rai")}
+          </p>
+        </div>
+      </div>
+    </Link>
+  );
+}
+
+/** A podium place no one holds yet (fewer than 3 owners), so the winner stays centred. */
+function OpenSpotCard({ rank, t }: { rank: 2 | 3; t: (key: string) => string }) {
+  const trophy = TROPHIES[rank];
+
+  return (
+    <Link
+      href={routes.dashboardExplore}
+      aria-label={`#${rank} ${t("Open spot")}: ${t("Explore Map")}`}
+      className="group relative mt-12 flex min-w-0 max-w-[330px] flex-1 cursor-pointer flex-col items-center sm:mt-[84px]"
+    >
+      <div className="relative z-10 h-[60px] w-[60px] shrink-0 sm:h-[124px] sm:w-[124px]">
+        <span className="flex h-full w-full items-center justify-center rounded-full border-2 border-dashed border-[#c5d3e8] bg-[#f6f9fd] font-manrope text-[17px] font-semibold text-[#9aaac0] transition-colors group-hover:border-navy/40 group-hover:text-navy sm:border-[3px] sm:text-[34px]">
+          #{rank}
+        </span>
+        <Image
+          src={trophy.src}
+          alt=""
+          width={trophy.width}
+          height={trophy.height}
+          className="absolute -bottom-3 left-1/2 h-auto w-[38%] -translate-x-1/2 opacity-40 grayscale sm:-bottom-7"
+        />
+      </div>
+
+      <div className="relative mt-3 w-full sm:mt-7">
+        <span
+          aria-hidden="true"
+          className="block h-2.5 w-full bg-gradient-to-b from-[#e2eaf7] to-[#ebf1fa] [clip-path:polygon(3.5%_0,96.5%_0,100%_100%,0_100%)] sm:h-[14px]"
+        />
+        <div className="flex flex-col items-center border-t border-[#d9e3f2] bg-gradient-to-b from-[#f2f6fc] via-[#f6f9fd] to-white/0 px-2 pb-6 pt-3 text-center sm:pb-10 sm:pt-5">
+          <p className="font-manrope text-[13px] font-semibold text-[#9aaac0] sm:text-[24px]">{t("Open spot")}</p>
+          <p className="mt-0.5 font-manrope text-[10px] leading-4 text-[#8b939e] sm:mt-1 sm:text-[14px] sm:leading-5">
+            {t("Buy land to claim this place.")}
+          </p>
+          <p className="mt-1.5 inline-flex items-center gap-1 font-manrope text-[10px] font-semibold text-navy group-hover:underline sm:mt-2.5 sm:text-[14px]">
+            {t("Explore Map")}
+            <ArrowRight />
           </p>
         </div>
       </div>
@@ -356,9 +400,8 @@ export function LeaderboardPage() {
     state.status === "ready"
       ? state.entries.map((entry) => toOwner(entry, t("Tajlandia owner"))).sort((a, b) => a.rank - b.rank)
       : [];
-  const podium = PODIUM_ORDER.map((rank) => owners.find((owner) => owner.rank === rank)).filter(
-    (owner): owner is Owner => Boolean(owner),
-  );
+  // Each podium place with its owner, or none yet (shown as an open spot).
+  const podium = PODIUM_ORDER.map((rank) => ({ rank, owner: owners.find((owner) => owner.rank === rank) }));
   const rest = owners.filter((owner) => owner.rank > 3);
 
   return (
@@ -404,9 +447,13 @@ export function LeaderboardPage() {
               aria-label={t("Top 3 owners")}
               className="mx-auto mt-8 flex max-w-[1060px] items-start justify-center gap-2 sm:mt-12 sm:gap-8"
             >
-              {podium.map((owner) => (
-                <PodiumCard key={owner.userId} owner={owner} t={t} />
-              ))}
+              {podium.map(({ rank, owner }) =>
+                owner ? (
+                  <PodiumCard key={owner.userId} owner={owner} t={t} />
+                ) : rank === 1 ? null : (
+                  <OpenSpotCard key={rank} rank={rank} t={t} />
+                ),
+              )}
             </section>
 
             {rest.length ? (

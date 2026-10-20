@@ -19,6 +19,8 @@ import {
   fill,
   money,
   OrderSummaryCard,
+  ReservationCountdown,
+  reservationDeadlines,
   WarningIcon,
   ZONE_COLORS,
 } from "./CartSummaryCard";
@@ -29,6 +31,7 @@ import { PageLoader } from "@/components/ui/PageLoader";
 import type { CartItem, CartSummary } from "./schemas/cart.schema";
 import {
   clearCart,
+  getActiveReservations,
   getCart,
   getCartCoupons,
   getOrderSummary,
@@ -39,9 +42,12 @@ type Translate = (source: string) => string;
 
 const PLACEHOLDER_IMAGE = "/images/explore/place-placeholder.svg";
 const bone = "animate-pulse rounded-[8px] bg-[#eef1f5] motion-reduce:animate-none";
+// How long the "reservation expired" notice stays before it hides itself.
+const EXPIRY_NOTICE_MS = 5000;
 
-// What the page shows: the items (`GET /cart`) with their totals (`GET /cart/order-summary`).
-type CartView = CartSummary & { items: CartItem[] };
+// What the page shows: the items (`GET /cart`) with their totals (`GET /cart/order-summary`)
+// and when each plot's lock ends (`GET /reservations/active`; null when that failed).
+type CartView = CartSummary & { items: CartItem[]; deadlines: Record<string, number> | null };
 
 const titleCase = (value: string) => value.charAt(0) + value.slice(1).toLowerCase();
 
@@ -67,6 +73,8 @@ export function CartPage() {
   const [removingIds, setRemovingIds] = useState<string[]>([]);
   const [isClearing, setIsClearing] = useState(false);
   const [actionError, setActionError] = useState("");
+  // Set when a plot's reservation runs out while the page is open.
+  const [expiryNotice, setExpiryNotice] = useState("");
   // Confirm dialogs (Figma "Remove this plot?" / "Clear your selection?").
   const [pendingRemove, setPendingRemove] = useState<CartItem | null>(null);
   const [isClearDialogOpen, setIsClearDialogOpen] = useState(false);
@@ -85,16 +93,31 @@ export function CartPage() {
   }, [isAuthenticated, isLoading, router]);
 
   useEffect(() => {
+    if (!expiryNotice) return;
+    const timer = window.setTimeout(() => setExpiryNotice(""), EXPIRY_NOTICE_MS);
+    return () => window.clearTimeout(timer);
+  }, [expiryNotice]);
+
+  useEffect(() => {
     if (!isAuthenticated) return;
 
     const controller = new AbortController();
     // Items first; an empty cart has no summary (the API answers 404), so it's skipped.
     getCart({ signal: controller.signal })
       .then(async ({ items }) => {
+        // Expired plots leave the cart on the server: the navbar badge follows this list.
+        notifyCartChanged();
         if (!items.length) {
           setCart({ status: "empty" });
           return;
         }
+        // The countdowns are secondary: without them the cart still shows.
+        const deadlines = getActiveReservations(controller.signal)
+          .then(reservationDeadlines)
+          .catch((error: unknown) => {
+            if (!isAbortError(error)) logError(error, "Failed to load reservations");
+            return null;
+          });
         const couponId = appliedCouponRef.current?.id;
         let summary: CartSummary;
         try {
@@ -111,7 +134,10 @@ export function CartPage() {
           setCouponError("Your discount code no longer applies to this cart.");
           summary = await getOrderSummary({ signal: controller.signal });
         }
-        setCart({ status: "ready", data: { ...summary, items } });
+        setCart({
+          status: "ready",
+          data: { ...summary, items, deadlines: await deadlines },
+        });
       })
       .catch((error: unknown) => {
         // A cancelled request is not an error, and 401 already redirects to login.
@@ -171,7 +197,7 @@ export function CartPage() {
       setCouponInput(match.code);
       setCart((current) =>
         current.status === "ready"
-          ? { status: "ready", data: { ...summary, items: current.data.items } }
+          ? { status: "ready", data: { ...current.data, ...summary } }
           : current,
       );
     } catch (error) {
@@ -191,10 +217,15 @@ export function CartPage() {
     setReloadKey((key) => key + 1);
   }
 
-  // After a change: reload the cart (totals come from the API) and the navbar badge.
+  // After a change: reload the cart (totals come from the API); the reload updates the badge.
   function cartChanged() {
     setReloadKey((key) => key + 1);
-    notifyCartChanged();
+  }
+
+  // A plot's lock ran out: the server drops it from the cart, so load the cart again.
+  function reservationExpired() {
+    setExpiryNotice("A plot's reservation expired, so your cart has been updated.");
+    setReloadKey((key) => key + 1);
   }
 
   function handleActionError(error: unknown, message: string) {
@@ -285,6 +316,8 @@ export function CartPage() {
               removingIds={removingIds}
               isClearing={isClearing}
               actionError={actionError}
+              expiryNotice={expiryNotice}
+              onReservationExpired={reservationExpired}
               onClearAll={() => setIsClearDialogOpen(true)}
               onRemove={setPendingRemove}
               t={t}
@@ -437,6 +470,8 @@ type FilledCartProps = {
   removingIds: string[];
   isClearing: boolean;
   actionError: string;
+  expiryNotice: string;
+  onReservationExpired: () => void;
   onClearAll: () => void;
   onRemove: (item: CartItem) => void;
   t: Translate;
@@ -448,6 +483,8 @@ function FilledCart({
   removingIds,
   isClearing,
   actionError,
+  expiryNotice,
+  onReservationExpired,
   onClearAll,
   onRemove,
   t,
@@ -473,6 +510,18 @@ function FilledCart({
               {t(isClearing ? "Clearing..." : "Clear All")}
             </button>
           </div>
+          <p className="mt-1 font-manrope font-medium text-[12px] leading-5 text-[#8b939e]">
+            {t("Each plot is held for you for 10 minutes after you add it.")}
+          </p>
+          {expiryNotice ? (
+            <p
+              role="status"
+              className="mt-2 flex items-center gap-1.5 font-manrope font-medium text-[12px] text-[#b45309]"
+            >
+              <WarningIcon />
+              {t(expiryNotice)}
+            </p>
+          ) : null}
           {actionError ? (
             <p
               role="alert"
@@ -486,8 +535,11 @@ function FilledCart({
               <CartItemCard
                 key={item.plotId}
                 item={item}
+                // No lock left for it: shown as expired (unknown when the lookup failed).
+                deadline={cart.deadlines ? (cart.deadlines[item.plotId] ?? 0) : null}
                 isRemoving={removingIds.includes(item.plotId)}
                 onRemove={() => onRemove(item)}
+                onReservationExpired={onReservationExpired}
                 t={t}
               />
             ))}
@@ -499,9 +551,11 @@ function FilledCart({
               </span>
               <div>
                 <h3 className="font-manrope text-[14px] font-semibold leading-5 text-navy">
-                  {fill(t("Add more places to reach the {min} Rai threshold"), {
-                    min: cart.minimumRai,
-                  })}
+                  {minimumReached
+                    ? t("Want more land? Add more places to your collection.")
+                    : fill(t("Add more places to reach the {min} Rai threshold"), {
+                        min: cart.minimumRai,
+                      })}
                 </h3>
                 <p className="mt-1 max-w-[420px] font-manrope font-medium text-[12px] leading-5 text-[#8b939e]">
                   {minimumReached
@@ -604,7 +658,11 @@ function ProgressBanner({ cart, t }: { cart: CartView; t: Translate }) {
         )}
         <span className="text-[#8b939e] sm:text-right">
           <strong className="font-semibold text-navy">{t("NEXT STEP : ")}</strong>{" "}
-          {t("Select parcels from any province zone to unlock settlement.")}
+          {t(
+            reached
+              ? "Continue to checkout to complete your purchase."
+              : "Select parcels from any province zone to unlock settlement.",
+          )}
         </span>
       </div>
     </section>
@@ -688,13 +746,18 @@ function CartItemImage({ src }: { src: string | null | undefined }) {
 /** One cart row (Figma "Selected Plots" card); optional fields hide when not sent. */
 function CartItemCard({
   item,
+  deadline,
   isRemoving,
   onRemove,
+  onReservationExpired,
   t,
 }: {
   item: CartItem;
+  /** When its reservation ends (ms); 0 once it has, null when not known. */
+  deadline: number | null;
   isRemoving: boolean;
   onRemove: () => void;
+  onReservationExpired: () => void;
   t: Translate;
 }) {
   const location = item.city ?? item.region?.name;
@@ -740,6 +803,15 @@ function CartItemCard({
           <span className="font-bold text-[#e11d2e]">{`${item.sizeRai} ${t("Rai")}`}</span>
           <span className="text-[#8b939e]">{` · ${money(item.pricePerRai)} / ${t("Rai")}`}</span>
         </p>
+        {deadline !== null ? (
+          <ReservationCountdown
+            deadline={deadline}
+            template="Reserved for {time}"
+            onExpire={onReservationExpired}
+            t={t}
+            className="mt-1.5"
+          />
+        ) : null}
       </div>
       <div className="flex shrink-0 flex-col items-end justify-center gap-3 self-stretch sm:gap-4">
         <strong className="font-manrope text-[22px] font-semibold leading-7 text-[#111111] sm:text-[30px] sm:leading-9">

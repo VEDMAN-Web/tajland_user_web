@@ -16,6 +16,8 @@ import {
   fill,
   money,
   OrderSummaryCard,
+  ReservationCountdown,
+  reservationDeadlines,
   WarningIcon,
 } from "./CartSummaryCard";
 import { readAppliedCoupon, saveAppliedCoupon } from "./cart-coupon";
@@ -30,6 +32,7 @@ import { PageLoader } from "@/components/ui/PageLoader";
 import type { CartSummary, CheckoutContact } from "./schemas/cart.schema";
 import {
   createCheckout,
+  getActiveReservations,
   getCartCoupons,
   getOrder,
   getOrderSummary,
@@ -50,6 +53,10 @@ const EMPTY_CONTACT: CheckoutContact = {
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 // Phone country before one is picked: Thailand, where the land is.
 const DEFAULT_PHONE_COUNTRY = "TH";
+// Shown with a "Review your cart" link beside it.
+const RESERVATION_EXPIRED_NOTICE = "Your plot reservation expired.";
+// How long that notice stays once the cart can check out again.
+const EXPIRED_NOTICE_MS = 6000;
 const MESSAGE_MAX_LENGTH = 300;
 // The summary column's button submits whichever step is showing, by form id.
 const DETAILS_FORM_ID = "checkout-details";
@@ -103,6 +110,8 @@ export function CheckoutPage() {
   >({ status: "loading" });
   const [reloadKey, setReloadKey] = useState(0);
   const [notice, setNotice] = useState("");
+  // When the first plot's reservation ends (ms); null when unknown or none.
+  const [deadline, setDeadline] = useState<number | null>(null);
 
   const [purchaseType, setPurchaseType] = useState<PurchaseType>("self");
   // Buyer: the signed-in account's name / email, overridden by what's typed.
@@ -155,9 +164,11 @@ export function CheckoutPage() {
     const controller = new AbortController();
     getOrderSummary({ couponId, signal: controller.signal })
       // An empty cart answers 200 with zeros (older builds: 404, handled below).
-      .then((data) =>
-        setSummary(data.plots === 0 ? { status: "empty" } : { status: "ready", data }),
-      )
+      .then((data) => {
+        setSummary(data.plots === 0 ? { status: "empty" } : { status: "ready", data });
+        // Expired plots leave the cart on the server: the navbar badge follows.
+        notifyCartChanged();
+      })
       .catch((error: unknown) => {
         if (isAbortError(error)) return;
         if (isApiError(error) && error.code === "API_SESSION_EXPIRED") return;
@@ -180,9 +191,27 @@ export function CheckoutPage() {
         logError(error, "Failed to load checkout summary");
         setSummary({ status: "error" });
       });
+    // The countdown is secondary: without it the checkout still works.
+    getActiveReservations(controller.signal)
+      .then((reservations) => {
+        const deadlines = Object.values(reservationDeadlines(reservations));
+        setDeadline(deadlines.length ? Math.min(...deadlines) : null);
+      })
+      .catch((error: unknown) => {
+        if (!isAbortError(error)) logError(error, "Failed to load reservations");
+      });
 
     return () => controller.abort();
   }, [isAuthenticated, couponId, reloadKey]);
+
+  // The expired-plot notice hides itself once the cart can check out again; below the
+  // minimum it stays, since it explains why checkout is closed.
+  const canCheckout = summary.status === "ready" && summary.data.checkoutEligible;
+  useEffect(() => {
+    if (notice !== RESERVATION_EXPIRED_NOTICE || !canCheckout) return;
+    const timer = window.setTimeout(() => setNotice(""), EXPIRED_NOTICE_MS);
+    return () => window.clearTimeout(timer);
+  }, [notice, canCheckout]);
 
   function removeCoupon() {
     setCouponId(undefined);
@@ -311,6 +340,7 @@ export function CheckoutPage() {
         setSubmitError(
           "Some plots are no longer reserved for you. Please review your cart.",
         );
+        setReloadKey((key) => key + 1);
       } else if (status === 400 || status === 404) {
         setSubmitError(
           "Your cart changed and can't be checked out as it is. Please review your cart.",
@@ -324,6 +354,15 @@ export function CheckoutPage() {
       setIsSubmitting(false);
     }
   }
+
+  // A plot's lock ran out: the server drops it from the cart, so reload the totals.
+  function reservationExpired() {
+    setNotice(RESERVATION_EXPIRED_NOTICE);
+    setDeadline(null);
+    setReloadKey((key) => key + 1);
+  }
+  // Shown by the button; a submit error (it has its own cart link) takes its place.
+  const showExpiredNotice = notice === RESERVATION_EXPIRED_NOTICE && !submitError;
 
   // `POST /payments` (card only for now), then the paid order for the confirmation.
   async function pay(payment: PaymentSubmission) {
@@ -509,7 +548,20 @@ export function CheckoutPage() {
             )}
 
             <aside className="space-y-3">
-              {notice ? (
+              {/* Once the order exists, its own payment window applies instead. Below the
+                  minimum checkout is closed, so there's nothing to hurry for. */}
+              {deadline !== null && !orderId && summary.data.checkoutEligible ? (
+                <ReservationCountdown
+                  deadline={deadline}
+                  // The earliest lock, so "all your plots" holds until it runs out.
+                  template="Complete checkout within {time} to keep all your plots"
+                  onExpire={reservationExpired}
+                  t={t}
+                  className="px-3 py-1 text-[12px]"
+                />
+              ) : null}
+              {/* The expired-reservation notice sits by the button instead (below). */}
+              {notice && notice !== RESERVATION_EXPIRED_NOTICE ? (
                 <p
                   role="status"
                   className="flex items-center gap-1.5 font-manrope text-[12px] font-medium text-[#b45309]"
@@ -548,6 +600,25 @@ export function CheckoutPage() {
                 />
               )}
               <OrderSummaryCard summary={summary.data} t={t}>
+                {showExpiredNotice ? (
+                  <p
+                    role="alert"
+                    className="mt-5 flex items-start gap-1.5 font-manrope text-[12px] font-medium leading-4 text-[#e11d2e]"
+                  >
+                    <WarningIcon />
+                    <span>
+                      {/* Below the minimum it also says why checkout is closed (one message, not two). */}
+                      {t(
+                        summary.data.checkoutEligible
+                          ? RESERVATION_EXPIRED_NOTICE
+                          : "A plot's reservation expired, so your cart is below the minimum.",
+                      )}{" "}
+                      <Link href={routes.cart} className="underline">
+                        {t("Review your cart")}
+                      </Link>
+                    </span>
+                  </p>
+                ) : null}
                 {submitError ? (
                   <p
                     role="alert"
@@ -595,7 +666,7 @@ export function CheckoutPage() {
                 >
                   {t("Continue Exploring")}
                 </Link>
-                {!summary.data.checkoutEligible ? (
+                {!summary.data.checkoutEligible && !showExpiredNotice && !submitError ? (
                   <p className="mt-3 text-center font-manrope text-[11px] font-medium text-[#e11d2e]">
                     {t("Your cart doesn't meet the minimum yet.")}{" "}
                     <Link href={routes.cart} className="underline">

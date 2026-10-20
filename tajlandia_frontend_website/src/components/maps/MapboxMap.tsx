@@ -8,7 +8,8 @@ import { cn } from "@/lib/utils/cn";
 export type MapboxMapHandle = {
   zoomIn: () => void;
   zoomOut: () => void;
-  locate: () => void;
+  /** Flies to the browser's location. "denied": the user (or browser) refused access. */
+  locate: () => Promise<"success" | "denied" | "unavailable">;
   flyToCoordinates: (
     coordinates: [number, number],
     zoom?: number,
@@ -617,15 +618,26 @@ export const MapboxMap = forwardRef<MapboxMapHandle, MapboxMapProps>(function Ma
           ...(options?.maxZoom !== undefined && { maxZoom: options.maxZoom }),
         });
       },
-      locate: () => {
-        if (!mapRef.current || !navigator.geolocation) return;
-        navigator.geolocation.getCurrentPosition(({ coords }) => {
-          mapRef.current?.flyTo({
-            center: [coords.longitude, coords.latitude],
-            zoom: 10,
-          });
-        });
-      },
+      locate: () =>
+        new Promise((resolve) => {
+          if (!mapRef.current || !navigator.geolocation) {
+            resolve("unavailable");
+            return;
+          }
+          navigator.geolocation.getCurrentPosition(
+            ({ coords }) => {
+              mapRef.current?.flyTo({
+                center: [coords.longitude, coords.latitude],
+                zoom: 10,
+              });
+              resolve("success");
+            },
+            (error) =>
+              resolve(error.code === error.PERMISSION_DENIED ? "denied" : "unavailable"),
+            // A position from the last minute comes back at once, so a second click is instant.
+            { timeout: 10_000, maximumAge: 60_000 },
+          );
+        }),
     }),
     [],
   );
