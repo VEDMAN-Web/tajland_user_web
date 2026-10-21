@@ -326,6 +326,7 @@ function PlotCard({
   const tier = plot.tier.toUpperCase();
   const tierLabel = tier.charAt(0) + tier.slice(1).toLowerCase();
   const title = plot.plotName?.trim() || plot.plotCode;
+  const image = plot.images?.[0] ?? plot.image;
   const place = [plot.city, plot.province].filter(Boolean).join(", ");
   const location = [place, plot.zone].filter(Boolean).join(" · ");
   const mapHref =
@@ -346,7 +347,7 @@ function PlotCard({
     <article className="overflow-hidden rounded-[16px] border border-[#eef1f4] bg-white shadow-[0_8px_22px_rgba(11,31,77,0.05)]">
       <div className="relative h-[168px] w-full bg-[#eef1f5]">
         <Image
-          src={isAllowedRemoteImage(plot.image) ? plot.image : PLOT_PLACEHOLDER_IMAGE}
+          src={isAllowedRemoteImage(image) ? image : PLOT_PLACEHOLDER_IMAGE}
           alt={title}
           fill
           sizes="(min-width: 1280px) 360px, (min-width: 768px) 50vw, 100vw"

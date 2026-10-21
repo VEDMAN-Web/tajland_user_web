@@ -47,6 +47,7 @@ const personSchema = z.object({ firstName: z.string().nullish(), lastName: z.str
 // `GET /orders/{id}` `data`: one order with its plots, totals and payment.
 const orderDetailItemSchema = orderListItemSchema.extend({
   imageUrl: z.string().nullish(),
+  images: z.array(z.string()).nullish(),
   // City name, e.g. "Phuket City".
   location: z.string().nullish(),
   latitude: z.number().nullish(),

@@ -296,7 +296,8 @@ function PurchasedPlotCard({
   const sqm =
     item.sizeSquareFeet != null ? Math.round(item.sizeSquareFeet * SQM_PER_SQFT) : null;
   const rate = item.pricePerRai ?? (item.rai > 0 ? item.price / item.rai : 0);
-  const usable = isAllowedRemoteImage(item.imageUrl);
+  const image = item.images?.[0] ?? item.imageUrl;
+  const usable = isAllowedRemoteImage(image);
   const raiLine = `${item.rai} ${t("Rai")}`;
   const rateLine = `${money(rate)} / ${t("Rai")}`;
 
@@ -307,7 +308,7 @@ function PurchasedPlotCard({
       style={{ height: variant === "gift" ? GIFT_CARD_HEIGHT : CARD_HEIGHT }}
     >
       <Image
-        src={usable ? item.imageUrl! : PLACEHOLDER_IMAGE}
+        src={usable ? image! : PLACEHOLDER_IMAGE}
         alt=""
         width={80}
         height={80}

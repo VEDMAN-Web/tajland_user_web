@@ -24,6 +24,7 @@ const leaderboardPlotSchema = z.object({
   plotCode: z.string(),
   plotName: z.string().nullish(),
   image: z.string().nullish(),
+  images: z.array(z.string()).nullish(),
   // Zone type: "ICON", "POPULAR" or "STANDARD".
   tier: z.string(),
   city: z.string().nullish(),

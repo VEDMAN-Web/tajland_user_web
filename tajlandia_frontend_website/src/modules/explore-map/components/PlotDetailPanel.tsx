@@ -130,7 +130,10 @@ const decorative = "cursor-pointer";
 /** Plot image; the local placeholder when missing, from a host we don't allow, or broken. */
 function PlotImage({ src, alt }: { src: string | null | undefined; alt: string }) {
   const [failedSrc, setFailedSrc] = useState<string | null>(null);
+  const [loadedSrc, setLoadedSrc] = useState<string | null>(null);
   const usable = isAllowedRemoteImage(src) && failedSrc !== src;
+  // Remote images can be slow; pulse until this one has loaded.
+  const loading = usable && loadedSrc !== src;
 
   return (
     <Image
@@ -139,10 +142,16 @@ function PlotImage({ src, alt }: { src: string | null | undefined; alt: string }
       fill
       sizes="(max-width: 640px) 100vw, 420px"
       unoptimized={!usable}
+      onLoad={() => {
+        if (usable) setLoadedSrc(src);
+      }}
       onError={() => {
         if (usable) setFailedSrc(src);
       }}
-      className="object-cover"
+      className={cn(
+        "object-cover",
+        loading && "animate-pulse bg-[#eef1f5] motion-reduce:animate-none",
+      )}
     />
   );
 }
@@ -162,12 +171,19 @@ export function PlotDetailPanel({
   const tier = plot.zone?.tier;
   const sizeSqm = plotSizeSqm(plot.sizeSquareFeet);
   const place = [plot.location?.name, plot.region.name].filter(Boolean).join(", ");
+  // `images` (Cloudinary) first; plots without them fall back to the single `imageUrl`.
+  const photos = plot.images?.length ? plot.images : plot.imageUrl ? [plot.imageUrl] : [];
+  // Back to the first photo whenever another plot is opened.
+  const [photo, setPhoto] = useState({ plotId: plot.id, index: 0 });
+  const photoIndex = photo.plotId === plot.id ? photo.index : 0;
+  const showPhoto = (step: number) =>
+    setPhoto({ plotId: plot.id, index: (photoIndex + step + photos.length) % photos.length });
 
   return (
     <article className="flex flex-col" aria-label={t("Plot details")}>
       {/* Image header: edge to edge, 190px tall, dark gradient (60% -> 0% -> 20%). */}
       <div className="relative h-[190px] w-full shrink-0 overflow-hidden">
-        <PlotImage src={plot.imageUrl} alt={plot.name} />
+        <PlotImage src={photos[photoIndex]} alt={plot.name} />
         <span
           aria-hidden="true"
           className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.6)_0%,rgba(0,0,0,0)_45%,rgba(0,0,0,0.2)_100%)]"
@@ -191,26 +207,27 @@ export function PlotDetailPanel({
         >
           {t(status.label)}
         </span>
-        <button
-          type="button"
-          aria-label={t("Previous image")}
-          className={cn(
-            decorative,
-            "absolute left-3 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-full bg-black/25 text-white",
-          )}
-        >
-          <Chevron direction="left" />
-        </button>
-        <button
-          type="button"
-          aria-label={t("Next image")}
-          className={cn(
-            decorative,
-            "absolute right-3 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-full bg-black/25 text-white",
-          )}
-        >
-          <Chevron direction="right" />
-        </button>
+        {/* Only with more than one photo. */}
+        {photos.length > 1 ? (
+          <>
+            <button
+              type="button"
+              onClick={() => showPhoto(-1)}
+              aria-label={t("Previous image")}
+              className="absolute left-3 top-1/2 flex h-6 w-6 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full bg-black/25 text-white transition-colors hover:bg-black/40"
+            >
+              <Chevron direction="left" />
+            </button>
+            <button
+              type="button"
+              onClick={() => showPhoto(1)}
+              aria-label={t("Next image")}
+              className="absolute right-3 top-1/2 flex h-6 w-6 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full bg-black/25 text-white transition-colors hover:bg-black/40"
+            >
+              <Chevron direction="right" />
+            </button>
+          </>
+        ) : null}
       </div>
 
       <div className="px-4 pb-6 pt-4">

@@ -124,7 +124,7 @@ export function PlotCard({
       >
         <span className="relative shrink-0">
           <PlaceThumbnail
-            src={plot.imageUrl}
+            src={plot.images?.[0] ?? plot.imageUrl}
             size={99}
             className="h-[84px] w-[84px] rounded-[12px] sm:h-[99px] sm:w-[99px]"
           />

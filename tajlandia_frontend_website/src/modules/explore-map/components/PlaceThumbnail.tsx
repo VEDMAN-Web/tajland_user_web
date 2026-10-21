@@ -22,7 +22,10 @@ export function PlaceThumbnail({
   className?: string;
 }) {
   const [failedSrc, setFailedSrc] = useState<string | null>(null);
+  const [loadedSrc, setLoadedSrc] = useState<string | null>(null);
   const usable = isAllowedRemoteImage(src) && failedSrc !== src;
+  // Remote images can be slow; pulse until this one has loaded.
+  const loading = usable && loadedSrc !== src;
 
   return (
     <Image
@@ -31,10 +34,17 @@ export function PlaceThumbnail({
       width={size}
       height={size}
       unoptimized={!usable}
+      onLoad={() => {
+        if (usable) setLoadedSrc(src);
+      }}
       onError={() => {
         if (usable) setFailedSrc(src);
       }}
-      className={cn("shrink-0 object-cover", className)}
+      className={cn(
+        "shrink-0 object-cover",
+        loading && "animate-pulse bg-[#eef1f5] motion-reduce:animate-none",
+        className,
+      )}
     />
   );
 }

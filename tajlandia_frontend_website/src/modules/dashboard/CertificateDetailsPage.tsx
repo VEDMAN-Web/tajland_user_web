@@ -149,8 +149,17 @@ export function CertificateDetailsPage({ certificateId }: { certificateId: strin
     <div className="min-h-[100svh] bg-[#f5f9fc] text-navy">
       <DashboardNavbar active="none" />
       <main className="mx-auto w-[92%] max-w-none px-5 pb-12 pt-10 sm:px-8 sm:pt-14">
-        <Link href={routes.certificates} className="cursor-pointer font-manrope text-[11px] font-medium text-navy">
-          ← {t("Back to My Certificates")}
+        <Link
+          href={routes.certificates}
+          className="group inline-flex h-10 cursor-pointer items-center gap-2 rounded-full bg-white pl-1.5 pr-4 font-manrope text-[13px] font-medium text-navy shadow-[0_4px_14px_rgba(11,31,77,0.08)] transition-shadow hover:shadow-[0_6px_18px_rgba(11,31,77,0.14)]"
+        >
+          <span
+            aria-hidden="true"
+            className="flex h-7 w-7 items-center justify-center rounded-full bg-[#eaf0f5] text-[14px] transition-transform group-hover:-translate-x-0.5"
+          >
+            ←
+          </span>
+          {t("Back to My Certificates")}
         </Link>
         <div className="mt-5 flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
           <div>
@@ -169,17 +178,18 @@ export function CertificateDetailsPage({ certificateId }: { certificateId: strin
                   onClick={download}
                   disabled={downloading}
                   aria-busy={downloading}
-                  className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-[8px] bg-navy px-5 font-manrope text-[11px] text-white disabled:cursor-wait disabled:opacity-70"
+                  className="inline-flex h-11 cursor-pointer items-center gap-2.5 rounded-[10px] bg-navy px-5 font-manrope text-[14px] font-medium text-white disabled:cursor-wait disabled:opacity-70"
                 >
-                  {downloading ? t("Downloading...") : t("Download")} <span aria-hidden="true">⇩</span>
+                  {downloading ? t("Downloading...") : t("Download")}
+                  <DownloadIcon />
                 </button>
                 <button
                   type="button"
                   aria-label={t("Share certificate")}
                   onClick={() => setDialog("share")}
-                  className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-[8px] bg-white text-navy shadow-[0_4px_14px_rgba(11,31,77,0.08)]"
+                  className="flex h-11 w-11 cursor-pointer items-center justify-center rounded-[10px] border border-[#e5e9f0] bg-white text-navy transition-colors hover:bg-[#f5f7fa]"
                 >
-                  <Image src="/images/dashboard/certificate-share.png" alt="" width={24} height={24} className="h-6 w-6 object-contain" />
+                  <ShareIcon />
                 </button>
               </div>
               {downloadError ? (
@@ -192,16 +202,16 @@ export function CertificateDetailsPage({ certificateId }: { certificateId: strin
         </div>
 
         {state.status === "loading" ? (
-          <div aria-busy="true" className="mt-6 grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1fr)_305px]">
+          <div aria-busy="true" className="mt-6 grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[560px_minmax(0,1fr)] lg:gap-8">
             <span className="sr-only" role="status">
               {t("Loading certificate...")}
             </span>
-            <span aria-hidden="true" className="block h-[520px] animate-pulse bg-white motion-reduce:animate-none" />
+            <span aria-hidden="true" className="mx-auto block h-[520px] w-full max-w-[560px] animate-pulse bg-white motion-reduce:animate-none" />
             <span aria-hidden="true" className="block h-[360px] animate-pulse rounded-[12px] bg-white motion-reduce:animate-none" />
           </div>
         ) : order ? (
-          <div className="mt-6 grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1fr)_305px]">
-            <div className="flex justify-center bg-white p-3 shadow-[0_5px_18px_rgba(11,31,77,0.06)] sm:p-5">
+          <div className="mt-6 grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[560px_minmax(0,1fr)] lg:gap-8">
+            <div className="mx-auto flex w-full max-w-[560px] justify-center self-start bg-white p-3 shadow-[0_5px_18px_rgba(11,31,77,0.06)] sm:p-5">
               <div className="relative aspect-[646/941] w-full max-w-[520px]">
                 <Image
                   src={image ?? CERTIFICATE_PLACEHOLDER}
@@ -285,29 +295,29 @@ function CertificateFacts({
   const plots = `${order.totalPlots} ${t(order.totalPlots === 1 ? "Verified Plot" : "Verified Plots")}`;
 
   return (
-    <aside className="min-w-0 space-y-4">
+    <aside className="min-w-0 space-y-5 lg:sticky lg:top-28 lg:self-start">
       <div>
-        <p className="font-manrope text-[9px] font-semibold uppercase tracking-[0.08em] text-navy">
+        <p className="font-manrope text-[11px] font-semibold uppercase tracking-[0.08em] text-navy">
           ◉ {t("Public registry view")}
         </p>
-        <h2 className="mt-2 font-manrope text-[17px] font-semibold text-navy">{t("Verified Public Record")}</h2>
-        <p className="mt-1 font-manrope text-[10px] leading-4 text-[#8f99a4]">
+        <h2 className="mt-2 font-manrope text-[22px] font-semibold text-navy">{t("Verified Public Record")}</h2>
+        <p className="mt-1 font-manrope text-[13px] leading-5 text-[#8f99a4]">
           {t("Authorized for third-party audit. Personal financial data, telephone, and residential records remain redacted.")}
         </p>
       </div>
-      <div className="flex items-center gap-2 rounded-[8px] bg-[#eaf0f5] px-3 py-2 font-manrope text-[9px] text-[#7b858f]">
+      <div className="flex items-center gap-2 rounded-[10px] bg-[#eaf0f5] px-4 py-2.5 font-manrope text-[12px] text-[#7b858f]">
         <span className="min-w-0 flex-1 truncate">{pageUrl}</span>
-        <button type="button" onClick={onCopy} className="cursor-pointer rounded-[6px] bg-navy px-3 py-1.5 text-[10px] text-white">
+        <button type="button" onClick={onCopy} className="cursor-pointer rounded-[8px] bg-navy px-4 py-2 text-[12px] text-white">
           {copied ? t("Copied") : t("Copy")}
         </button>
       </div>
-      <div className="rounded-[12px] bg-white p-4 shadow-[0_5px_18px_rgba(11,31,77,0.06)]">
-        <h3 className="font-manrope text-[11px] font-semibold text-navy">◉ {t("Certificate Verified")}</h3>
-        <p className="mt-1 font-manrope text-[9px] text-[#8f99a4]">
+      <div className="rounded-[14px] bg-white p-6 shadow-[0_5px_18px_rgba(11,31,77,0.06)]">
+        <h3 className="font-manrope text-[15px] font-semibold text-navy">◉ {t("Certificate Verified")}</h3>
+        <p className="mt-1 font-manrope text-[12px] text-[#8f99a4]">
           {t("Issued")}: {formatDate(order.paidAt, true)}
         </p>
-        <div className="my-4 border-t border-[#e8edf1]" />
-        <div className="grid grid-cols-2 gap-x-4 gap-y-3 font-manrope text-[9px]">
+        <div className="my-5 border-t border-[#e8edf1]" />
+        <div className="grid grid-cols-2 gap-x-6 gap-y-5 font-manrope text-[13px]">
           <Detail label={t("Certificate ID")} value={order.certificateNo ?? "—"} />
           <Detail label={t("Registered Owner")} value={owner} />
           <Detail label={t("Location")} value={location} />
@@ -333,7 +343,7 @@ function Detail({
 }) {
   return (
     <div className="min-w-0">
-      <p className="text-[8px] uppercase tracking-[0.06em] text-[#a0aab4]">{label}</p>
+      <p className="text-[10px] uppercase tracking-[0.06em] text-[#a0aab4]">{label}</p>
       <p className={`mt-1 break-words font-medium ${accent ? "text-brand-red" : "text-navy"}`}>{value}</p>
     </div>
   );
@@ -345,7 +355,7 @@ function Overlay({ children }: { children: React.ReactNode }) {
       <section
         role="dialog"
         aria-modal="true"
-        className="w-full max-w-[340px] rounded-[14px] bg-white p-6 text-center font-manrope shadow-[0_20px_60px_rgba(11,31,77,0.24)]"
+        className="w-full max-w-[420px] rounded-[16px] bg-white p-7 text-center font-manrope shadow-[0_20px_60px_rgba(11,31,77,0.24)]"
       >
         {children}
       </section>
@@ -405,25 +415,51 @@ function ShareDialog({
       <Image
         src="/images/brand/tajlandia-logo.png"
         alt="Tajlandia"
-        width={94}
-        height={40}
-        className="mx-auto mt-1 h-auto w-[94px] object-contain"
+        width={150}
+        height={64}
+        className="mx-auto -mt-2 h-auto w-[150px] object-contain"
       />
-      <h2 className="mt-5 text-[17px] font-semibold text-[#171717]">{t("Share your Certificate")}</h2>
-      <p className="mt-1 text-[10px] leading-4 text-[#8f99a4]">
+      <h2 className="mt-5 text-[20px] font-semibold text-[#171717]">{t("Share your Certificate")}</h2>
+      <p className="mt-1.5 text-[13px] leading-5 text-[#8f99a4]">
         {t("Share your verified Tajlandia ownership record with colleagues, banks, or legal counsel.")}
       </p>
-      <div className="mt-4 break-all rounded-[8px] bg-[#f2f5f8] px-3 py-2 text-left text-[9px] text-[#7b858f]">
+      <div className="mt-5 break-all rounded-[10px] bg-[#f2f5f8] px-4 py-3 text-left text-[12px] leading-5 text-[#7b858f]">
         {certificateUrl}
       </div>
-      <div className="mt-4 grid grid-cols-2 gap-2">
-        <button type="button" onClick={onCopy} className="cursor-pointer rounded-[8px] border border-[#e1e7ec] py-2.5 text-[10px] text-navy">
+      <div className="mt-5 grid grid-cols-2 gap-3">
+        <button type="button" onClick={onCopy} className="h-11 cursor-pointer rounded-[10px] border border-[#e1e7ec] text-[13px] font-medium text-navy">
           {copied ? t("Copied") : t("Copy link")}
         </button>
-        <button type="button" onClick={onShare} className="cursor-pointer rounded-[8px] bg-navy py-2.5 text-[10px] text-white">
+        <button type="button" onClick={onShare} className="h-11 cursor-pointer rounded-[10px] bg-navy text-[13px] font-medium text-white">
           ↗ {t("Share Link")}
         </button>
       </div>
     </Overlay>
+  );
+}
+
+function DownloadIcon() {
+  return (
+    <svg viewBox="0 0 20 20" aria-hidden="true" className="h-[18px] w-[18px]">
+      <path
+        d="M10 3v9.5m0 0-3.5-3.5M10 12.5l3.5-3.5M3.5 13.5v1.75c0 .69.56 1.25 1.25 1.25h10.5c.69 0 1.25-.56 1.25-1.25V13.5"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function ShareIcon() {
+  return (
+    <svg viewBox="0 0 16 16" aria-hidden="true" className="h-4 w-4">
+      <circle cx="12" cy="3.5" r="1.9" fill="currentColor" />
+      <circle cx="4" cy="8" r="1.9" fill="currentColor" />
+      <circle cx="12" cy="12.5" r="1.9" fill="currentColor" />
+      <path d="m5.6 7.1 4.8-2.7M5.6 8.9l4.8 2.7" stroke="currentColor" strokeWidth="1.4" />
+    </svg>
   );
 }

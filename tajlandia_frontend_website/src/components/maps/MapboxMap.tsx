@@ -24,6 +24,8 @@ export type MapboxMapHandle = {
     curve?: number;
     bearing?: number;
     pitch?: number;
+    /** Pixels to shift the centre by, e.g. to land it beside a side panel. */
+    offset?: [number, number];
   }) => Promise<void>;
   /** Removes the pin left by `flyToCoordinates` / `searchAndFlyTo`. */
   clearMarker: () => void;
@@ -151,6 +153,47 @@ function regionMarkerElement(region: MapRegion, onClick: () => void) {
     onClick();
   });
   return button;
+}
+
+const REGION_PILL_GAP = 4;
+
+/**
+ * Region pills for nearby places (e.g. Phuket and Krabi) cover each other when
+ * zoomed out. Such a pair opens away from each other instead: the western pill
+ * to the left of its spot, the eastern one to the right.
+ */
+function spreadRegionMarkers(map: mapboxgl.Map, markers: mapboxgl.Marker[]) {
+  const pills = markers
+    .filter((marker) => marker.getElement().style.display !== "none")
+    .map((marker) => {
+      const element = marker.getElement();
+      return {
+        marker,
+        point: map.project(marker.getLngLat()),
+        width: element.offsetWidth,
+        height: element.offsetHeight,
+        side: 0,
+      };
+    })
+    .sort((a, b) => a.point.x - b.point.x);
+
+  for (let i = 0; i < pills.length; i += 1) {
+    for (let j = i + 1; j < pills.length; j += 1) {
+      const west = pills[i]!;
+      const east = pills[j]!;
+      const overlaps =
+        east.point.x - west.point.x < (west.width + east.width) / 2 &&
+        Math.abs(east.point.y - west.point.y) < (west.height + east.height) / 2;
+      if (overlaps) {
+        west.side = -1;
+        east.side = 1;
+      }
+    }
+  }
+
+  for (const pill of pills) {
+    pill.marker.setOffset([pill.side * (pill.width / 2 + REGION_PILL_GAP), 0]);
+  }
 }
 
 const PLOT_LABEL_IMAGE = "plot-label-pill";
@@ -359,6 +402,9 @@ export const MapboxMap = forwardRef<MapboxMapHandle, MapboxMapProps>(function Ma
     zoom: initialZoom ?? selectedLocation?.zoom ?? 4.5,
   });
   const [status, setStatus] = useState<MapboxMapStatus>("loading");
+  // The loading card leaves the DOM once it has faded out (screen readers and
+  // find-in-page shouldn't still see "Loading Map").
+  const [isLoaderFaded, setIsLoaderFaded] = useState(false);
   // Latest plots, so the load handler can draw ones that arrived before the style.
   const plotsRef = useRef(plots);
   // Latest handler, so the map listeners (added once) never call a stale one.
@@ -492,6 +538,7 @@ export const MapboxMap = forwardRef<MapboxMapHandle, MapboxMapProps>(function Ma
       for (const marker of regionMarkersRef.current) {
         marker.getElement().style.display = visible ? "flex" : "none";
       }
+      spreadRegionMarkers(map, regionMarkersRef.current);
     });
     map.on("error", (event) => {
       console.error("Mapbox failed to load", event.error);
@@ -521,6 +568,7 @@ export const MapboxMap = forwardRef<MapboxMapHandle, MapboxMapProps>(function Ma
         .addTo(map);
     });
     regionMarkersRef.current = markers;
+    spreadRegionMarkers(map, markers);
     return () => {
       for (const marker of markers) marker.remove();
       regionMarkersRef.current = [];
@@ -595,6 +643,7 @@ export const MapboxMap = forwardRef<MapboxMapHandle, MapboxMapProps>(function Ma
         curve = 1.6,
         bearing = 0,
         pitch = 0,
+        offset,
       }) => {
         const map = mapRef.current;
         if (!map) return;
@@ -603,7 +652,16 @@ export const MapboxMap = forwardRef<MapboxMapHandle, MapboxMapProps>(function Ma
         }
         await new Promise<void>((resolve) => {
           map.once("moveend", () => resolve());
-          map.flyTo({ center, zoom, duration, curve, bearing, pitch, essential: true });
+          map.flyTo({
+            center,
+            zoom,
+            duration,
+            curve,
+            bearing,
+            pitch,
+            essential: true,
+            ...(offset && { offset }),
+          });
         });
       },
       clearMarker: () => {
@@ -648,24 +706,30 @@ export const MapboxMap = forwardRef<MapboxMapHandle, MapboxMapProps>(function Ma
       aria-label="Interactive Thailand map"
     >
       <div ref={containerRef} className="absolute inset-0 h-full w-full" />
-      <div
-        className={cn(
-          "pointer-events-none absolute inset-0 z-10 flex items-center justify-center bg-[#effbfd]/75 transition-opacity duration-300",
-          status === "loading" ? "opacity-100" : "opacity-0",
-          loadingOverlayClassName,
-        )}
-        aria-hidden={status !== "loading"}
-      >
-        <div className="flex h-[116px] w-[220px] flex-col items-center justify-center rounded-[14px] bg-white shadow-[0_8px_24px_rgba(11,31,77,0.08)]">
-          <span className="h-7 w-7 animate-spin rounded-full border-[4px] border-[#151515]/20 border-t-[#151515]" />
-          <strong className="mt-2 text-[14px] font-bold text-[#151515]">
-            {loadingLabels.title}
-          </strong>
-          <span className="mt-1 text-[11px] text-[#737373]">
-            {loadingLabels.subtitle}
-          </span>
+      {status === "loading" || !isLoaderFaded ? (
+        <div
+          className={cn(
+            "pointer-events-none absolute inset-0 z-10 flex items-center justify-center bg-[#effbfd]/75 transition-opacity duration-300",
+            status === "loading" ? "opacity-100" : "opacity-0",
+            loadingOverlayClassName,
+          )}
+          aria-hidden={status !== "loading"}
+          onTransitionEnd={(event) => {
+            if (event.target === event.currentTarget && status !== "loading")
+              setIsLoaderFaded(true);
+          }}
+        >
+          <div className="flex h-[116px] w-[220px] flex-col items-center justify-center rounded-[14px] bg-white shadow-[0_8px_24px_rgba(11,31,77,0.08)]">
+            <span className="h-7 w-7 animate-spin rounded-full border-[4px] border-[#151515]/20 border-t-[#151515]" />
+            <strong className="mt-2 text-[14px] font-bold text-[#151515]">
+              {loadingLabels.title}
+            </strong>
+            <span className="mt-1 text-[11px] text-[#737373]">
+              {loadingLabels.subtitle}
+            </span>
+          </div>
         </div>
-      </div>
+      ) : null}
       {status === "error" && showErrorOverlay ? (
         <div className="absolute inset-0 z-10 flex items-center justify-center bg-[#74d0e1] px-6 text-center text-sm text-navy">
           The map could not be loaded. Please check your connection and try again.

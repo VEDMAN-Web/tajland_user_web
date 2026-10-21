@@ -16,6 +16,7 @@ const landPlotSchema = z.object({
   // Not sent yet; the card falls back to the zone name.
   name: z.string().nullish(),
   imageUrl: z.string().nullish(),
+  images: z.array(z.string()).nullish(),
   zone: z.string(),
   zoneName: z.string().nullish(),
   region: z.string(),

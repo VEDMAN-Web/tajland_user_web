@@ -51,6 +51,16 @@ describe("explorePlotsPageSchema", () => {
     expect(parsed.items[0]?.geometry).toBeNull();
   });
 
+  it("keeps the Cloudinary `images` list next to a null `imageUrl`", () => {
+    const image = "https://res.cloudinary.com/ck9pqqyk/image/upload/uploads/plotImages/1.png";
+    const parsed = explorePlotsPageSchema.parse({
+      ...page,
+      items: [{ ...page.items[0], imageUrl: null, images: [image] }],
+    });
+    expect(parsed.items[0]?.imageUrl).toBeNull();
+    expect(parsed.items[0]?.images).toEqual([image]);
+  });
+
   it("rejects a plot without coordinates", () => {
     const broken = { ...page, items: [{ ...page.items[0], coordinates: undefined }] };
     expect(explorePlotsPageSchema.safeParse(broken).success).toBe(false);
