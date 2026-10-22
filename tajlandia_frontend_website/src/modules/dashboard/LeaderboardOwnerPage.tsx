@@ -15,6 +15,7 @@ import { DashboardNavbar } from "./DashboardNavbar";
 import { useDashboardLanguage } from "./DashboardLanguageContext";
 import type { LeaderboardPlot, LeaderboardProfile } from "./schemas/leaderboard.schema";
 import { getLeaderboardProfile } from "./services/leaderboard.client";
+import { BackLink } from "@/components/ui/BackLink";
 
 type ProfileState =
   | { status: "loading" }
@@ -83,13 +84,7 @@ export function LeaderboardOwnerPage({ userId }: { userId: string }) {
     <div className="min-h-[100svh] bg-white text-navy">
       <DashboardNavbar active="leaderboard" />
       <main className="mx-auto w-full max-w-[1180px] px-4 pb-16 pt-6 sm:px-8 sm:pt-8">
-        <Link
-          href={routes.leaderboard}
-          className="inline-flex cursor-pointer items-center gap-2 font-manrope text-[14px] font-medium text-navy hover:text-navy-deep"
-        >
-          <ArrowLeft />
-          {t("Back to Top Owners")}
-        </Link>
+        <BackLink href={routes.leaderboard}>{t("Back to Top Owners")}</BackLink>
 
         {state.status === "loading" ? (
           <>
@@ -405,14 +400,6 @@ function PlotCard({
         </div>
       </div>
     </article>
-  );
-}
-
-function ArrowLeft() {
-  return (
-    <svg viewBox="0 0 16 16" aria-hidden="true" className="h-4 w-4 shrink-0">
-      <path d="M13 8H3m4-4-4 4 4 4" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
   );
 }
 

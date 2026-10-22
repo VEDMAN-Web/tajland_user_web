@@ -1,18 +1,21 @@
 "use client";
 
 import { useEffect, useRef, useState, type RefObject } from "react";
-import { MapboxMap, type MapboxMapHandle } from "@/components/maps/MapboxMap";
+import { MapboxMap, type MapboxMapHandle, type MapRegion } from "@/components/maps/MapboxMap";
 import { cn } from "@/lib/utils/cn";
 
 type ExploreThailandMapProps = {
   /** Shared with the page so search and zoom controls can drive the map. */
   mapRef: RefObject<MapboxMapHandle | null>;
+  regions: MapRegion[];
+  onRegionClick: (regionId: string) => void;
 };
 
 // Same entrance as the home map: starts as a globe over the Arabian Sea, then
 // flies east and lands on Thailand. Leaving the viewport resets it to the globe.
 const GLOBE_VIEW = { center: [70, 18] as [number, number], zoom: 2 };
-const THAILAND_VIEW = { center: [101.1, 14.95] as [number, number], zoom: 7.2 };
+// Wide enough to show every region pill, Chiang Mai down to Phuket.
+const THAILAND_VIEW = { center: [100.9, 13.4] as [number, number], zoom: 4.9 };
 const FLY_DURATION_MS = 3200;
 // Fly once the map is this visible, so the whole flight is actually seen.
 const START_AT_VISIBLE = 0.4;
@@ -23,7 +26,7 @@ const legend = [
   { label: "Restricted", color: "bg-[#a9a9a9]" },
 ];
 
-export function ExploreThailandMap({ mapRef }: ExploreThailandMapProps) {
+export function ExploreThailandMap({ mapRef, regions, onRegionClick }: ExploreThailandMapProps) {
   const frameRef = useRef<HTMLDivElement>(null);
   const [landed, setLanded] = useState(false);
 
@@ -85,6 +88,8 @@ export function ExploreThailandMap({ mapRef }: ExploreThailandMapProps) {
         initialCenter={GLOBE_VIEW.center}
         initialZoom={GLOBE_VIEW.zoom}
         projection="globe"
+        regions={regions}
+        onRegionClick={onRegionClick}
       />
       <div
         className={cn(

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { ExploreMapPage } from "@/modules/explore-map";
+import { ExploreMapPage, fetchPublicMapRegions } from "@/modules/explore-map";
 import { createPageMetadata } from "@/lib/seo/metadata";
 import { routes } from "@/lib/constants/routes";
 
@@ -10,6 +10,7 @@ export const metadata: Metadata = createPageMetadata({
   index: false,
 });
 
-export default function Page() {
-  return <ExploreMapPage />;
+export default async function Page() {
+  const regions = await fetchPublicMapRegions();
+  return <ExploreMapPage regions={regions} />;
 }

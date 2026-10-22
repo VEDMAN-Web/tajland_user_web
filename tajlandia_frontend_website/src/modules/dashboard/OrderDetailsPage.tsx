@@ -16,6 +16,7 @@ import { DashboardNavbar } from "./DashboardNavbar";
 import { useDashboardLanguage } from "./DashboardLanguageContext";
 import type { OrderDetail, OrderDetailItem } from "./schemas/orders.schema";
 import { getOrderDetail } from "./services/orders.client";
+import { BackLink } from "@/components/ui/BackLink";
 
 type OrderState =
   | { status: "loading" }
@@ -133,9 +134,7 @@ export function OrderDetailsPage({ orderId }: { orderId: string }) {
       <main className="mx-auto grid w-full max-w-[1180px] gap-6 px-5 pb-14 pt-8 sm:px-8 lg:grid-cols-[240px_minmax(0,1fr)] lg:items-start lg:gap-7">
         <AccountMenu active="purchases" />
         <section className="min-w-0">
-          <Link href={routes.purchases} className="inline-flex cursor-pointer items-center gap-1 font-manrope text-[13px] font-medium text-navy">
-            ← {t("Back to Purchases")}
-          </Link>
+          <BackLink href={routes.purchases}>{t("Back to Purchases")}</BackLink>
           <div className="mt-4 flex items-start justify-between gap-4">
             <div className="min-w-0">
               {order ? (

@@ -11,6 +11,7 @@ import {
   type ForgotPasswordFormValues,
 } from "./schemas/forgot-password.schema";
 import { requestPasswordResetOtpAction } from "./services/forgot-password.service";
+import { BackLink } from "@/components/ui/BackLink";
 
 type ForgotPasswordErrors = Partial<Record<keyof ForgotPasswordFormValues, string>>;
 
@@ -25,6 +26,8 @@ export function ForgotPasswordPage() {
   const [successMessage, setSuccessMessage] = useState("");
   const [apiError, setApiError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // Skeleton until the (large) side photo has loaded.
+  const [imageLoaded, setImageLoaded] = useState(false);
   const router = useRouter();
 
   function updateField(field: keyof ForgotPasswordFormValues, value: string | boolean) {
@@ -86,13 +89,17 @@ export function ForgotPasswordPage() {
     <section className="flex flex-1 items-center bg-white px-4 py-8 sm:px-8 lg:px-12 lg:py-10">
       <div className="mx-auto grid w-full max-w-[1080px] items-stretch gap-8 lg:grid-cols-[1.05fr_0.95fr] lg:gap-14">
         <div className="relative min-h-[420px] overflow-hidden rounded-[28px] bg-[#0b1f4d] text-white sm:min-h-[560px] lg:min-h-[680px]">
+          {!imageLoaded ? (
+            <span aria-hidden="true" className="absolute inset-0 animate-pulse bg-[#e6eaf0] motion-reduce:animate-none" />
+          ) : null}
           <Image
             src="/images/auth/img_forget-pass.png"
             alt=""
             fill
             priority
             sizes="(max-width: 1024px) 100vw, 540px"
-            className="object-cover object-center"
+            onLoad={() => setImageLoaded(true)}
+            className={`object-cover object-center transition-opacity duration-500 ${imageLoaded ? "opacity-100" : "opacity-0"}`}
           />
           <div className="absolute inset-0 bg-gradient-to-b from-black/25 via-transparent to-transparent" />
           <div className="relative z-10 px-7 py-8 [text-shadow:0_1px_10px_rgba(0,0,0,0.35)] sm:px-8 sm:py-9">
@@ -108,17 +115,7 @@ export function ForgotPasswordPage() {
 
         <div className="flex min-h-[640px] flex-col px-1 py-2 sm:px-4">
           <ScrollAnimatedElement animation="slide-in-right" duration={600} className="mx-auto flex w-full max-w-[420px] flex-1 flex-col">
-            <Link
-              href={routes.login}
-              className="group inline-flex self-start items-center gap-2 rounded-full border border-[#e6e8ef] bg-white py-1 pl-1 pr-3.5 text-[13px] font-medium text-navy shadow-[0_1px_2px_rgba(11,31,77,0.06)] transition-colors hover:border-navy/25 hover:bg-[#f5f7fb] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy"
-            >
-              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#f1f4f9] transition-colors group-hover:bg-navy group-hover:text-white">
-                <svg viewBox="0 0 16 16" aria-hidden="true" className="h-3.5 w-3.5 transition-transform group-hover:-translate-x-0.5 motion-reduce:transition-none">
-                  <path d="M13 8H3m4-4L3 8l4 4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </span>
-              Back to Login
-            </Link>
+            <BackLink href={routes.login}>Back to Login</BackLink>
 
             <h2 className="mt-8 text-[28px] font-semibold tracking-[-0.03em] text-navy sm:text-[30px]">
               Forgot your password?

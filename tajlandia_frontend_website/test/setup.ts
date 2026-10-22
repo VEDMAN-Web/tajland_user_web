@@ -30,6 +30,14 @@ vi.mock("next/image", () => ({
 
 vi.mock("next/navigation", () => ({
   usePathname: () => "/",
+  useRouter: () => ({
+    push: vi.fn(),
+    replace: vi.fn(),
+    back: vi.fn(),
+    forward: vi.fn(),
+    refresh: vi.fn(),
+    prefetch: vi.fn(),
+  }),
 }));
 
 // jsdom has no IntersectionObserver; scroll-reveal components only need it to exist.

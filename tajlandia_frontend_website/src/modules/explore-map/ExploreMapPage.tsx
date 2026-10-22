@@ -6,9 +6,9 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type FormEvent, type MouseEvent } from "react";
 import { Button } from "@/components/ui/Button";
 import { Container } from "@/components/ui/Container";
-import type { MapboxMapHandle } from "@/components/maps/MapboxMap";
+import type { MapboxMapHandle, MapRegion } from "@/components/maps/MapboxMap";
 import { isAuthenticated } from "@/lib/api/auth.utils";
-import { routes } from "@/lib/constants/routes";
+import { exploreRegionPath, routes } from "@/lib/constants/routes";
 import { useAuth } from "@/lib/hooks/useAuth";
 import { ExploreThailandMap } from "./components/ExploreThailandMap";
 
@@ -82,7 +82,12 @@ function MapControlIcon({ type }: { type: "plus" | "minus" }) {
   return <span aria-hidden="true" className="text-lg leading-none">{type === "plus" ? "+" : "−"}</span>;
 }
 
-export function ExploreMapPage() {
+type ExploreMapPageProps = {
+  /** Region pills from `GET /explore/public/map` (empty hides them). */
+  regions?: MapRegion[];
+};
+
+export function ExploreMapPage({ regions = [] }: ExploreMapPageProps) {
   const router = useRouter();
   const { isAuthenticated: signedIn } = useAuth();
   const mapRef = useRef<MapboxMapHandle>(null);
@@ -158,6 +163,12 @@ export function ExploreMapPage() {
     router.push(destination);
   }
 
+  // Region pill: open its plots on the Explore Map, logging in first if needed.
+  function handleRegionClick(regionId: string) {
+    const region = regions.find((item) => item.id === regionId);
+    if (region) router.push(exploreRegionPath(region, isAuthenticated()));
+  }
+
   return (
     <div className="bg-white pb-16 md:pb-24">
       <section className="bg-white px-4 pb-10 pt-12 sm:px-8 md:pb-14 md:pt-16">
@@ -200,7 +211,7 @@ export function ExploreMapPage() {
       <section ref={mapSectionRef} className="bg-white px-4 sm:px-8">
         <Container>
           <div className="relative overflow-hidden rounded-[1.75rem] border border-[#dbe8ed] bg-white p-2 shadow-[0_15px_40px_rgba(11,31,77,0.1)] sm:p-3">
-            <ExploreThailandMap mapRef={mapRef} />
+            <ExploreThailandMap mapRef={mapRef} regions={regions} onRegionClick={handleRegionClick} />
             <div className="absolute bottom-7 right-7 flex flex-col overflow-hidden rounded-full border border-[#dfe7ef] bg-white text-navy shadow-[0_4px_12px_rgba(11,31,77,0.12)] sm:bottom-8 sm:right-8">
               <button type="button" aria-label="Zoom in" onClick={() => mapRef.current?.zoomIn()} className="flex h-8 w-8 items-center justify-center hover:bg-[#f4f7fa]"><MapControlIcon type="plus" /></button>
               <span className="mx-auto h-px w-4 bg-line" />

@@ -29,3 +29,10 @@ export type AppRoute = (typeof routes)[keyof typeof routes];
 export function leaderboardOwnerPath(userId: string) {
   return `${routes.leaderboard}/${encodeURIComponent(userId)}`;
 }
+
+/** Explore Map opened on one region's plots; signed-out users log in first. */
+export function exploreRegionPath(region: { id: string; name: string }, signedIn: boolean) {
+  const query = new URLSearchParams({ regionId: region.id, region: region.name });
+  const path = `${routes.dashboardExplore}?${query.toString()}`;
+  return signedIn ? path : `${routes.login}?next=${encodeURIComponent(path)}`;
+}

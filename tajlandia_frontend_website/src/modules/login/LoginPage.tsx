@@ -11,6 +11,7 @@ import { setAuthToken, setAuthUser } from "@/lib/api/auth.utils";
 import { getRememberedLogin, saveRememberedLogin } from "@/lib/api/remember-me.utils";
 import { loginSchema, type LoginFormValues } from "./schemas/login.schema";
 import { loginAction } from "./services/login.service";
+import { BackLink } from "@/components/ui/BackLink";
 
 type LoginErrors = Partial<Record<keyof LoginFormValues, string>>;
 
@@ -68,6 +69,8 @@ export function LoginPage() {
   const [rememberMe, setRememberMe] = useState(false);
   const [apiError, setApiError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // Skeleton until the (large) side photo has loaded.
+  const [imageLoaded, setImageLoaded] = useState(false);
 
   React.useEffect(() => {
     const rememberedLogin = getRememberedLogin();
@@ -135,13 +138,17 @@ export function LoginPage() {
     <section className="flex flex-1 items-center bg-white px-4 py-8 sm:px-8 lg:px-12 lg:py-10">
       <div className="mx-auto grid w-full max-w-[1080px] items-center gap-8 lg:grid-cols-[1.05fr_0.95fr] lg:gap-14">
         <div className="relative min-h-[420px] overflow-hidden rounded-[28px] bg-[#0b1f4d] text-white sm:min-h-[520px] lg:min-h-[640px]">
+          {!imageLoaded ? (
+            <span aria-hidden="true" className="absolute inset-0 animate-pulse bg-[#e6eaf0] motion-reduce:animate-none" />
+          ) : null}
           <Image
             src="/images/auth/img_login.png"
             alt=""
             fill
             priority
             sizes="(max-width: 1024px) 100vw, 540px"
-            className="object-cover object-center"
+            onLoad={() => setImageLoaded(true)}
+            className={`object-cover object-center transition-opacity duration-500 ${imageLoaded ? "opacity-100" : "opacity-0"}`}
           />
           <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-transparent" />
           <div className="relative z-10 px-7 py-8 [text-shadow:0_1px_10px_rgba(0,0,0,0.35)] sm:px-8 sm:py-9">
@@ -160,17 +167,7 @@ export function LoginPage() {
 
         <div className="flex items-center px-1 py-2 sm:px-4">
           <ScrollAnimatedElement animation="slide-in-right" duration={600} className="mx-auto w-full max-w-[420px]">
-            <Link
-              href={routes.home}
-              className="group inline-flex items-center gap-2 rounded-full border border-[#e6e8ef] bg-white py-1 pl-1 pr-3.5 text-[13px] font-medium text-navy shadow-[0_1px_2px_rgba(11,31,77,0.06)] transition-colors hover:border-navy/25 hover:bg-[#f5f7fb] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy"
-            >
-              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#f1f4f9] transition-colors group-hover:bg-navy group-hover:text-white">
-                <svg viewBox="0 0 16 16" aria-hidden="true" className="h-3.5 w-3.5 transition-transform group-hover:-translate-x-0.5 motion-reduce:transition-none">
-                  <path d="M13 8H3m4-4L3 8l4 4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </span>
-              Back to Home
-            </Link>
+            <BackLink href={routes.home}>Back to Home</BackLink>
 
             <h2 className="mt-8 text-[28px] font-semibold tracking-[-0.03em] text-navy sm:text-[30px]">Welcome back</h2>
             <p className="mt-2 text-[14px] text-[#8b939e]">Sign in to continue your Tajlandia journey.</p>

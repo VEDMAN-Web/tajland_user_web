@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { fetchPublicMapRegions } from "@/modules/explore-map";
 import { HomePage } from "@/modules/home";
 import { HomeEntryRedirect } from "@/modules/home/HomeEntryRedirect";
 import { createPageMetadata } from "@/lib/seo/metadata";
@@ -11,10 +12,12 @@ export const metadata: Metadata = createPageMetadata({
   path: routes.home,
 });
 
-export default function Page() {
+export default async function Page() {
+  const mapRegions = await fetchPublicMapRegions();
+
   return (
     <HomeEntryRedirect>
-      <HomePage />
+      <HomePage mapRegions={mapRegions} />
     </HomeEntryRedirect>
   );
 }

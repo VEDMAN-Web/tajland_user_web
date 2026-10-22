@@ -149,6 +149,8 @@ function regionMarkerElement(region: MapRegion, onClick: () => void) {
   label.textContent = region.name;
   button.append(label);
   button.addEventListener("click", (event) => {
+    // The map can sit inside a link (home page); a pill opens its region instead.
+    event.preventDefault();
     event.stopPropagation();
     onClick();
   });

@@ -1,12 +1,12 @@
 "use client";
 
-import Link from "next/link";
 import { Container } from "@/components/ui/Container";
 import { ScrollAnimatedElement } from "@/components/animations/ScrollAnimatedElement";
 import { Markdown } from "@/components/ui/Markdown";
 import { BlogCoverImage } from "./components/BlogCoverImage";
 import type { BlogDetail } from "./schemas/blog.schema";
 import { blogAuthorName, formatBlogDate } from "./utils/blog.utils";
+import { BackLink } from "@/components/ui/BackLink";
 
 type BlogDetailPageProps = {
   post: BlogDetail;
@@ -48,15 +48,7 @@ export function BlogDetailPage({ post }: BlogDetailPageProps) {
       <Container>
         <article className="mx-auto w-full max-w-[760px]">
           <ScrollAnimatedElement animation="fade-in" duration={600}>
-            <Link
-              href="/blog"
-              className="inline-flex items-center gap-2 text-[14px] font-normal text-[#9aa3ad] transition-colors hover:text-[#1c1c1c]"
-            >
-              <span aria-hidden="true" className="text-[16px] leading-none">
-                ←
-              </span>
-              Back to Blogs
-            </Link>
+            <BackLink href="/blog">Back to Blogs</BackLink>
           </ScrollAnimatedElement>
 
           <ScrollAnimatedElement animation="slide-in-up" duration={600}>
