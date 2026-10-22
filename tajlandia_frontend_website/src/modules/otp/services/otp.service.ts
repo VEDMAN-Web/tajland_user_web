@@ -1,7 +1,7 @@
 "use server";
 
 import { apiPost, isApiError } from "@/lib/api/client";
-import { verifyOtpResponseSchema, requestOtpResponseSchema, registerResponseSchema, loginResponseSchema } from "@/lib/api/auth.schemas";
+import { verifyOtpResponseSchema, requestOtpResponseSchema, loginResponseSchema } from "@/lib/api/auth.schemas";
 import type { SignupFormValues } from "@/modules/signup/schemas/signup.schema";
 
 export type VerifyOtpActionResult =
@@ -107,58 +107,25 @@ export async function completeSignupWithOtpAction(
   otp: string,
   signupData: SignupFormValues,
 ): Promise<CompleteSignupWithOtpResult> {
-  if (!email || !otp || otp.length !== 6) {
-    return { ok: false, message: "Please enter a valid email and 6-digit OTP code." };
+  // Step 1: Verify the email (the account was created on the signup page).
+  const verified = await verifyOtpAction(email, otp);
+
+  if (!verified.ok) {
+    return verified;
   }
 
+  // Step 2: verify-otp returns no token, so log in with the signup credentials.
+  // The email is verified either way; without a token the user logs in manually.
   try {
-    // For testing: Accept OTP 123456 to bypass verification
-    if (otp !== "123456") {
-      return { ok: false, message: "Invalid OTP. For testing, use code 123456." };
-    }
-
-    // Step 1: Create the user account via register endpoint
-    const registerPayload = {
-      email: signupData.email,
-      password: signupData.newPassword,
-      name: `${signupData.firstName} ${signupData.lastName}`,
-      role: "USER",
-    };
-
-    const registerResponse = await apiPost(
-      "/auth/register",
-      registerPayload,
-      registerResponseSchema,
-    );
-
-    if (!registerResponse.success) {
-      return { ok: false, message: registerResponse.message || "Failed to create account. Please check your details and try again." };
-    }
-
-    // Step 2: Login with the newly created credentials to get authentication token
-    const loginPayload = {
-      email: signupData.email,
-      password: signupData.newPassword,
-      role: "USER",
-    };
-
     const loginResponse = await apiPost(
       "/auth/login",
-      loginPayload,
+      { email: signupData.email, password: signupData.newPassword, role: "USER" },
       loginResponseSchema,
+      { timeoutMs: 20_000 },
     );
 
     if (!loginResponse.success) {
-      // If login fails, still consider signup successful since account was created
-      return {
-        ok: true,
-        token: undefined,
-        user: {
-          name: registerResponse.data?.name,
-          email: registerResponse.data?.email,
-          id: registerResponse.data?.id,
-        },
-      };
+      return { ok: true };
     }
 
     return {
@@ -166,18 +133,8 @@ export async function completeSignupWithOtpAction(
       token: loginResponse.data?.accessToken,
       user: loginResponse.data?.user,
     };
-  } catch (error) {
-    if (isApiError(error)) {
-      if (error.status === 400) {
-        return { ok: false, message: "Invalid signup information. Please check your details and try again." };
-      }
-
-      if (error.status === 409) {
-        return { ok: false, message: "An account with this email already exists." };
-      }
-    }
-
-    return { ok: false, message: "Unable to complete signup right now. Please try again." };
+  } catch {
+    return { ok: true };
   }
 }
 

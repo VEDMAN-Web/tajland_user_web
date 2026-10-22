@@ -1,17 +1,16 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { isAbortError } from "@/lib/api/browser-client";
 import { isApiError } from "@/lib/api/errors";
-import { isAllowedRemoteImage } from "@/lib/config/remote-images";
 import { routes } from "@/lib/constants/routes";
 import { useAuth } from "@/lib/hooks/useAuth";
 import { logError } from "@/lib/logging/logger";
 import { PageLoader } from "@/components/ui/PageLoader";
 import { AccountMenu } from "./AccountMenu";
+import { CertificatePreview } from "./CertificatePreview";
 import { DashboardNavbar } from "./DashboardNavbar";
 import { useDashboardLanguage } from "./DashboardLanguageContext";
 import type { OrderListEntry } from "./schemas/orders.schema";
@@ -22,7 +21,7 @@ import { getOrders } from "./services/orders.client";
 type Certificate = {
   orderId: string;
   certificateNo: string;
-  imageUrl: string | null;
+  fileUrl: string | null;
   issuedAt: string;
   gifted: boolean;
 };
@@ -31,8 +30,6 @@ type CertificatesState =
   | { status: "loading" }
   | { status: "ready"; certificates: Certificate[] }
   | { status: "error" };
-
-const certificatePreview = "/images/certificates/my-certificates.png";
 
 const isQuietError = (error: unknown) =>
   isAbortError(error) || (isApiError(error) && error.code === "API_SESSION_EXPIRED");
@@ -44,7 +41,7 @@ function toCertificates(orders: OrderListEntry[]): Certificate[] {
           {
             orderId: order.id,
             certificateNo: order.certificateNo,
-            imageUrl: isAllowedRemoteImage(order.certificateUrl) ? order.certificateUrl : null,
+            fileUrl: order.certificateUrl ?? null,
             issuedAt: order.paidAt ?? order.createdAt,
             gifted: order.purchaseType === "gift",
           },
@@ -491,12 +488,10 @@ function CertificateCard({ certificate }: { certificate: Certificate }) {
   return (
     <article className="rounded-[16px] border border-[#eef1f4] bg-white px-4 pb-4 pt-5 shadow-[0_10px_28px_rgba(11,31,77,0.06)]">
       <div className="relative mx-auto aspect-[616/898] w-[68%] max-w-[210px]">
-        <Image
-          src={certificate.imageUrl ?? certificatePreview}
+        <CertificatePreview
+          url={certificate.fileUrl}
           alt={`${t("Certificate ID")}: ${certificate.certificateNo}`}
-          fill
           sizes="210px"
-          className="object-contain"
         />
       </div>
       <p className="mt-4 font-manrope text-[12px] leading-4 text-[#8b939e]">

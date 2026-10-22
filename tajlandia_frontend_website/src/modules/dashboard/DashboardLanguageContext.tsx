@@ -781,6 +781,8 @@ const translations: Record<string, Record<Exclude<DashboardLanguage, "EN">, stri
   "Explore on Map →": { PL: "Eksploruj na mapie →", TH: "สำรวจบนแผนที่ →" },
   "Payment fully settled": { PL: "Płatność w pełni rozliczona", TH: "ชำระเงินครบแล้ว" },
   "Back to My Certificates": { PL: "Powrót do certyfikatów", TH: "กลับไปที่ใบรับรอง" },
+  "Certificate preview unavailable": { PL: "Podgląd certyfikatu niedostępny", TH: "ไม่สามารถแสดงตัวอย่างใบรับรองได้" },
+  "Open PDF": { PL: "Otwórz PDF", TH: "เปิด PDF" },
   "Total Owned": { PL: "Łącznie posiadane", TH: "ที่ดินทั้งหมด" },
   "Total Spent": { PL: "Łącznie wydano", TH: "ยอดใช้จ่ายทั้งหมด" },
   Regions: { PL: "Regiony", TH: "ภูมิภาค" },

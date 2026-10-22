@@ -19,6 +19,22 @@ export function backendImageHost(apiUrl = process.env.NEXT_PUBLIC_API_URL): stri
   }
 }
 
+/**
+ * An image to show for a certificate: image URLs as they are, Cloudinary PDFs as
+ * a JPG of their first page (`pg_1`), anything else null (show a placeholder).
+ */
+export function certificatePreviewUrl(url: string | null | undefined): string | null {
+  if (!isAllowedRemoteImage(url)) return null;
+
+  const { hostname, pathname } = new URL(url);
+  if (!pathname.toLowerCase().endsWith(".pdf")) return url;
+  if (hostname !== "res.cloudinary.com" || !pathname.includes("/image/upload/")) return null;
+
+  const preview = new URL(url);
+  preview.pathname = pathname.replace("/image/upload/", "/image/upload/pg_1/").replace(/\.pdf$/i, ".jpg");
+  return preview.toString();
+}
+
 export function isAllowedRemoteImage(
   url: string | null | undefined,
   apiUrl = process.env.NEXT_PUBLIC_API_URL,

@@ -32,7 +32,8 @@ export const registerResponseSchema = authResponseBaseSchema.extend({
     .object({
       id: z.string(),
       email: z.string().email(),
-      name: z.string(),
+      firstName: z.string().optional(),
+      lastName: z.string().optional(),
       role: authRoleSchema,
       isActive: z.boolean().optional(),
       isEmailVerified: z.boolean().optional(),

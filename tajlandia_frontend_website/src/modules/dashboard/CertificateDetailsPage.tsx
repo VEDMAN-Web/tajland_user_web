@@ -6,11 +6,11 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { isAbortError } from "@/lib/api/browser-client";
 import { isApiError } from "@/lib/api/errors";
-import { isAllowedRemoteImage } from "@/lib/config/remote-images";
 import { routes } from "@/lib/constants/routes";
 import { useAuth } from "@/lib/hooks/useAuth";
 import { logError } from "@/lib/logging/logger";
 import { PageLoader } from "@/components/ui/PageLoader";
+import { CertificatePreview } from "./CertificatePreview";
 import { DashboardNavbar } from "./DashboardNavbar";
 import { useDashboardLanguage } from "./DashboardLanguageContext";
 import type { OrderDetail } from "./schemas/orders.schema";
@@ -23,8 +23,6 @@ type CertificateState =
   | { status: "error" }
   | { status: "not-found" }
   | { status: "ready"; order: OrderDetail };
-
-const CERTIFICATE_PLACEHOLDER = "/images/dashboard/certificate.png";
 
 const isQuietError = (error: unknown) =>
   isAbortError(error) || (isApiError(error) && error.code === "API_SESSION_EXPIRED");
@@ -105,7 +103,6 @@ export function CertificateDetailsPage({ certificateId }: { certificateId: strin
   if (isLoading || !isAuthenticated) return <PageLoader label={t("Loading certificate...")} />;
 
   const order = state.status === "ready" ? state.order : null;
-  const image = isAllowedRemoteImage(order?.certificateUrl) ? order.certificateUrl : null;
 
   async function download() {
     if (!order || downloading) return;
@@ -213,12 +210,10 @@ export function CertificateDetailsPage({ certificateId }: { certificateId: strin
           <div className="mt-6 grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[560px_minmax(0,1fr)] lg:gap-8">
             <div className="mx-auto flex w-full max-w-[560px] justify-center self-start bg-white p-3 shadow-[0_5px_18px_rgba(11,31,77,0.06)] sm:p-5">
               <div className="relative aspect-[646/941] w-full max-w-[520px]">
-                <Image
-                  src={image ?? CERTIFICATE_PLACEHOLDER}
+                <CertificatePreview
+                  url={order.certificateUrl}
                   alt={t("Certificate of ownership")}
-                  fill
                   sizes="(min-width: 1024px) 520px, 92vw"
-                  className="object-contain"
                   priority
                 />
               </div>
@@ -260,7 +255,9 @@ export function CertificateDetailsPage({ certificateId }: { certificateId: strin
       {dialog === "download" && order ? (
         <DownloadDialog
           onClose={() => setDialog(null)}
-          onView={() => window.open(image ?? CERTIFICATE_PLACEHOLDER, "_blank", "noopener,noreferrer")}
+          onView={() => {
+            if (order.certificateUrl) window.open(order.certificateUrl, "_blank", "noopener,noreferrer");
+          }}
         />
       ) : null}
       {dialog === "share" ? (

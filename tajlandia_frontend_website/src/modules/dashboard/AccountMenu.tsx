@@ -105,7 +105,8 @@ export function AccountMenu({
 
   return (
     <>
-      <aside className="h-fit rounded-[16px] bg-white p-4 shadow-[0_8px_28px_rgba(11,31,77,0.06)] sm:p-5">
+      {/* Desktop: pinned below the sticky navbar (h-16) while the page scrolls. */}
+      <aside className="h-fit rounded-[16px] lg:sticky lg:top-[88px] lg:max-h-[calc(100svh-104px)] lg:overflow-y-auto bg-white p-4 shadow-[0_8px_28px_rgba(11,31,77,0.06)] sm:p-5">
         <p className="px-2 font-manrope text-[11px] font-semibold uppercase tracking-[0.14em] text-[#8b939e]">
           {t("Account Menu")}
         </p>
