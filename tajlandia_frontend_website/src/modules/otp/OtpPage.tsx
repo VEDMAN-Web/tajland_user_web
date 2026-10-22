@@ -13,6 +13,10 @@ import { verifyOtpAction, resendOtpAction, completeSignupWithOtpAction } from ".
 import { verifyPasswordResetOtpAction } from "@/modules/reset-password/services/reset-password.service";
 
 const OTP_LENGTH = 6;
+// The API enforces a 60-second cooldown between OTP emails.
+const RESEND_COOLDOWN_SECONDS = 60;
+const RESEND_MESSAGE_DURATION_MS = 3000;
+const RESEND_SUCCESS_MESSAGE = "A new code has been sent to your email.";
 
 function OtpPageContent() {
   const router = useRouter();
@@ -22,7 +26,7 @@ function OtpPageContent() {
   const [digits, setDigits] = useState<string[]>(Array(OTP_LENGTH).fill(""));
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
-  const [secondsRemaining, setSecondsRemaining] = useState(30);
+  const [secondsRemaining, setSecondsRemaining] = useState(RESEND_COOLDOWN_SECONDS);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isResending, setIsResending] = useState(false);
   const inputRefs = useRef<Array<HTMLInputElement | null>>([]);
@@ -95,7 +99,7 @@ function OtpPageContent() {
 
     try {
       if (mode === "signup") {
-        // Signup mode: verify OTP and create account
+        // Signup mode: verify the new account's email, then log in
         const signupDataStr = sessionStorage.getItem("signupFormData");
         if (!signupDataStr) {
           setError("Signup data not found. Please start signup again.");
@@ -113,8 +117,16 @@ function OtpPageContent() {
           if (actionResult.user) {
             setAuthUser(actionResult.user);
           }
-          // Clear signup data from sessionStorage
+          // Clear signup data (it holds the password) from sessionStorage
           sessionStorage.removeItem("signupFormData");
+
+          if (!actionResult.token) {
+            setMessage("Email verified! Please log in to continue.");
+            setTimeout(() => {
+              router.push(routes.login);
+            }, 1500);
+            return;
+          }
 
           // Create success message with username
           const userName = actionResult.user?.name || `${signupData.firstName} ${signupData.lastName}` || "User";
@@ -180,8 +192,14 @@ function OtpPageContent() {
       const actionResult = await resendOtpAction(email);
 
       if (actionResult.ok) {
-        setSecondsRemaining(30);
-        setMessage("A new code has been sent to your email.");
+        // The old code is invalid now, so clear the boxes for the new one
+        setDigits(Array(OTP_LENGTH).fill(""));
+        inputRefs.current[0]?.focus();
+        setSecondsRemaining(RESEND_COOLDOWN_SECONDS);
+        setMessage(RESEND_SUCCESS_MESSAGE);
+        window.setTimeout(() => {
+          setMessage((current) => (current === RESEND_SUCCESS_MESSAGE ? "" : current));
+        }, RESEND_MESSAGE_DURATION_MS);
       } else {
         setError(actionResult.message);
       }
@@ -221,8 +239,16 @@ function OtpPageContent() {
 
         <div className="flex min-h-[640px] flex-col px-1 py-2 sm:px-4">
           <ScrollAnimatedElement animation="slide-in-right" duration={600} className="mx-auto flex w-full max-w-[420px] flex-1 flex-col">
-            <Link href={mode === "signup" ? routes.signup : routes.login} className="text-[13px] text-[#6b7280] hover:text-navy hover:underline">
-              ← Back to {mode === "signup" ? "Sign Up" : "Login"}
+            <Link
+              href={mode === "signup" ? routes.signup : routes.login}
+              className="group inline-flex self-start items-center gap-2 rounded-full border border-[#e6e8ef] bg-white py-1 pl-1 pr-3.5 text-[13px] font-medium text-navy shadow-[0_1px_2px_rgba(11,31,77,0.06)] transition-colors hover:border-navy/25 hover:bg-[#f5f7fb] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy"
+            >
+              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#f1f4f9] transition-colors group-hover:bg-navy group-hover:text-white">
+                <svg viewBox="0 0 16 16" aria-hidden="true" className="h-3.5 w-3.5 transition-transform group-hover:-translate-x-0.5 motion-reduce:transition-none">
+                  <path d="M13 8H3m4-4L3 8l4 4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </span>
+              Back to {mode === "signup" ? "Sign Up" : "Login"}
             </Link>
             <h2 className="mt-8 text-[28px] font-semibold tracking-[-0.03em] text-navy sm:text-[30px]">
               {mode === "signup" ? "Verify your email" : "Verify your identity"}
@@ -230,11 +256,6 @@ function OtpPageContent() {
             <p className="mt-2 text-[14px] leading-6 text-[#8b939e]">
               We&apos;ve sent a 6 digit code to {email}. Enter it below to {mode === "signup" ? "complete your account creation" : "continue"}.
             </p>
-            {mode === "signup" && (
-              <p className="mt-2 text-[10px] leading-4 text-gray-500">
-                <strong>Testing:</strong> Use code <span className="font-mono font-bold">123456</span>
-              </p>
-            )}
 
             <form className="mt-7" onSubmit={handleSubmit} noValidate>
               <div className="flex justify-between gap-2" onPaste={handlePaste}>
@@ -266,7 +287,7 @@ function OtpPageContent() {
 
             <p className="mt-6 text-center text-[14px] text-[#1c1c1c]">
               Didn&apos;t receive the code? {secondsRemaining > 0 ? (
-                <span className="font-medium text-[#e11d2e]">Resend in 00:{String(secondsRemaining).padStart(2, "0")}</span>
+                <span className="font-medium text-[#e11d2e]">Resend in {String(Math.floor(secondsRemaining / 60)).padStart(2, "0")}:{String(secondsRemaining % 60).padStart(2, "0")}</span>
               ) : (
                 <button type="button" onClick={resendCode} disabled={isResending} className="cursor-pointer font-medium text-[#e11d2e] hover:underline disabled:cursor-not-allowed disabled:opacity-60">
                   {isResending ? "Sending..." : "Resend code"}
@@ -276,9 +297,9 @@ function OtpPageContent() {
 
             <div className="mt-auto pt-16 text-center text-[12px] text-[#8e8e91]">
               <div className="flex justify-center gap-4">
-                <Link href={routes.privacy} className="hover:underline">Privacy Policy</Link>
-                <Link href={routes.terms} className="hover:underline">Terms of Service</Link>
-                <Link href={routes.contact} className="hover:underline">Contact Support</Link>
+                <Link href={routes.privacy} className="font-medium text-[#e11d2e] hover:underline">Privacy Policy</Link>
+                <Link href={routes.terms} className="font-medium text-[#e11d2e] hover:underline">Terms of Service</Link>
+                <Link href={routes.contact} className="font-medium text-[#e11d2e] hover:underline">Contact Support</Link>
               </div>
               <p className="mt-4 text-[12px] text-[#1c1c1c]">© 2026 Tajlandia.pl. All rights reserved.</p>
             </div>

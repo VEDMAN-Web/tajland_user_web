@@ -10,6 +10,7 @@ const IMAGE_EXTENSIONS: Record<string, string> = {
   "image/png": "png",
   "image/jpeg": "jpg",
   "image/webp": "webp",
+  "application/pdf": "pdf",
 };
 
 const orderCertificateSchema = z.object({
@@ -29,7 +30,7 @@ function jsonError(message: string, status: number) {
 }
 
 /**
- * Downloads the certificate of one of the caller's paid orders. The image is
+ * Downloads the certificate (image or PDF) of one of the caller's paid orders. It is
  * hosted elsewhere, so the browser can't save it with a plain `download` link;
  * this checks the order with the caller's token and returns it as an attachment.
  */

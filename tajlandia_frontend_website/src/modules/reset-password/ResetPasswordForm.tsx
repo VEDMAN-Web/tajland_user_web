@@ -122,7 +122,17 @@ export function ResetPasswordForm() {
   return (
     <div className="flex min-h-[640px] flex-col px-1 py-2 sm:px-4">
       <ScrollAnimatedElement animation="slide-in-right" duration={600} className="mx-auto flex w-full max-w-[420px] flex-1 flex-col">
-        <Link href={routes.login} className="text-[13px] text-[#6b7280] hover:text-navy hover:underline">← Back to Login</Link>
+        <Link
+          href={routes.login}
+          className="group inline-flex self-start items-center gap-2 rounded-full border border-[#e6e8ef] bg-white py-1 pl-1 pr-3.5 text-[13px] font-medium text-navy shadow-[0_1px_2px_rgba(11,31,77,0.06)] transition-colors hover:border-navy/25 hover:bg-[#f5f7fb] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy"
+        >
+          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#f1f4f9] transition-colors group-hover:bg-navy group-hover:text-white">
+            <svg viewBox="0 0 16 16" aria-hidden="true" className="h-3.5 w-3.5 transition-transform group-hover:-translate-x-0.5 motion-reduce:transition-none">
+              <path d="M13 8H3m4-4L3 8l4 4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </span>
+          Back to Login
+        </Link>
         <h2 className="mt-8 text-[28px] font-semibold tracking-[-0.03em] text-navy sm:text-[30px]">Reset your password</h2>
         <p className="mt-2 text-[14px] leading-6 text-[#8b939e]">Create a new password for your account.</p>
 
@@ -165,7 +175,7 @@ export function ResetPasswordForm() {
         </form>
 
         <div className="mt-auto pt-16 text-center text-[12px] text-[#8e8e91]">
-          <div className="flex justify-center gap-4"><Link href={routes.privacy} className="hover:underline">Privacy Policy</Link><Link href={routes.terms} className="hover:underline">Terms of Service</Link><Link href={routes.contact} className="hover:underline">Contact Support</Link></div>
+          <div className="flex justify-center gap-4"><Link href={routes.privacy} className="font-medium text-[#e11d2e] hover:underline">Privacy Policy</Link><Link href={routes.terms} className="font-medium text-[#e11d2e] hover:underline">Terms of Service</Link><Link href={routes.contact} className="font-medium text-[#e11d2e] hover:underline">Contact Support</Link></div>
           <p className="mt-4 text-[12px] text-[#1c1c1c]">© 2026 Tajlandia.pl. All rights reserved.</p>
         </div>
       </ScrollAnimatedElement>

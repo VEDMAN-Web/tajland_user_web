@@ -102,12 +102,11 @@ export function SignupPage() {
       // Store signup form data in sessionStorage for OTP verification
       sessionStorage.setItem("signupFormData", JSON.stringify(result.data));
 
-      // Prepare for OTP verification and redirect to OTP page
+      // Create the account and email the OTP, then go to the OTP page
       const actionResult = await requestSignupOtpAction(result.data);
 
       if (actionResult.ok && actionResult.redirectUrl) {
         setSuccessMessage("Redirecting to OTP verification...");
-        // Redirect to OTP page with default 123456 for testing
         setTimeout(() => {
           router.push(actionResult.redirectUrl!);
         }, 800);

@@ -11,6 +11,10 @@ const backendHost = backendImageHost();
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   allowedDevOrigins: ["127.0.0.1"],
+  logging: {
+    // Dev logs print server action arguments, including signup passwords
+    serverFunctions: false,
+  },
   images: {
     remotePatterns: [
       ...REMOTE_IMAGE_HOSTS.map((hostname) => ({
