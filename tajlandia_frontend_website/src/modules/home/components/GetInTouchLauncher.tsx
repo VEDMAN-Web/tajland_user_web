@@ -18,7 +18,7 @@ export function GetInTouchLauncher() {
 
   return (
     <>
-      <button type="button" onClick={() => setIsOpen(true)} aria-label="Get In Touch" className="group absolute bottom-16 right-0 z-30 inline-flex h-14 w-14 items-center overflow-hidden rounded-[1.1rem] bg-navy px-3.5 text-white shadow-[0_10px_25px_rgba(11,31,77,0.2)] transition-[width,background-color] duration-300 hover:bg-navy-deep focus-visible:w-[205px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy sm:bottom-[4.5rem] sm:right-0 md:hover:w-[205px] md:hover:justify-start">
+      <button type="button" onClick={() => setIsOpen(true)} aria-label="Get In Touch" className="group absolute cursor-pointer bottom-16 right-0 z-30 inline-flex h-14 w-14 items-center overflow-hidden rounded-[1.1rem] bg-navy px-3.5 text-white shadow-[0_10px_25px_rgba(11,31,77,0.2)] transition-[width,background-color] duration-300 hover:bg-navy-deep focus-visible:w-[205px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy sm:bottom-[4.5rem] sm:right-0 md:hover:w-[205px] md:hover:justify-start">
         <ChatIcon />
         <span className="max-w-0 whitespace-nowrap text-[17px] opacity-0 transition-[max-width,margin,opacity] duration-300 md:group-hover:ml-3 md:group-hover:max-w-[150px] md:group-hover:opacity-100">Get In Touch →</span>
       </button>

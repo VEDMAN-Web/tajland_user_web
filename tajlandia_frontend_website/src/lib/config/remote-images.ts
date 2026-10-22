@@ -35,6 +35,12 @@ export function certificatePreviewUrl(url: string | null | undefined): string | 
   return preview.toString();
 }
 
+/** Map region pill image through the Next image proxy (the CSP blocks remote images). */
+export function regionImageSrc(imageUrl: string | null | undefined): string | undefined {
+  if (!isAllowedRemoteImage(imageUrl)) return undefined;
+  return `/_next/image?url=${encodeURIComponent(imageUrl)}&w=64&q=75`;
+}
+
 export function isAllowedRemoteImage(
   url: string | null | undefined,
   apiUrl = process.env.NEXT_PUBLIC_API_URL,

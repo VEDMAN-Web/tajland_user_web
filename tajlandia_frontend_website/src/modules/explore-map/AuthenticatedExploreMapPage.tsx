@@ -17,7 +17,7 @@ import {
   type MapRegion,
   type MapView,
 } from "@/components/maps/MapboxMap";
-import { isAllowedRemoteImage } from "@/lib/config/remote-images";
+import { regionImageSrc } from "@/lib/config/remote-images";
 import { useDashboardLanguage } from "@/modules/dashboard/DashboardLanguageContext";
 import { PageLoader } from "@/components/ui/PageLoader";
 import { FilterPlotsPanel } from "./components/FilterPlotsPanel";
@@ -155,12 +155,6 @@ const VIEWPORT_DEBOUNCE_MS = 300;
 // and the zoom in to its outline is slower than a click's.
 const LINKED_PLOT_ZOOM_DELAY_MS = 800;
 const LINKED_PLOT_ZOOM_DURATION_MS = 2200;
-
-/** Region pill image through the Next image proxy (the CSP blocks remote images). */
-function regionImageSrc(imageUrl: string | null | undefined) {
-  if (!isAllowedRemoteImage(imageUrl)) return undefined;
-  return `/_next/image?url=${encodeURIComponent(imageUrl)}&w=64&q=75`;
-}
 
 /** Box around the plots (padded so one plot isn't zoomed to street level). */
 function plotsBounds(plots: ExplorePlot[]): MapBounds | null {

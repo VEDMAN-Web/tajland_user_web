@@ -6,6 +6,8 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/Button";
 import { Container } from "@/components/ui/Container";
 import { CountryFlag } from "@/components/ui/CountryFlag";
+import { submitInquiryAction } from "@/lib/api/inquiries";
+import { INQUIRY_EMAIL_MAX, INQUIRY_MESSAGE_MAX, inquiryMessageError, inquiryNameError } from "@/lib/api/inquiry.schema";
 import { routes } from "@/lib/constants/routes";
 import { countryCodes, defaultCountry, phonePlaceholder } from "@/lib/phone/countries";
 
@@ -29,6 +31,8 @@ const initialValues: FormValues = {
 
 type ContactErrors = Partial<Record<keyof FormValues, string>>;
 
+const SUCCESS_MESSAGE_DURATION_MS = 3000;
+
 function fieldClass(hasError: boolean) {
   return `mt-2 h-11 w-full rounded-[10px] border bg-white px-3 text-[14px] font-normal text-navy outline-none placeholder:text-[#c5ccd6] focus:border-navy focus:ring-2 focus:ring-navy/10 ${hasError ? "border-[#d52b35]" : "border-[#e4e9f0]"}`;
 }
@@ -36,18 +40,22 @@ function fieldClass(hasError: boolean) {
 function validateContact(values: FormValues): ContactErrors {
   const errors: ContactErrors = {};
 
-  if (!values.firstName.trim()) errors.firstName = "First name is required";
-  if (!values.lastName.trim()) errors.lastName = "Last name is required";
-  if (!values.email.trim()) errors.email = "Email is required";
-  else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.email.trim())) {
+  const firstNameError = inquiryNameError(values.firstName, "First name");
+  if (firstNameError) errors.firstName = firstNameError;
+  const lastNameError = inquiryNameError(values.lastName, "Last name");
+  if (lastNameError) errors.lastName = lastNameError;
+  const email = values.email.trim();
+  if (!email) errors.email = "Email is required";
+  else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > INQUIRY_EMAIL_MAX) {
     errors.email = "Please enter a valid email address";
   }
+  // Phone is optional; when given it must be a full national number.
   const country = countryCodes.find((item) => item.id === values.countryCode) ?? defaultCountry;
-  if (!values.phone) errors.phone = "Phone number is required";
-  else if (values.phone.length !== country.digits) {
-    errors.phone = `Enter a ${country.digits}-digit phone number`;
+  if (values.phone && values.phone.length !== country.digits) {
+    errors.phone = `Enter a ${country.digits}-digit phone number, or leave it empty`;
   }
-  if (!values.message.trim()) errors.message = "Message is required";
+  const messageError = inquiryMessageError(values.message);
+  if (messageError) errors.message = messageError;
 
   return errors;
 }
@@ -80,9 +88,18 @@ export function ContactPage() {
   const [values, setValues] = useState<FormValues>(initialValues);
   const [errors, setErrors] = useState<ContactErrors>({});
   const [submitted, setSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
   const [countryOpen, setCountryOpen] = useState(false);
   const countryMenuRef = useRef<HTMLDivElement>(null);
   const selectedCountry = countryCodes.find((item) => item.id === values.countryCode) ?? defaultCountry;
+
+  // The "Thanks" note hides itself after a few seconds.
+  useEffect(() => {
+    if (!submitted) return;
+    const timer = window.setTimeout(() => setSubmitted(false), SUCCESS_MESSAGE_DURATION_MS);
+    return () => window.clearTimeout(timer);
+  }, [submitted]);
 
   useEffect(() => {
     if (!countryOpen) return;
@@ -107,6 +124,7 @@ export function ContactPage() {
     setValues((current) => ({ ...current, [field]: value }));
     setErrors((current) => ({ ...current, [field]: undefined }));
     setSubmitted(false);
+    setSubmitError("");
   }
 
   function updateCountry(countryId: string) {
@@ -125,16 +143,34 @@ export function ContactPage() {
     updateField("phone", value.replace(/\D/g, "").slice(0, country.digits));
   }
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (isSubmitting) return;
     const nextErrors = validateContact(values);
     setErrors(nextErrors);
+    setSubmitError("");
 
     if (Object.keys(nextErrors).length > 0) {
       setSubmitted(false);
       return;
     }
 
+    setIsSubmitting(true);
+    const result = await submitInquiryAction({
+      firstName: values.firstName.trim(),
+      lastName: values.lastName.trim(),
+      email: values.email.trim(),
+      phoneNumber: values.phone ? `${selectedCountry.dial}${values.phone}` : undefined,
+      message: values.message.trim(),
+    }).catch(() => ({ ok: false as const, message: "Unable to send your message right now. Please try again." }));
+    setIsSubmitting(false);
+
+    if (!result.ok) {
+      setSubmitError(result.message);
+      return;
+    }
+    // Sent: clear the form for a fresh message.
+    setValues(initialValues);
     setSubmitted(true);
   }
 
@@ -243,7 +279,7 @@ export function ContactPage() {
               </div>
               <div>
                 <label htmlFor="contact-phone" className="text-[13px] font-semibold text-[#1c1c1c]">
-                  Phone Number
+                  Phone Number <span className="font-normal text-[#8a99aa]">(optional)</span>
                 </label>
                 <div className={`relative mt-2 flex h-11 items-center rounded-[10px] border bg-white focus-within:border-navy focus-within:ring-2 focus-within:ring-navy/10 ${countryOpen ? "z-30" : ""} ${errors.phone ? "border-[#d52b35]" : "border-[#e4e9f0]"}`}>
                   <div ref={countryMenuRef} className="relative h-full shrink-0">
@@ -308,15 +344,27 @@ export function ContactPage() {
                 value={values.message}
                 onChange={(event) => updateField("message", event.target.value)}
                 placeholder="Enter your message..."
+                maxLength={INQUIRY_MESSAGE_MAX}
                 aria-invalid={Boolean(errors.message)}
                 aria-describedby={errors.message ? "contact-message-error" : undefined}
                 className={`${fieldClass(Boolean(errors.message))} h-[120px] resize-none py-3`}
               />
               {errors.message ? <p id="contact-message-error" className="mt-1.5 text-[11px] text-[#d52b35]">{errors.message}</p> : null}
             </div>
-            <Button type="submit" size="lg" className="mt-6 h-12 w-fit cursor-pointer px-7 text-[15px]">
-              Send Message →
+            <Button
+              type="submit"
+              size="lg"
+              disabled={isSubmitting}
+              aria-busy={isSubmitting}
+              className="mt-6 h-12 w-fit cursor-pointer px-7 text-[15px] disabled:cursor-wait disabled:opacity-70"
+            >
+              {isSubmitting ? "Sending..." : "Send Message →"}
             </Button>
+            {submitError ? (
+              <p role="alert" className="mt-3 text-[14px] text-[#d52b35]">
+                {submitError}
+              </p>
+            ) : null}
             {submitted ? (
               <p role="status" className="mt-3 text-[14px] text-green-700">
                 Thanks. We&apos;ll get back to you soon.

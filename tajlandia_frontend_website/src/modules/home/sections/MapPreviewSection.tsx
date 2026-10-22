@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { MapRegion } from "@/components/maps/MapboxMap";
 import { Container } from "@/components/ui/Container";
 import { ScrollAnimatedElement } from "@/components/animations/ScrollAnimatedElement";
 import { ScrollDirectionalReveal } from "@/components/animations/ScrollDirectionalReveal";
@@ -7,6 +8,7 @@ import type { HomePageContent } from "../types/home.types";
 
 type MapPreviewSectionProps = {
   content: HomePageContent["map"];
+  regions?: MapRegion[];
 };
 
 const descriptionBreakAfter = "resonates";
@@ -23,13 +25,13 @@ function mapDescriptionLines(description: string) {
   );
 }
 
-export function MapPreviewSection({ content }: MapPreviewSectionProps) {
+export function MapPreviewSection({ content, regions = [] }: MapPreviewSectionProps) {
   const headingLead = content.headingBefore.replace(/\s+experience$/, "");
   const description =
     content.description ??
     "Explore the map, discover a place that resonates with you, and claim its story as your own.";
   const descriptionLines = mapDescriptionLines(description);
-  const map = <ThailandMap pins={content.pins} />;
+  const map = <ThailandMap pins={content.pins} regions={regions} />;
 
   return (
     <section id="map" className="bg-white py-[60px]">

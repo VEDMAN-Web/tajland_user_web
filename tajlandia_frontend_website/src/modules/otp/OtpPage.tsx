@@ -11,6 +11,7 @@ import { otpSchema } from "./schemas/otp.schema";
 import type { SignupFormValues } from "@/modules/signup/schemas/signup.schema";
 import { verifyOtpAction, resendOtpAction, completeSignupWithOtpAction } from "./services/otp.service";
 import { verifyPasswordResetOtpAction } from "@/modules/reset-password/services/reset-password.service";
+import { BackLink } from "@/components/ui/BackLink";
 
 const OTP_LENGTH = 6;
 // The API enforces a 60-second cooldown between OTP emails.
@@ -239,17 +240,7 @@ function OtpPageContent() {
 
         <div className="flex min-h-[640px] flex-col px-1 py-2 sm:px-4">
           <ScrollAnimatedElement animation="slide-in-right" duration={600} className="mx-auto flex w-full max-w-[420px] flex-1 flex-col">
-            <Link
-              href={mode === "signup" ? routes.signup : routes.login}
-              className="group inline-flex self-start items-center gap-2 rounded-full border border-[#e6e8ef] bg-white py-1 pl-1 pr-3.5 text-[13px] font-medium text-navy shadow-[0_1px_2px_rgba(11,31,77,0.06)] transition-colors hover:border-navy/25 hover:bg-[#f5f7fb] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy"
-            >
-              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#f1f4f9] transition-colors group-hover:bg-navy group-hover:text-white">
-                <svg viewBox="0 0 16 16" aria-hidden="true" className="h-3.5 w-3.5 transition-transform group-hover:-translate-x-0.5 motion-reduce:transition-none">
-                  <path d="M13 8H3m4-4L3 8l4 4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </span>
-              Back to {mode === "signup" ? "Sign Up" : "Login"}
-            </Link>
+            <BackLink href={mode === "signup" ? routes.signup : routes.login}>Back to {mode === "signup" ? "Sign Up" : "Login"}</BackLink>
             <h2 className="mt-8 text-[28px] font-semibold tracking-[-0.03em] text-navy sm:text-[30px]">
               {mode === "signup" ? "Verify your email" : "Verify your identity"}
             </h2>

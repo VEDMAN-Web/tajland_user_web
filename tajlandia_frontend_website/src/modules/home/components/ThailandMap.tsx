@@ -2,7 +2,10 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
-import type { MapboxMapHandle } from "@/components/maps/MapboxMap";
+import { useRouter } from "next/navigation";
+import type { MapboxMapHandle, MapRegion } from "@/components/maps/MapboxMap";
+import { exploreRegionPath } from "@/lib/constants/routes";
+import { useAuth } from "@/lib/hooks/useAuth";
 import { cn } from "@/lib/utils/cn";
 
 // mapbox-gl is heavy (JS + a WebGL context + tiles), so it is fetched and
@@ -15,12 +18,15 @@ import type { HomePageContent } from "../types/home.types";
 
 type ThailandMapProps = {
   pins: HomePageContent["map"]["pins"];
+  /** Region pills; a click opens that region on the Explore Map (after login). */
+  regions: MapRegion[];
 };
 
 // Starts as a globe over the Arabian Sea, then flies east and lands on Thailand.
 // Replays on every visit: leaving the viewport resets it to the globe.
 const GLOBE_VIEW = { center: [70, 18] as [number, number], zoom: 2 };
-const THAILAND_VIEW = { center: [101.1, 14.95] as [number, number], zoom: 7.2 };
+// Wide enough to show every region pill, Chiang Mai down to Phuket.
+const THAILAND_VIEW = { center: [100.9, 13.4] as [number, number], zoom: 4.9 };
 const FLY_DURATION_MS = 3200;
 // Fly once the map is this visible, so the whole flight is actually seen.
 const START_AT_VISIBLE = 0.4;
@@ -33,8 +39,10 @@ const legend = [
   { label: "Restricted", color: "bg-[#a9a9a9]" },
 ];
 
-export function ThailandMap({ pins }: ThailandMapProps) {
+export function ThailandMap({ pins, regions }: ThailandMapProps) {
   void pins;
+  const router = useRouter();
+  const { isAuthenticated } = useAuth();
   const frameRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapboxMapHandle | null>(null);
   // Flight requested before the lazily loaded map was there; runs once it is.
@@ -50,6 +58,11 @@ export function ThailandMap({ pins }: ThailandMapProps) {
       flight();
     }
   }, []);
+
+  function handleRegionClick(regionId: string) {
+    const region = regions.find((item) => item.id === regionId);
+    if (region) router.push(exploreRegionPath(region, isAuthenticated));
+  }
 
   useEffect(() => {
     const frame = frameRef.current;
@@ -136,6 +149,8 @@ export function ThailandMap({ pins }: ThailandMapProps) {
           initialCenter={GLOBE_VIEW.center}
           initialZoom={GLOBE_VIEW.zoom}
           projection="globe"
+          regions={regions}
+          onRegionClick={handleRegionClick}
         />
       ) : (
         <div className="h-full w-full" aria-label="Interactive Thailand map" />

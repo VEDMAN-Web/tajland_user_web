@@ -13,10 +13,10 @@ const IMAGE_EXTENSIONS: Record<string, string> = {
   "application/pdf": "pdf",
 };
 
-const orderCertificateSchema = z.object({
+// `GET /certificates/{orderId}` only returns the caller's own, generated certificates.
+const certificateSchema = z.object({
   success: z.literal(true),
   data: z.object({
-    status: z.string(),
     certificateNo: z.string().nullish(),
     certificateUrl: z.string().nullish(),
   }),
@@ -32,7 +32,7 @@ function jsonError(message: string, status: number) {
 /**
  * Downloads the certificate (image or PDF) of one of the caller's paid orders. It is
  * hosted elsewhere, so the browser can't save it with a plain `download` link;
- * this checks the order with the caller's token and returns it as an attachment.
+ * this looks the certificate up with the caller's token and returns it as an attachment.
  */
 export async function GET(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   const { id } = await context.params;
@@ -44,29 +44,29 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
   }
   if (!ORDER_ID.test(id)) return jsonError("Certificate not found", 404);
 
-  let order: z.infer<typeof orderCertificateSchema>["data"];
+  let certificate: z.infer<typeof certificateSchema>["data"];
   try {
-    const response = await fetch(`${apiUrl.replace(/\/$/, "")}/orders/${id}`, {
+    const response = await fetch(`${apiUrl.replace(/\/$/, "")}/certificates/${id}`, {
       headers: { Accept: "application/json", Authorization: authorization },
       cache: "no-store",
       signal: AbortSignal.timeout(20_000),
     });
     if (response.status === 401) return jsonError("Authentication is required.", 401);
     if (!response.ok) return jsonError("Certificate not found", response.status === 404 || response.status === 400 ? 404 : 502);
-    const parsed = orderCertificateSchema.safeParse(await response.json().catch(() => null));
+    const parsed = certificateSchema.safeParse(await response.json().catch(() => null));
     if (!parsed.success) return jsonError("Unexpected API response", 502);
-    order = parsed.data.data;
+    certificate = parsed.data.data;
   } catch {
     return jsonError("Unable to reach the API", 503);
   }
 
-  if (order.status !== "paid" || !isAllowedRemoteImage(order.certificateUrl, apiUrl)) {
+  if (!isAllowedRemoteImage(certificate.certificateUrl, apiUrl)) {
     return jsonError("Certificate not ready yet", 404);
   }
 
   let image: Response;
   try {
-    image = await fetch(order.certificateUrl, { cache: "no-store", signal: AbortSignal.timeout(20_000) });
+    image = await fetch(certificate.certificateUrl, { cache: "no-store", signal: AbortSignal.timeout(20_000) });
   } catch {
     return jsonError("Unable to download the certificate", 502);
   }
@@ -78,7 +78,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
   const body = await image.arrayBuffer();
   if (body.byteLength > MAX_IMAGE_BYTES) return jsonError("Unable to download the certificate", 502);
 
-  const name = (order.certificateNo ?? `certificate-${id}`).replace(/[^\w.-]/g, "_");
+  const name = (certificate.certificateNo ?? `certificate-${id}`).replace(/[^\w.-]/g, "_");
   return new Response(body, {
     headers: {
       "Content-Type": type,

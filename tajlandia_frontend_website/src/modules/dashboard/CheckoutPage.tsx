@@ -38,6 +38,7 @@ import {
   getOrderSummary,
   payOrderByCard,
 } from "./services/cart.client";
+import { BackLink } from "@/components/ui/BackLink";
 
 type Translate = (source: string) => string;
 type PurchaseType = "self" | "gift";
@@ -409,13 +410,7 @@ export function CheckoutPage() {
     <div className="min-h-[100svh] bg-[#f7f9fc] text-navy">
       <DashboardNavbar active="none" />
       <main className="mx-auto w-full max-w-[1240px] px-4 pb-16 pt-6 sm:px-8 sm:pt-8">
-        <Link
-          href={routes.cart}
-          className="inline-flex items-center gap-1.5 font-manrope text-[13px] font-medium text-[#111111] hover:text-navy"
-        >
-          <span aria-hidden="true">←</span>
-          {t("Back to Cart")}
-        </Link>
+        <BackLink href={routes.cart}>{t("Back to Cart")}</BackLink>
         <h1 className="mt-3 font-manrope text-[26px] font-semibold leading-tight tracking-[-0.02em] text-[#111111] sm:text-[30px]">
           {t("Complete your purchase")}
         </h1>
