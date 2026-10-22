@@ -19,6 +19,8 @@ const explorePlotSchema = z.object({
   totalPrice: z.number(),
   currency: z.string(),
   imageUrl: z.string().nullish(),
+  // Plot photos (Cloudinary); `imageUrl` is the older single image, now usually null.
+  images: z.array(z.string()).nullish(),
   isOwned: z.boolean().optional(),
   isInCart: z.boolean().optional(),
   // In the Figma card but not in the list response yet; shown once the backend sends them.

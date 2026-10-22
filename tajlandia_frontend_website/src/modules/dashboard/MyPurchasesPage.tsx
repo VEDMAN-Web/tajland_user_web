@@ -727,6 +727,7 @@ function LandCard({ plot }: { plot: LandPlot }) {
   // The API sends no plot name yet, so the zone name is the title until it does.
   const name = plot.name?.trim();
   const title = name || plot.zoneName || plot.plotNumber;
+  const image = plot.images?.[0] ?? plot.imageUrl;
   const location = name && plot.zoneName ? `${place} · ${plot.zoneName}` : place;
   const mapHref =
     plot.latitude != null && plot.longitude != null
@@ -746,7 +747,7 @@ function LandCard({ plot }: { plot: LandPlot }) {
     <article className="overflow-hidden rounded-[16px] border border-[#eef1f4] bg-white shadow-[0_8px_22px_rgba(11,31,77,0.05)]">
       <div className="relative h-[168px] w-full bg-[#eef1f5]">
         <Image
-          src={isAllowedRemoteImage(plot.imageUrl) ? plot.imageUrl : LAND_PLACEHOLDER_IMAGE}
+          src={isAllowedRemoteImage(image) ? image : LAND_PLACEHOLDER_IMAGE}
           alt={title}
           fill
           sizes="(min-width: 1024px) 360px, (min-width: 768px) 50vw, 100vw"

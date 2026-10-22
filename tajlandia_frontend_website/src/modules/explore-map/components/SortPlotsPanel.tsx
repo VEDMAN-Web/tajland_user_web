@@ -56,7 +56,7 @@ export function SortPlotsPanel({
     <PlotOptionsPanel
       icon={<SortIcon />}
       title={t("Sort by")}
-      subtitle={t("Reorder active parcel markers")}
+      subtitle={t("Reorder the plot list")}
       closeLabel={t("Close")}
       widthClassName="sm:w-[340px]"
       onClose={onClose}

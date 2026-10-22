@@ -143,6 +143,19 @@ export async function getPlotsInArea(
   return plots;
 }
 
+/** How many plots in the area match the filters (one 1-item page, read its `total`). */
+export async function countPlotsInArea(
+  scope: PlotScope,
+  filters: PlotFilterQuery,
+  signal?: AbortSignal,
+): Promise<number> {
+  const data = await authedGet("/explore/plots", explorePlotsPageSchema, {
+    query: { [scope.param]: scope.id, page: 1, limit: 1, ...filters },
+    signal,
+  });
+  return data.pagination.total;
+}
+
 /** The API's largest viewport: `bbox` sides over this answer 400 VIEWPORT_TOO_LARGE. */
 export const MAX_VIEWPORT_DEGREES = 8;
 
@@ -219,9 +232,9 @@ export async function getSortOptions(signal?: AbortSignal): Promise<PlotSortOpti
   return toPlotSortOptions(data.options);
 }
 
-/** Zone types and size / price ranges for the Filter panel (load once per page). */
-export function getFilterOptions(signal?: AbortSignal): Promise<FilterOptions> {
-  return authedGet("/explore/filters", filterOptionsSchema, { signal });
+/** Zone types and size / price ranges for the Filter panel, for one region's zones. */
+export function getFilterOptions(regionId: string, signal?: AbortSignal): Promise<FilterOptions> {
+  return authedGet("/explore/filters", filterOptionsSchema, { query: { regionId }, signal });
 }
 
 /**

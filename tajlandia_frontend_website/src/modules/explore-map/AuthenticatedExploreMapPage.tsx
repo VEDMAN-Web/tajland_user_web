@@ -34,7 +34,6 @@ import { SearchResultRow } from "./components/SearchResultRow";
 import { SortPlotsPanel } from "./components/SortPlotsPanel";
 import { DEFAULT_PLOT_FILTERS, toPlotFilterQuery } from "./constants/explore-filters";
 import { OWNED_PLOT_FILL, PLOT_STATUS_COLORS, plotColor } from "./constants/plot-status";
-import { exploreFiltersMock } from "./data/explore-filters.mock";
 import {
   addPlotToCart,
   clearRecentSearches,
@@ -45,6 +44,7 @@ import {
   saveRecentSearch,
   getSearchSuggestions,
   MIN_SUGGESTION_QUERY_LENGTH,
+  countPlotsInArea,
   getFilterOptions,
   getPlotDetail,
   getPlotsInArea,
@@ -75,6 +75,9 @@ const SLIM_SCROLLBAR =
 
 // Used until `/explore/map` returns the real bounds.
 const THAILAND_BOUNDS: MapBounds = { north: 20.5, south: 5.6, east: 105.6, west: 97.3 };
+// Thailand-wide view: room for the search bar on top and the status legend at
+// the bottom, so no region pin (Chiang Mai, Phuket) sits under them.
+const THAILAND_VIEW_PADDING = { top: 160, bottom: 80, left: 40, right: 40 };
 const SUGGESTION_DEBOUNCE_MS = 300;
 // Search runs as the user types. Each call is saved to their recent searches,
 // so wait for a longer pause than the autocomplete does.
@@ -112,10 +115,29 @@ function polygonBounds(plot: Pick<ExplorePlot, "geometry">): MapBounds | null {
   };
 }
 
+// From sm the plot list is a 420px panel, 32px from the left edge.
+const PLOT_PANEL_RIGHT_EDGE = 32 + 420;
+// Narrowest strip of map kept for the plots beside the panel (small tablets).
+const MIN_VISIBLE_MAP_WIDTH = 160;
+
+/** Tablets (sm up to lg): the 420px list panel covers much of the map. */
+function isTabletWidth() {
+  return window.matchMedia("(min-width: 640px) and (max-width: 1023px)").matches;
+}
+
 /** Keeps a focused plot in the visible map: right of the side panel, or above the phone sheet. */
 function plotFocusPadding() {
-  if (window.matchMedia("(min-width: 640px)").matches) {
+  if (window.matchMedia("(min-width: 1024px)").matches) {
     return { top: 170, bottom: 60, left: 500, right: 80 };
+  }
+  if (isTabletWidth()) {
+    const right = 40;
+    // Clear of the panel, but never so much that the fit has no room (Mapbox then fails).
+    const left = Math.max(
+      40,
+      Math.min(PLOT_PANEL_RIGHT_EDGE + 24, window.innerWidth - right - MIN_VISIBLE_MAP_WIDTH),
+    );
+    return { top: 170, bottom: 60, left, right };
   }
   return {
     top: 140,
@@ -274,11 +296,10 @@ export function AuthenticatedExploreMapPage() {
   const [isSortOpen, setIsSortOpen] = useState(false);
   // Applied values; they will drive the plot API once it is wired up.
   const [plotFilters, setPlotFilters] = useState<PlotFilters>(DEFAULT_PLOT_FILTERS);
-  // Filter panel options (`/explore/filters`, loaded once).
-  const [filterOptions, setFilterOptions] = useState<FilterOptions | null>(null);
-  const [filterOptionsStatus, setFilterOptionsStatus] = useState<
-    "loading" | "ready" | "error"
-  >("loading");
+  // Filter panel options (`/explore/filters?regionId=`), for the open area's region.
+  const [filterOptionsResult, setFilterOptionsResult] = useState<
+    { regionId: string; options: FilterOptions } | { regionId: string; failed: true } | null
+  >(null);
   const [filterOptionsReloadKey, setFilterOptionsReloadKey] = useState(0);
   // Sort panel options (`/explore/sort-options`, loaded once) and the applied one.
   const [sortOptions, setSortOptions] = useState<PlotSortOption[]>([]);
@@ -304,6 +325,9 @@ export function AuthenticatedExploreMapPage() {
   const [searchingQuery, setSearchingQuery] = useState<string | null>(null);
   const searchAbortRef = useRef<AbortController | null>(null);
   const searchTimerRef = useRef<number | undefined>(undefined);
+  // The text the user last typed. Autocomplete runs only for it, not when the
+  // box is filled in for them (opening a region, a recent search, Tab).
+  const typedSearchRef = useRef("");
   // Mirrors for the async search flow (state would be stale inside timers).
   const lastResultsRef = useRef<{ query: string; results: SearchResult[] } | null>(null);
   const inFlightQueryRef = useRef<string | null>(null);
@@ -383,6 +407,20 @@ export function AuthenticatedExploreMapPage() {
   const hasActiveFilters = [zoneId, minRai, maxRai, minPrice, maxPrice].some(
     (param) => param !== undefined,
   );
+  const plotScopeKey = plotScope ? `${plotScope.param}:${plotScope.id}` : null;
+  // Filter panel header: the area's plot count without filters. Unfiltered, that's
+  // the list; filtered, one count request per area (only once the panel opens).
+  const [areaTotalResult, setAreaTotalResult] = useState<{ key: string; total: number } | null>(
+    null,
+  );
+  const areaTotal = !hasActiveFilters
+    ? plotsStatus === "ready"
+      ? plots.length
+      : null
+    : areaTotalResult?.key === plotScopeKey
+      ? areaTotalResult.total
+      : null;
+  const needsAreaTotal = isFilterOpen && hasActiveFilters && areaTotal === null;
   // Set once the user moves the map, so late API data doesn't yank the camera back.
   const hasNavigatedRef = useRef(Boolean(linkedRegion));
   // Set when an area is opened without a known location (a recent search or a
@@ -445,7 +483,7 @@ export function AuthenticatedExploreMapPage() {
           })),
         );
         if (!hasSelectedPlot && !hasNavigatedRef.current) {
-          mapRef.current?.fitBounds(map.bounds);
+          mapRef.current?.fitBounds(map.bounds, { padding: THAILAND_VIEW_PADDING });
         }
       })
       .catch((error: unknown) => {
@@ -477,7 +515,13 @@ export function AuthenticatedExploreMapPage() {
         if (fitToPlotsRef.current) {
           fitToPlotsRef.current = false;
           const bounds = plotsBounds(items);
-          if (bounds) mapRef.current?.fitBounds(bounds, { duration: 1200 });
+          if (bounds) {
+            mapRef.current?.fitBounds(bounds, {
+              // Tablets: frame them beside the panel. Desktop keeps the default.
+              ...(isTabletWidth() && { padding: plotFocusPadding() }),
+              duration: 1200,
+            });
+          }
         }
       })
       .catch((error: unknown) => {
@@ -504,29 +548,60 @@ export function AuthenticatedExploreMapPage() {
     maxPrice,
   ]);
 
+  // Region whose zones the Filter panel offers: the picked region, or (city / zone)
+  // the region its plots belong to.
+  const filtersRegionId =
+    plotScope?.param === "regionId"
+      ? plotScope.id
+      : (plots.find((plot) => plot.region)?.region?.id ?? null);
+
   useEffect(() => {
-    if (!isAuthenticated) return;
+    if (!isAuthenticated || !filtersRegionId) return;
 
     const controller = new AbortController();
-    getFilterOptions(controller.signal)
-      .then((options) => {
-        setFilterOptions(options);
-        setFilterOptionsStatus("ready");
-      })
+    getFilterOptions(filtersRegionId, controller.signal)
+      .then((options) => setFilterOptionsResult({ regionId: filtersRegionId, options }))
       .catch((error: unknown) => {
         if (isAbortError(error)) return;
         if (isApiError(error) && error.code === "API_SESSION_EXPIRED") return;
         logError(error, "Failed to load filter options");
-        setFilterOptionsStatus("error");
+        setFilterOptionsResult({ regionId: filtersRegionId, failed: true });
       });
 
     return () => controller.abort();
-  }, [isAuthenticated, filterOptionsReloadKey]);
+  }, [isAuthenticated, filtersRegionId, filterOptionsReloadKey]);
+
+  // A city / zone with no matching plots has no region to go by: keep the last options.
+  const currentFilterOptions =
+    filterOptionsResult && (!filtersRegionId || filterOptionsResult.regionId === filtersRegionId)
+      ? filterOptionsResult
+      : null;
+  const filterOptions =
+    currentFilterOptions && "options" in currentFilterOptions ? currentFilterOptions.options : null;
+  const filterOptionsStatus = !currentFilterOptions
+    ? "loading"
+    : "failed" in currentFilterOptions
+      ? "error"
+      : "ready";
 
   function retryFilterOptions() {
-    setFilterOptionsStatus("loading");
+    setFilterOptionsResult(null);
     setFilterOptionsReloadKey((key) => key + 1);
   }
+
+  useEffect(() => {
+    if (!isAuthenticated || !needsAreaTotal || !plotScope || !plotScopeKey) return;
+    const controller = new AbortController();
+    countPlotsInArea(plotScope, {}, controller.signal)
+      .then((total) => setAreaTotalResult({ key: plotScopeKey, total }))
+      .catch((error: unknown) => {
+        if (isAbortError(error)) return;
+        if (isApiError(error) && error.code === "API_SESSION_EXPIRED") return;
+        // The header just leaves the number out.
+        logError(error, "Failed to count area plots");
+      });
+    return () => controller.abort();
+  }, [isAuthenticated, needsAreaTotal, plotScope, plotScopeKey]);
 
   // First plots in view after a My Land link: open the linked plot (only that first time).
   const openLinkedPlot = useEffectEvent((items: ExplorePlot[]) => {
@@ -639,8 +714,9 @@ export function AuthenticatedExploreMapPage() {
     return () => controller.abort();
   }, [isAuthenticated, detailPlotId, plotDetailReloadKey]);
 
-  // Fly to a place and show its plots.
-  function openPlace(place: SearchResult) {
+  // Fly to a place and show its plots. A map pin click is not a search, so it
+  // isn't saved to recent searches (`remember: false`).
+  function openPlace(place: SearchResult, { remember = true } = {}) {
     const scope = plotScopeFor(place);
     if (!scope) {
       flyToPlace(place);
@@ -649,13 +725,19 @@ export function AuthenticatedExploreMapPage() {
     // The area's plots (with their labels) mark it, so fly without a pin that would cover them.
     hasNavigatedRef.current = true;
     mapRef.current?.clearMarker();
+    // Tablets: land the place in the map left beside the list panel, in the same
+    // single fly (no second zoom once the plots arrive). Desktop has room as is.
+    const tabletPadding = isTabletWidth() ? plotFocusPadding() : null;
     void mapRef.current?.flyToView({
       center: [place.location.lng, place.location.lat],
       zoom: PLACE_ZOOM[place.type.toUpperCase()] ?? 11,
       duration: 1500,
+      ...(tabletPadding && {
+        offset: [Math.round((tabletPadding.left - tabletPadding.right) / 2), 0] as [number, number],
+      }),
     });
     showAreaPlots(scope, place.name);
-    rememberPlace(place);
+    if (remember) rememberPlace(place);
     // Show the full place name ("pat" -> "Pattaya"). Not scheduled as a search,
     // so it isn't sent (or auto-saved) again.
     window.clearTimeout(searchTimerRef.current);
@@ -673,6 +755,8 @@ export function AuthenticatedExploreMapPage() {
     } else {
       setPlots([]);
       setPlotScope(scope);
+      // Zone ids belong to the old area's region.
+      setPlotFilters((filters) => (filters.zones.length ? { ...filters, zones: [] } : filters));
     }
   }
 
@@ -870,13 +954,16 @@ export function AuthenticatedExploreMapPage() {
     const region = mapRegions.find((item) => item.id === regionId);
     if (!region) return;
     setIsSearchExpanded(true);
-    openPlace({
-      type: "region",
-      id: region.id,
-      name: region.name,
-      imageUrl: null,
-      location: region.location,
-    });
+    openPlace(
+      {
+        type: "region",
+        id: region.id,
+        name: region.name,
+        imageUrl: null,
+        location: region.location,
+      },
+      { remember: false },
+    );
   }
 
   // Only the open plot's own result counts (a stale one shows the skeleton).
@@ -890,7 +977,7 @@ export function AuthenticatedExploreMapPage() {
   // Autocomplete: debounced, and a newer keystroke cancels the older request.
   useEffect(() => {
     const query = search.trim();
-    if (query.length < MIN_SUGGESTION_QUERY_LENGTH) return;
+    if (search !== typedSearchRef.current || query.length < MIN_SUGGESTION_QUERY_LENGTH) return;
 
     const controller = new AbortController();
     const timer = window.setTimeout(() => {
@@ -982,6 +1069,21 @@ export function AuthenticatedExploreMapPage() {
     // Saved from a click: open that region/city directly (no search, so nothing new is saved).
     const type = item.type.toUpperCase();
     if (item.referenceId && (type === "REGION" || type === "CITY")) {
+      // Same as clicking the place's chip on the map: one fly to its centre. (Fitting
+      // to its plots zoomed out whenever one plot sat far away.) Entries often come
+      // without `location`; a region's centre is on its map chip.
+      const location =
+        item.location ??
+        (type === "REGION"
+          ? mapRegions.find((region) => region.id === item.referenceId)?.location
+          : undefined);
+      if (location) {
+        openPlace(
+          { type: item.type, id: item.referenceId, name: item.query, imageUrl: null, location },
+          { remember: false },
+        );
+        return;
+      }
       hasNavigatedRef.current = true;
       mapRef.current?.clearMarker();
       fitToPlotsRef.current = true;
@@ -1135,7 +1237,7 @@ export function AuthenticatedExploreMapPage() {
 
   if (isLoading)
     return (
-      <PageLoader label={t("Loading map...")} />
+      <PageLoader label={t("Loading...")} />
     );
   if (!isAuthenticated) {
     router.replace(routes.login);
@@ -1196,7 +1298,9 @@ export function AuthenticatedExploreMapPage() {
 
       <div
         ref={searchAreaRef}
-        className="absolute inset-x-4 top-20 z-20 flex items-start gap-2 sm:inset-x-auto sm:left-8 sm:top-24"
+        // An open Filter/Sort panel is inside this box, so the box itself must sit
+        // above the plot list (phones: a z-30 bottom sheet) or it covers "Apply".
+        className={`absolute inset-x-4 top-20 flex items-start gap-2 sm:inset-x-auto sm:left-8 sm:top-24 ${isFilterOpen || isSortOpen ? "z-40" : "z-20"}`}
         onMouseEnter={() => setIsSearchExpanded(true)}
       >
         <label
@@ -1221,6 +1325,7 @@ export function AuthenticatedExploreMapPage() {
               onFocus={() => setIsSearchExpanded(true)}
               onChange={(event) => {
                 setSearchMessage("");
+                typedSearchRef.current = event.target.value;
                 setSearch(event.target.value);
                 scheduleSearch(event.target.value);
               }}
@@ -1268,7 +1373,10 @@ export function AuthenticatedExploreMapPage() {
                 setSelectedPlotId(null);
                 // Back to the view the page opened with.
                 mapRef.current?.clearMarker();
-                mapRef.current?.fitBounds(initialBoundsRef.current, { duration: 1200 });
+                mapRef.current?.fitBounds(initialBoundsRef.current, {
+                  duration: 1200,
+                  padding: THAILAND_VIEW_PADDING,
+                });
                 hasNavigatedRef.current = false;
               }}
               className="flex cursor-pointer items-center justify-center text-[#8c96a3]"
@@ -1308,8 +1416,9 @@ export function AuthenticatedExploreMapPage() {
                   options={filterOptions}
                   status={filterOptionsStatus}
                   onRetry={retryFilterOptions}
-                  totalPlots={exploreFiltersMock.totalPlots}
-                  matchingPlots={exploreFiltersMock.matchingPlots}
+                  areaName={plotAreaName}
+                  areaTotal={areaTotal}
+                  appliedCount={plotsStatus === "ready" ? plots.length : null}
                   onApply={applyFilters}
                   onClose={() => setIsFilterOpen(false)}
                   t={t}
@@ -1364,16 +1473,27 @@ export function AuthenticatedExploreMapPage() {
         >
           {showPlotList ? (
             <>
-              {/* Grab handle look for the phone bottom sheet. */}
-              <span
-                aria-hidden="true"
-                className="mx-auto mt-2.5 h-1 w-10 shrink-0 rounded-full bg-[#d9e1ea] sm:hidden"
-              />
+              {/* Grab handle look for the phone bottom sheet, with a close button. */}
+              <div className="relative flex h-9 shrink-0 items-center justify-center sm:hidden">
+                <span aria-hidden="true" className="h-1 w-10 rounded-full bg-[#d9e1ea]" />
+                <button
+                  type="button"
+                  aria-label={t("Close")}
+                  onClick={() => {
+                    setIsSearchExpanded(false);
+                    setIsFilterOpen(false);
+                    setIsSortOpen(false);
+                  }}
+                  className="absolute right-3 top-1.5 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-[#f4f7fa] text-[#6d7784] hover:text-navy"
+                >
+                  <CloseIcon />
+                </button>
+              </div>
               <div
                 // New key per view, so opening a detail (or going back) starts at the top.
                 key={detailPlotId ?? "plot-list"}
                 // The detail lays out its own padding so its image can sit edge to edge.
-                className={`flex min-h-0 flex-1 flex-col overflow-y-auto ${detailPlotId ? "" : "gap-[14px] px-4 pb-6 pt-4 sm:py-6"} ${SLIM_SCROLLBAR}`}
+                className={`flex min-h-0 flex-1 flex-col overflow-y-auto ${detailPlotId ? "" : "gap-[14px] px-4 pb-6 pt-1 sm:py-6"} ${SLIM_SCROLLBAR}`}
                 aria-live="polite"
                 aria-label={t("Plots")}
               >

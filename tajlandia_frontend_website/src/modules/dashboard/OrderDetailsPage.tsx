@@ -277,6 +277,7 @@ function PlotRow({ item, currency }: { item: OrderDetailItem; currency: string }
   const zone = ZONES.find((entry) => entry.type === zoneOf(item));
   const code = item.plotNumber?.trim() ?? "";
   const name = item.name?.trim() || code || t("Plot");
+  const image = item.images?.[0] ?? item.imageUrl;
   const location = item.location?.trim() || item.region?.name?.trim() || "";
   const mapHref =
     item.latitude != null && item.longitude != null
@@ -301,7 +302,7 @@ function PlotRow({ item, currency }: { item: OrderDetailItem; currency: string }
       <div className="flex min-w-0 flex-1 items-center gap-3">
         <div className="relative h-[72px] w-[88px] shrink-0 overflow-hidden rounded-[12px] bg-[#eef1f5]">
           <Image
-            src={isAllowedRemoteImage(item.imageUrl) ? item.imageUrl : PLOT_PLACEHOLDER_IMAGE}
+            src={isAllowedRemoteImage(image) ? image : PLOT_PLACEHOLDER_IMAGE}
             alt={name}
             fill
             sizes="88px"

@@ -6,6 +6,7 @@ const cartItemSchema = z.object({
   plotNumber: z.string().nullish(),
   name: z.string().nullish(),
   imageUrl: z.string().nullish(),
+  images: z.array(z.string()).nullish(),
   sizeRai: z.number(),
   pricePerRai: z.number(),
   subtotal: z.number(),
@@ -131,6 +132,7 @@ export const orderSchema = z.object({
       plotNumber: z.string().nullish(),
       name: z.string().nullish(),
       imageUrl: z.string().nullish(),
+      images: z.array(z.string()).nullish(),
       // City name, e.g. "Phuket".
       location: z.string().nullish(),
       sizeSquareFeet: z.number().nullish(),

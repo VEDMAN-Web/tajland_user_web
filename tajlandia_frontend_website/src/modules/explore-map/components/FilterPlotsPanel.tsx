@@ -24,9 +24,12 @@ type FilterPlotsPanelProps = {
   options: FilterOptions | null;
   status: "loading" | "ready" | "error";
   onRetry: () => void;
-  // Figma placeholders until the API sends counts.
-  totalPlots: number;
-  matchingPlots: number;
+  /** Name of the open area, e.g. "Phuket". */
+  areaName: string;
+  /** All plots in the area (no filters); null while unknown. */
+  areaTotal: number | null;
+  /** Plots in the list now (the applied filters); null while they load. Updates on Apply. */
+  appliedCount: number | null;
   onApply: (value: PlotFilters) => void;
   onClose: () => void;
   t: Translate;
@@ -196,8 +199,9 @@ export function FilterPlotsPanel({
   options,
   status,
   onRetry,
-  totalPlots,
-  matchingPlots,
+  areaName,
+  areaTotal,
+  appliedCount,
   onApply,
   onClose,
   t,
@@ -225,7 +229,11 @@ export function FilterPlotsPanel({
     <PlotOptionsPanel
       icon={<FilterIcon />}
       title={t("Filter Plots")}
-      subtitle={`${t("Narrow")} ${numberFormat.format(totalPlots)} ${t("parcels across Thailand")}`}
+      subtitle={
+        areaTotal === null
+          ? `${t("Plots in")} ${areaName}`
+          : `${numberFormat.format(areaTotal)} ${t(areaTotal === 1 ? "plot in" : "plots in")} ${areaName}`
+      }
       closeLabel={t("Close")}
       headerDivider
       widthClassName="sm:w-[420px]"
@@ -236,9 +244,12 @@ export function FilterPlotsPanel({
             {t("Clear All")}
           </PanelTextButton>
           <div className="flex items-center gap-3">
-            <span className="text-[11px] text-[#8a94a3]">
-              {numberFormat.format(matchingPlots)} {t("plots found")}
-            </span>
+            {appliedCount !== null ? (
+              <span className="text-[11px] text-[#8a94a3]">
+                {numberFormat.format(appliedCount)}{" "}
+                {t(appliedCount === 1 ? "plot found" : "plots found")}
+              </span>
+            ) : null}
             <PanelPrimaryButton
               disabled={raiInvalid || priceInvalid}
               onClick={() => {

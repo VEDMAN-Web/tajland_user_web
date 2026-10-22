@@ -18,6 +18,12 @@ type DashboardNavbarProps = {
   overlay?: boolean;
 };
 
+const LANGUAGE_OPTIONS = [
+  { code: "EN", label: "English", flag: "/images/dashboard/en-flag.svg" },
+  { code: "PL", label: "Polish", flag: "/images/dashboard/pl-flag.svg" },
+  { code: "TH", label: "Thai", flag: "/images/dashboard/th-flag.png" },
+] as const;
+
 const controlHeight = "h-11";
 const controlShadow = "shadow-[0_6px_20px_rgba(11,31,77,0.08)]";
 
@@ -101,6 +107,31 @@ export function DashboardNavbar({ active, overlay = false }: DashboardNavbarProp
   // Overlay (Explore Map): above the map's search bar (z-20) and panels (z-30), so
   // the mobile menu and account dropdown open on top of them.
   const navClass = overlay ? "absolute inset-x-0 top-0 z-40" : "sticky top-0 z-50";
+  const mobileLinks = [
+    { href: routes.dashboard, label: t("Home"), active: isHomeActive },
+    { href: routes.dashboardExplore, label: t("Explore Map"), active: active === "explore" },
+    { href: routes.leaderboard, label: t("Leaderboard"), active: active === "leaderboard" },
+    { href: routes.land, label: t("My Land"), active: active === "my-land" },
+  ];
+
+  function closeMobileMenu() {
+    setIsMobileMenuOpen(false);
+  }
+
+  // Open sidebar: Escape closes it and the page behind doesn't scroll.
+  useEffect(() => {
+    if (!isMobileMenuOpen) return;
+    function handleKey(event: KeyboardEvent) {
+      if (event.key === "Escape") setIsMobileMenuOpen(false);
+    }
+    const { overflow } = document.body.style;
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", handleKey);
+    return () => {
+      document.body.style.overflow = overflow;
+      window.removeEventListener("keydown", handleKey);
+    };
+  }, [isMobileMenuOpen]);
 
   return (
     <header
@@ -137,7 +168,7 @@ export function DashboardNavbar({ active, overlay = false }: DashboardNavbarProp
           </nav>
           <button
             type="button"
-            aria-label="Open dashboard menu"
+            aria-label={t("Open dashboard menu")}
             aria-expanded={isMobileMenuOpen}
             onClick={() => setIsMobileMenuOpen((open) => !open)}
             className={`flex ${controlHeight} w-11 flex-col items-center justify-center gap-1.5 rounded-full bg-white ${controlShadow} lg:hidden`}
@@ -255,60 +286,76 @@ export function DashboardNavbar({ active, overlay = false }: DashboardNavbarProp
           </div>
         </div>
       </div>
-      {isMobileMenuOpen ? (
-        <div className="absolute inset-x-0 top-full z-30 border-t border-[#edf0f3] bg-white px-5 pb-4 pt-3 shadow-[0_10px_24px_rgba(11,31,77,0.1)] lg:hidden">
-          <nav className="grid gap-1">
-            <Link
-              href={routes.dashboard}
-              onClick={() => setIsMobileMenuOpen(false)}
-              className={`rounded-[9px] px-3 py-3 text-[13px] ${isHomeActive ? "bg-navy text-white" : "text-navy hover:bg-[#f5f7fa]"}`}
+      {/* Phones / tablets: the menu slides in from the right as a sidebar. Kept
+          mounted so it can animate out. */}
+      <div
+        className={`fixed inset-0 z-[60] lg:hidden ${isMobileMenuOpen ? "" : "pointer-events-none"}`}
+        aria-hidden={!isMobileMenuOpen}
+        inert={!isMobileMenuOpen}
+      >
+        <button
+          type="button"
+          tabIndex={-1}
+          aria-label={t("Close")}
+          onClick={closeMobileMenu}
+          className={`absolute inset-0 cursor-default bg-[#071536]/40 transition-opacity duration-300 motion-reduce:transition-none ${isMobileMenuOpen ? "opacity-100" : "opacity-0"}`}
+        />
+        <aside
+          role="dialog"
+          aria-modal="true"
+          aria-label={t("Menu")}
+          className={`absolute inset-y-0 right-0 flex w-[min(300px,85vw)] flex-col bg-white shadow-[-12px_0_32px_rgba(11,31,77,0.16)] transition-transform duration-300 ease-out motion-reduce:transition-none ${isMobileMenuOpen ? "translate-x-0" : "translate-x-full"}`}
+        >
+          <div className="flex h-16 shrink-0 items-center justify-between border-b border-[#edf0f3] px-5">
+            <BrandLogo compact href={routes.dashboard} />
+            <button
+              type="button"
+              aria-label={t("Close")}
+              onClick={closeMobileMenu}
+              className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full bg-[#f4f7fa] text-navy"
             >
-              {t("Home")}
-            </Link>
-            <Link
-              href={routes.dashboardExplore}
-              onClick={() => setIsMobileMenuOpen(false)}
-              className={`rounded-[9px] px-3 py-3 text-[13px] ${active === "explore" ? "bg-navy text-white" : "text-navy hover:bg-[#f5f7fa]"}`}
-            >
-              {t("Explore Map")}
-            </Link>
-            <Link
-              href={routes.leaderboard}
-              onClick={() => setIsMobileMenuOpen(false)}
-              className={`rounded-[9px] px-3 py-3 text-[13px] ${active === "leaderboard" ? "bg-navy text-white" : "text-navy hover:bg-[#f5f7fa]"}`}
-            >
-              {t("Leaderboard")}
-            </Link>
-            <Link
-              href={routes.land}
-              onClick={() => setIsMobileMenuOpen(false)}
-              className={`rounded-[9px] px-3 py-3 text-[13px] ${active === "my-land" ? "bg-navy text-white" : "text-navy hover:bg-[#f5f7fa]"}`}
-            >
-              {t("My Land")}
-            </Link>
+              <svg viewBox="0 0 16 16" aria-hidden="true" className="h-3.5 w-3.5">
+                <path d="M3.5 3.5l9 9M12.5 3.5l-9 9" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+              </svg>
+            </button>
+          </div>
+          <nav className="grid gap-1 px-4 pt-4">
+            {mobileLinks.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                onClick={closeMobileMenu}
+                aria-current={link.active ? "page" : undefined}
+                className={`rounded-[10px] px-4 py-3 font-manrope text-[14px] font-medium ${link.active ? "bg-navy text-white" : "text-navy hover:bg-[#f5f7fa]"}`}
+              >
+                {link.label}
+              </Link>
+            ))}
           </nav>
-          <div className="mt-3 border-t border-[#edf0f3] pt-3" data-language-selector="true">
-            <p className="px-3 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#8b949e]">
+          <div className="mt-auto border-t border-[#edf0f3] px-4 pb-6 pt-4" data-language-selector="true">
+            <p className="px-1 font-manrope text-[10px] font-semibold uppercase tracking-[0.08em] text-[#8b949e]">
               {t("Language")}
             </p>
-            <div className="mt-2 grid grid-cols-3 gap-2">
-              {(["EN", "PL", "TH"] as const).map((option) => (
+            <div className="mt-2.5 grid gap-1.5">
+              {LANGUAGE_OPTIONS.map((option) => (
                 <button
-                  key={option}
+                  key={option.code}
                   type="button"
+                  aria-pressed={language === option.code}
                   onClick={() => {
-                    setLanguage(option);
-                    setIsMobileMenuOpen(false);
+                    setLanguage(option.code);
+                    closeMobileMenu();
                   }}
-                  className={`rounded-[9px] border px-2 py-2 text-[11px] ${language === option ? "border-navy bg-navy text-white" : "border-[#e3e8ed] text-navy"}`}
+                  className={`flex cursor-pointer items-center gap-3 rounded-[10px] border px-3 py-2.5 font-manrope text-[13px] ${language === option.code ? "border-navy bg-navy text-white" : "border-[#e3e8ed] text-navy hover:bg-[#f5f7fa]"}`}
                 >
-                  {option === "EN" ? "English" : option === "PL" ? "Polish" : "Thai"}
+                  <Image src={option.flag} alt="" width={20} height={14} className="h-3.5 w-5 rounded-[2px] object-cover" />
+                  {option.label}
                 </button>
               ))}
             </div>
           </div>
-        </div>
-      ) : null}
+        </aside>
+      </div>
     </header>
   );
 }

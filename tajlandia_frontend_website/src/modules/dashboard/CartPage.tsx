@@ -772,7 +772,7 @@ function CartItemCard({
         isRemoving && "opacity-60",
       )}
     >
-      <CartItemImage src={item.imageUrl} />
+      <CartItemImage src={item.images?.[0] ?? item.imageUrl} />
       <div className="min-w-0 flex-1">
         {tier || item.plotNumber ? (
           <div className="flex flex-wrap items-center gap-2">
@@ -942,6 +942,7 @@ function RemovePlotDialog({
 }) {
   const titleId = "remove-plot-title";
   const title = item.name ?? item.plotNumber ?? item.zone?.name ?? t("this plot");
+  const image = item.images?.[0] ?? item.imageUrl;
   const location = item.city ?? item.region?.name;
   const tier = item.zone?.tier;
 
@@ -976,11 +977,11 @@ function RemovePlotDialog({
 
       <div className="mt-5 flex items-center gap-3 rounded-[12px] border border-[#eef1f4] bg-white p-3 shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
         <Image
-          src={isAllowedRemoteImage(item.imageUrl) ? item.imageUrl : PLACEHOLDER_IMAGE}
+          src={isAllowedRemoteImage(image) ? image : PLACEHOLDER_IMAGE}
           alt=""
           width={56}
           height={56}
-          unoptimized={!isAllowedRemoteImage(item.imageUrl)}
+          unoptimized={!isAllowedRemoteImage(image)}
           className="h-12 w-12 shrink-0 rounded-[10px] bg-[#edf3f8] object-cover sm:h-14 sm:w-14"
         />
         <div className="min-w-0 flex-1">
