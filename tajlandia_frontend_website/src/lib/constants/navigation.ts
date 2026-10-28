@@ -1,4 +1,6 @@
 import { routes } from "@/lib/constants/routes";
+import type { Locale } from "@/lib/i18n/locale";
+import { chromeMessages } from "@/lib/i18n/messages";
 
 export const mainNavigation = [
   { href: routes.home, label: "Home" },
@@ -23,3 +25,13 @@ export const footerNavigation = {
     { href: routes.terms, label: "Terms of Use" },
   ],
 } as const;
+
+export function getMainNavigation(locale: Locale) {
+  const nav = chromeMessages[locale].nav;
+  return [
+    { href: routes.home, label: nav.home },
+    { href: routes.explore, label: nav.explore },
+    { href: routes.blog, label: nav.blog },
+    { href: routes.contact, label: nav.contact },
+  ] as const;
+}

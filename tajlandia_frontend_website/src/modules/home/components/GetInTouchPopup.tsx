@@ -6,6 +6,8 @@ import { createPortal } from "react-dom";
 import { CountryFlag } from "@/components/ui/CountryFlag";
 import { submitInquiryAction } from "@/lib/api/inquiries";
 import { INQUIRY_EMAIL_MAX, INQUIRY_MESSAGE_MAX, inquiryMessageError, inquiryNameError } from "@/lib/api/inquiry.schema";
+import type { Locale } from "@/lib/i18n/locale";
+import { popupStrings } from "../data/popup.strings";
 import { countryCodes, defaultCountry, findCountry, phonePlaceholder } from "@/lib/phone/countries";
 
 type Step = "intro" | "name" | "email" | "phone" | "message" | "success";
@@ -44,7 +46,8 @@ function CheckIcon({ className }: { className: string }) {
   );
 }
 
-export function GetInTouchPopup({ onClose }: { onClose: () => void }) {
+export function GetInTouchPopup({ onClose, locale = "en" }: { onClose: () => void; locale?: Locale }) {
+  const t = popupStrings[locale];
   const [step, setStep] = useState<Step>("intro");
   const [values, setValues] = useState<FormValues>(initialValues);
   const [error, setError] = useState("");
@@ -108,7 +111,7 @@ export function GetInTouchPopup({ onClose }: { onClose: () => void }) {
       email: values.email.trim(),
       phoneNumber: values.phone ? `${selectedCountry.dial}${values.phone}` : undefined,
       message: values.message.trim(),
-    }).catch(() => ({ ok: false as const, message: "Unable to send your message right now. Please try again." }));
+    }).catch(() => ({ ok: false as const, message: t.errors.sendFailed }));
     setIsSubmitting(false);
     if (result.ok) setStep("success");
     else setError(result.message);
@@ -127,14 +130,14 @@ export function GetInTouchPopup({ onClose }: { onClose: () => void }) {
     } else if (step === "email") {
       const email = values.email.trim();
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > INQUIRY_EMAIL_MAX) {
-        setError("Please enter a valid email address.");
+        setError(t.errors.email);
         return;
       }
       setStep("phone");
     } else if (step === "phone") {
       // Optional: leaving it empty skips it.
       if (values.phone && values.phone.length !== selectedCountry.digits) {
-        setError(`Enter a ${selectedCountry.digits}-digit phone number, or leave it empty.`);
+        setError(t.errors.phone(selectedCountry.digits));
         return;
       }
       setCountryOpen(false);
@@ -156,38 +159,23 @@ export function GetInTouchPopup({ onClose }: { onClose: () => void }) {
     setStep(step === "message" ? "phone" : step === "phone" ? "email" : step === "email" ? "name" : "intro");
   }
 
+  const copy = t.steps[step];
+  // The message step only breaks its title on wider screens.
+  const titleBreakClass = step === "message" ? "hidden sm:block" : undefined;
   const content = {
-    intro: {
-      eyebrow: "LET’S TALK",
-      title: <>Have a question about<br />Tajlandia?</>,
-      description: "Whether you’re exploring a location, looking for a plot, or simply curious, we’d love to hear from you.",
-    },
-    name: {
-      eyebrow: "NICE TO MEET YOU",
-      title: <>What’s your name?</>,
-      description: "Please introduce yourself so we know who we’re speaking with.",
-    },
-    email: {
-      eyebrow: "STAY IN TOUCH",
-      title: <>Where can we reach you?</>,
-      description: "We’ll use this only to respond to your enquiry.",
-    },
-    phone: {
-      eyebrow: "ONE MORE WAY TO REACH YOU",
-      title: <>What’s your contact number?</>,
-      description: "Useful for time sensitive updates or Whatsapp inquiry.",
-    },
-    message: {
-      eyebrow: "HOW WE CAN HELP",
-      title: <>Tell us little about what you’re<br className="hidden sm:block" /> looking for.</>,
-      description: "Specify preferred province, zone, or general questions.",
-    },
-    success: {
-      eyebrow: "MESSAGE SENT",
-      title: <>Thanks for reaching out.</>,
-      description: "We’ve received your message and our team will get back to you within 24 hours.",
-    },
-  }[step];
+    eyebrow: copy.eyebrow,
+    title: (
+      <>
+        {copy.title[0]}
+        {copy.title[1] ? (
+          <>
+            <br className={titleBreakClass} /> {copy.title[1]}
+          </>
+        ) : null}
+      </>
+    ),
+    description: copy.description,
+  };
 
   // Rendered on <body>, so no page section (with its own stacking) can sit above it.
   return createPortal(
@@ -204,11 +192,11 @@ export function GetInTouchPopup({ onClose }: { onClose: () => void }) {
         <div className="hidden bg-[#f5f6f8] p-3 sm:block">
           <div className="relative h-full min-h-[406px] overflow-hidden rounded-[14px]">
             {!imageLoaded ? <span aria-hidden="true" className="absolute inset-0 animate-pulse bg-[#e6eaf0] motion-reduce:animate-none" /> : null}
-            <Image src="/images/home/get-in-touch.jpg" alt="Temple spires in Thailand" fill sizes="310px" onLoad={() => setImageLoaded(true)} className={`object-cover transition-opacity duration-500 ${imageLoaded ? "opacity-100" : "opacity-0"}`} />
+            <Image src="/images/home/get-in-touch.jpg" alt={t.imageAlt} fill sizes="310px" onLoad={() => setImageLoaded(true)} className={`object-cover transition-opacity duration-500 ${imageLoaded ? "opacity-100" : "opacity-0"}`} />
           </div>
         </div>
         <div className="flex min-h-[430px] flex-col px-7 py-8 sm:px-8 sm:py-10">
-          <button type="button" onClick={onClose} aria-label="Close Get In Touch popup" className="absolute right-4 top-4 flex h-7 w-7 cursor-pointer items-center justify-center rounded-full bg-white text-[#9aa1ab] shadow-[0_2px_8px_rgba(11,31,77,0.12)] transition hover:text-navy"><CloseIcon /></button>
+          <button type="button" onClick={onClose} aria-label={t.close} className="absolute right-4 top-4 flex h-7 w-7 cursor-pointer items-center justify-center rounded-full bg-white text-[#9aa1ab] shadow-[0_2px_8px_rgba(11,31,77,0.12)] transition hover:text-navy"><CloseIcon /></button>
           {step !== "success" ? (
             <div className="pr-6">
               <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-[#b8bdc4]">{content.eyebrow}</p>
@@ -221,15 +209,15 @@ export function GetInTouchPopup({ onClose }: { onClose: () => void }) {
             <form onSubmit={continueStep} className="mt-6 flex flex-1 flex-col" noValidate>
               {step === "name" ? (
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <label className={labelClass}>First Name<input value={values.firstName} onChange={(event) => update("firstName", event.target.value)} placeholder="Enter your first name" className={inputClass} /></label>
-                  <label className={labelClass}>Last Name<input value={values.lastName} onChange={(event) => update("lastName", event.target.value)} placeholder="Enter your last name" className={inputClass} /></label>
+                  <label className={labelClass}>{t.firstName}<input value={values.firstName} onChange={(event) => update("firstName", event.target.value)} placeholder={t.firstNamePlaceholder} className={inputClass} /></label>
+                  <label className={labelClass}>{t.lastName}<input value={values.lastName} onChange={(event) => update("lastName", event.target.value)} placeholder={t.lastNamePlaceholder} className={inputClass} /></label>
                 </div>
               ) : step === "email" ? (
-                <label className={labelClass}>Email Id<input type="email" value={values.email} onChange={(event) => update("email", event.target.value)} placeholder="Enter your email id" className={inputClass} /></label>
+                <label className={labelClass}>{t.email}<input type="email" value={values.email} onChange={(event) => update("email", event.target.value)} placeholder={t.emailPlaceholder} className={inputClass} /></label>
               ) : step === "phone" ? (
                 <div>
                   <label htmlFor="get-in-touch-phone" className={labelClass}>
-                    Phone Number <span className="font-normal text-[#9aa1ab]">(optional)</span>
+                    {t.phone} <span className="font-normal text-[#9aa1ab]">{t.optional}</span>
                   </label>
                   {/* Same country picker as the contact page. */}
                   <div className={`relative mt-2 flex h-11 items-center rounded-[10px] border border-[#e5e7eb] bg-white focus-within:border-navy focus-within:ring-2 focus-within:ring-navy/10 ${countryOpen ? "z-30" : ""}`}>
@@ -249,7 +237,7 @@ export function GetInTouchPopup({ onClose }: { onClose: () => void }) {
                         </svg>
                       </button>
                       {countryOpen ? (
-                        <ul role="listbox" aria-label="Country code" className="absolute left-0 top-[calc(100%+6px)] z-30 max-h-44 w-[8.5rem] overflow-auto rounded-[10px] border border-[#e5e7eb] bg-white py-1 shadow-[0_12px_30px_rgba(11,31,77,0.12)]">
+                        <ul role="listbox" aria-label={t.countryCode} className="absolute left-0 top-[calc(100%+6px)] z-30 max-h-44 w-[8.5rem] overflow-auto rounded-[10px] border border-[#e5e7eb] bg-white py-1 shadow-[0_12px_30px_rgba(11,31,77,0.12)]">
                           {countryCodes.map((country) => (
                             <li key={country.id} role="presentation">
                               <button
@@ -282,13 +270,13 @@ export function GetInTouchPopup({ onClose }: { onClose: () => void }) {
                   </div>
                 </div>
               ) : (
-                <label className={labelClass}>Write your message<textarea value={values.message} onChange={(event) => update("message", event.target.value)} placeholder="Enter your message..." rows={4} maxLength={INQUIRY_MESSAGE_MAX} className={`${inputClass} h-auto resize-none py-3`} /></label>
+                <label className={labelClass}>{t.message}<textarea value={values.message} onChange={(event) => update("message", event.target.value)} placeholder={t.messagePlaceholder} rows={4} maxLength={INQUIRY_MESSAGE_MAX} className={`${inputClass} h-auto resize-none py-3`} /></label>
               )}
               {error ? <p role="alert" className="mt-2 text-[11px] text-[#d52b35]">{error}</p> : null}
               <div className="mt-auto flex items-center justify-between border-t border-[#eceef1] pt-4">
-                <button type="button" onClick={back} disabled={isSubmitting} className={secondaryButtonClass}>← Back</button>
+                <button type="button" onClick={back} disabled={isSubmitting} className={secondaryButtonClass}>{t.back}</button>
                 <button type="submit" disabled={isSubmitting} aria-busy={isSubmitting} className={primaryButtonClass}>
-                  {isSubmitting ? "Sending..." : step === "message" ? "Send Message" : "Continue"}
+                  {isSubmitting ? t.sending : step === "message" ? t.send : t.continue}
                   {isSubmitting ? null : <ArrowIcon />}
                 </button>
               </div>
@@ -297,9 +285,9 @@ export function GetInTouchPopup({ onClose }: { onClose: () => void }) {
 
           {step === "intro" ? (
             <div className="mt-auto flex items-center justify-between border-t border-[#eceef1] pt-4">
-              <button type="button" onClick={onClose} className={secondaryButtonClass}>Maybe later</button>
+              <button type="button" onClick={onClose} className={secondaryButtonClass}>{t.maybeLater}</button>
               <button type="button" onClick={() => setStep("name")} className={primaryButtonClass}>
-                Continue
+                {t.continue}
                 <ArrowIcon />
               </button>
             </div>
@@ -317,11 +305,11 @@ export function GetInTouchPopup({ onClose }: { onClose: () => void }) {
                 <span className="flex h-3.5 w-3.5 items-center justify-center rounded-full bg-[#22c55e] text-white">
                   <CheckIcon className="h-2.5 w-2.5" />
                 </span>
-                Your enquiry has been submitted successfully.
+                {t.submitted}
               </p>
               <div className="mt-auto flex w-full justify-end border-t border-[#eceef1] pt-4">
                 <button type="button" onClick={onClose} className={primaryButtonClass}>
-                  Continue Exploring
+                  {t.continueExploring}
                   <ArrowIcon />
                 </button>
               </div>

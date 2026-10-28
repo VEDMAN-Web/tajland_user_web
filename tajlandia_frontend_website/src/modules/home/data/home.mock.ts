@@ -115,7 +115,7 @@ export const homePageContent: HomePageContent = {
   },
   world: {
     alt: "Earth from space with a glowing blue atmosphere",
-    playerUrl: "tajlandia.com",
+    playerUrl: "tajlandia.pl",
     image: {
       src: "/images/home/earth.jpg",
       alt: "Earth from space with a glowing blue atmosphere",

@@ -15,8 +15,11 @@ const MapboxMap = dynamic(
   { ssr: false },
 );
 import type { HomePageContent } from "../types/home.types";
+import type { Locale } from "@/lib/i18n/locale";
+import { homeStrings } from "../data/home.strings";
 
 type ThailandMapProps = {
+  locale?: Locale;
   pins: HomePageContent["map"]["pins"];
   /** Region pills; a click opens that region on the Explore Map (after login). */
   regions: MapRegion[];
@@ -33,14 +36,20 @@ const START_AT_VISIBLE = 0.4;
 // Mount the map about a screen ahead, so it is usually ready before it shows.
 const MOUNT_MARGIN = "100% 0px";
 
-const legend = [
-  { label: "Claimed", color: "bg-[#e51d2a]" },
-  { label: "Available", color: "bg-[#0b1f4d]" },
-  { label: "Restricted", color: "bg-[#a9a9a9]" },
-];
+const legendColors = {
+  claimed: "bg-[#e51d2a]",
+  available: "bg-[#0b1f4d]",
+  restricted: "bg-[#a9a9a9]",
+} as const;
 
-export function ThailandMap({ pins, regions }: ThailandMapProps) {
+export function ThailandMap({ pins, regions, locale = "en" }: ThailandMapProps) {
   void pins;
+  const strings = homeStrings[locale];
+  const legend = [
+    { label: strings.legend.claimed, color: legendColors.claimed },
+    { label: strings.legend.available, color: legendColors.available },
+    { label: strings.legend.restricted, color: legendColors.restricted },
+  ];
   const router = useRouter();
   const { isAuthenticated } = useAuth();
   const frameRef = useRef<HTMLDivElement>(null);
@@ -153,7 +162,7 @@ export function ThailandMap({ pins, regions }: ThailandMapProps) {
           onRegionClick={handleRegionClick}
         />
       ) : (
-        <div className="h-full w-full" aria-label="Interactive Thailand map" />
+        <div className="h-full w-full" aria-label={strings.mapAria} />
       )}
       <div
         className={cn(

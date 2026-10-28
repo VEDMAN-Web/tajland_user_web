@@ -8,14 +8,16 @@ type BrandLogoProps = {
   className?: string;
   compact?: boolean;
   href?: string;
+  /** Accessible name of the home link; defaults to "<brand> home". */
+  label?: string;
 };
 
-export function BrandLogo({ className, compact = false, href = routes.home }: BrandLogoProps) {
+export function BrandLogo({ className, compact = false, href = routes.home, label }: BrandLogoProps) {
   return (
     <Link
       href={href}
       className={cn("inline-flex shrink-0 items-center", className)}
-      aria-label={`${brand.name} home`}
+      aria-label={label ?? `${brand.name} home`}
     >
       <Image
         src={brand.logo.src}

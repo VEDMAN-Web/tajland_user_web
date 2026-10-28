@@ -754,6 +754,17 @@ nextjs-portal {
     background-color: #ffffff;
     color: var(--navy);
   }
+
+  /* EN | PL switch: white over the film, like the account buttons. */
+  html:not([data-hero-film="done"]) body:has(.hero-film) .site-header-lang * {
+    color: rgba(255, 255, 255, 0.72);
+    transition: color 0.3s ease;
+  }
+
+  html:not([data-hero-film="done"]) body:has(.hero-film) .site-header-lang [aria-current],
+  html:not([data-hero-film="done"]) body:has(.hero-film) .site-header-lang a:hover {
+    color: #ffffff;
+  }
 }
 
 /* Reduced motion: keep the header's fade, drop the 3D flips. */

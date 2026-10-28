@@ -1,14 +1,16 @@
 import type { Metadata } from "next";
 import { BlogPage, fetchBlogPage, type BlogListPage } from "@/modules/blog";
-import { createPageMetadata } from "@/lib/seo/metadata";
+import { getPageMetadata } from "@/lib/seo/metadata";
 import { routes } from "@/lib/constants/routes";
 
-export const metadata: Metadata = createPageMetadata({
-  title: "Blog",
-  description: "Stories and destination guides will live here.",
-  path: routes.blog,
-  index: false,
-});
+export async function generateMetadata(): Promise<Metadata> {
+  return getPageMetadata({
+    title: "Blog",
+    description:
+      "Destination guides, travel stories and updates from Tajlandia, the interactive map of Thailand where you can collect symbolic plots.",
+    path: routes.blog,
+  });
+}
 
 export default async function Page() {
   let initialPage: BlogListPage | null = null;

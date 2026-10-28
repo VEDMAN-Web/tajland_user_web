@@ -4,15 +4,18 @@ import { useEffect, useId, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { createPortal } from "react-dom";
-import { mainNavigation } from "@/lib/constants/navigation";
+import { getMainNavigation } from "@/lib/constants/navigation";
+import { localizeHref, splitLocalePath, type Locale } from "@/lib/i18n/locale";
+import { chromeMessages } from "@/lib/i18n/messages";
 import { routes } from "@/lib/constants/routes";
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/utils/cn";
 
-export function MobileNav() {
+export function MobileNav({ locale = "en" }: { locale?: Locale }) {
+  const messages = chromeMessages[locale];
   const [open, setOpen] = useState(false);
   const menuId = useId();
-  const pathname = usePathname();
+  const pathname = splitLocalePath(usePathname() ?? "/").path;
 
   useEffect(() => {
     if (!open) {
@@ -43,7 +46,7 @@ export function MobileNav() {
         aria-controls={menuId}
         onClick={() => setOpen((value) => !value)}
       >
-        <span className="sr-only">{open ? "Close menu" : "Open menu"}</span>
+        <span className="sr-only">{open ? messages.closeMenu : messages.openMenu}</span>
         {open ? (
           <span aria-hidden="true" className="text-xl leading-none">×</span>
         ) : (
@@ -60,17 +63,17 @@ export function MobileNav() {
           id={menuId}
           role="dialog"
           aria-modal="true"
-          aria-label="Main menu"
+          aria-label={messages.mainMenuLabel}
           className="fixed inset-x-0 bottom-0 top-[4.5rem] z-[110] overflow-y-auto bg-white px-6 py-8 sm:top-20"
         >
           <nav className="flex flex-col gap-2">
-            {mainNavigation.map((item) => {
+            {getMainNavigation(locale).map((item) => {
               const isActive = pathname === item.href.split("?")[0];
 
               return (
                 <Link
                   key={item.href}
-                  href={item.href}
+                  href={localizeHref(locale, item.href)}
                   aria-current={isActive ? "page" : undefined}
                   className={cn(
                     "group relative inline-block rounded-full px-5 py-4 pb-[18px] text-xl transition-colors duration-200",
@@ -102,10 +105,10 @@ export function MobileNav() {
               className="w-full"
               onClick={() => setOpen(false)}
             >
-              Sign Up
+              {messages.signUp}
             </Button>
             <Button href={routes.login} className="w-full" onClick={() => setOpen(false)}>
-              Login
+              {messages.login}
             </Button>
           </div>
         </div>,

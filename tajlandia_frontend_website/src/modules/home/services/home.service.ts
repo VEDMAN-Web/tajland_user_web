@@ -1,6 +1,8 @@
 import "server-only";
 
+import type { Locale } from "@/lib/i18n/locale";
 import { homePageContent } from "../data/home.mock";
+import { homePageContentPl } from "../data/home.pl";
 import { homePageContentSchema } from "../schemas/home-content.schema";
 import type { HomePageContent } from "../types/home.types";
 
@@ -36,8 +38,10 @@ export function toHomePageViewModel(content: HomePageContent): HomePageContent {
   };
 }
 
-export async function getHomePageContent(): Promise<HomePageContent> {
+export async function getHomePageContent(locale: Locale = "en"): Promise<HomePageContent> {
   // Today this reads validated mock data. When the admin API exists, replace
   // `homePageContent` with `apiGet("/home", homePageContentSchema)` only.
-  return toHomePageViewModel(parseHomePageContent(homePageContent));
+  return toHomePageViewModel(
+    parseHomePageContent(locale === "pl" ? homePageContentPl : homePageContent),
+  );
 }

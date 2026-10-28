@@ -3,7 +3,10 @@
 import Link from "next/link";
 import { BrandLogo } from "@/components/ui/BrandLogo";
 import { Container } from "@/components/ui/Container";
+import { addressLines, contactDetails } from "@/lib/constants/contact";
 import { routes } from "@/lib/constants/routes";
+import { localizeHref, type Locale } from "@/lib/i18n/locale";
+import { chromeMessages } from "@/lib/i18n/messages";
 import { useInViewReplay } from "@/lib/hooks/useInViewReplay";
 
 function generateStarField(
@@ -77,8 +80,12 @@ function FooterText({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function SiteFooter() {
+export function SiteFooter({ locale = "en" }: { locale?: Locale }) {
   const { ref, inView } = useInViewReplay<HTMLElement>(0.2);
+  const t = chromeMessages[locale].footer;
+  const href = (path: string) => localizeHref(locale, path);
+  const addressRows = addressLines(contactDetails.address);
+  let contactSlot = 3;
 
   return (
     <footer
@@ -153,83 +160,97 @@ export function SiteFooter() {
         {/* `flip(n)` staggers a diagonal wave: left to right, then top to bottom. */}
         <div className="max-w-[28rem] text-left">
           <div className="site-footer-flip w-fit" style={flip(0)}>
-            <BrandLogo />
+            <BrandLogo href={href(routes.home)} label={chromeMessages[locale].homeLinkLabel} />
           </div>
           <p
             className="site-footer-flip mt-5 text-left text-[15px] font-normal leading-[1.55] text-[#636363]"
             style={flip(1)}
           >
-            <span className="block">A symbolic map of Thailand. Choose a fragment, claim</span>
-            <span className="block">your certificate, make it part of your story.</span>
+            <span className="block">{t.tagline[0]}</span>
+            <span className="block">{t.tagline[1]}</span>
           </p>
         </div>
 
         <div>
           <p className="site-footer-flip mb-6 text-[17px] font-semibold text-navy" style={flip(1)}>
-            Company
+            {t.companyHeading}
           </p>
           <ul className="space-y-3 text-left text-[15px] text-[#636363]">
             <li className="site-footer-flip" style={flip(2)}>
-              <FooterLink href="/#how-it-works">Journal</FooterLink>
+              <FooterLink href={href("/#how-it-works")}>{t.journal}</FooterLink>
             </li>
             <li className="site-footer-flip" style={flip(3)}>
-              <FooterLink href="/#map">Map</FooterLink>
+              <FooterLink href={href("/#map")}>{t.map}</FooterLink>
             </li>
             <li className="site-footer-flip" style={flip(4)}>
-              <FooterLink href="/#certificate">Certificate</FooterLink>
+              <FooterLink href={href("/#certificate")}>{t.certificate}</FooterLink>
             </li>
             <li className="site-footer-flip" style={flip(5)}>
-              <FooterLink href="/faq">FAQ</FooterLink>
+              <FooterLink href={href("/faq")}>{t.faq}</FooterLink>
             </li>
             <li className="site-footer-flip" style={flip(6)}>
-              <FooterLink href="/contact">Contact</FooterLink>
+              <FooterLink href={href("/contact")}>{t.contact}</FooterLink>
             </li>
           </ul>
         </div>
 
         <div>
           <p className="site-footer-flip mb-6 text-[17px] font-semibold text-navy" style={flip(2)}>
-            Legal
+            {t.legalHeading}
           </p>
           <ul className="space-y-3 text-left text-[15px] text-[#636363]">
             <li className="site-footer-flip" style={flip(3)}>
-              <FooterLink href={routes.privacy}>Privacy Policy</FooterLink>
+              <FooterLink href={href(routes.privacy)}>{t.privacy}</FooterLink>
             </li>
             <li className="site-footer-flip" style={flip(4)}>
-              <FooterLink href={routes.terms}>Terms and Conditions</FooterLink>
+              <FooterLink href={href(routes.terms)}>{t.terms}</FooterLink>
             </li>
             <li className="site-footer-flip" style={flip(5)}>
-              <FooterText>Risk Disclosure</FooterText>
+              <FooterText>{t.riskDisclosure}</FooterText>
             </li>
             <li className="site-footer-flip" style={flip(6)}>
-              <FooterText>Cookie Policy</FooterText>
+              <FooterText>{t.cookiePolicy}</FooterText>
             </li>
           </ul>
         </div>
 
-        <div>
-          <p className="site-footer-flip mb-6 text-[17px] font-semibold text-navy" style={flip(3)}>
-            Contact us
-          </p>
-          <ul className="space-y-4 text-left text-[15px] text-[#636363]">
-            <li className="site-footer-flip flex items-start gap-3" style={flip(4)}>
-              <MailIcon />
-              <span>contact@company.com</span>
-            </li>
-            <li className="site-footer-flip flex items-start gap-3" style={flip(5)}>
-              <PhoneIcon />
-              <span>(414) 687 - 5892</span>
-            </li>
-            <li className="site-footer-flip flex items-start gap-3" style={flip(6)}>
-              <LocationIcon />
-              <span>
-                794 Mcallister St
-                <br />
-                San Francisco, 94102
-              </span>
-            </li>
-          </ul>
-        </div>
+        {contactDetails.email || contactDetails.phone || addressRows.length > 0 ? (
+          <div>
+            <p className="site-footer-flip mb-6 text-[17px] font-semibold text-navy" style={flip(3)}>
+              {t.contactHeading}
+            </p>
+            <ul className="space-y-4 text-left text-[15px] text-[#636363]">
+              {contactDetails.email ? (
+                <li className="site-footer-flip flex items-start gap-3" style={flip(contactSlot++)}>
+                  <MailIcon />
+                  <a href={`mailto:${contactDetails.email}`} className="hover:text-navy">
+                    {contactDetails.email}
+                  </a>
+                </li>
+              ) : null}
+              {contactDetails.phone ? (
+                <li className="site-footer-flip flex items-start gap-3" style={flip(contactSlot++)}>
+                  <PhoneIcon />
+                  <a href={`tel:${contactDetails.phone.replace(/[^+\d]/g, "")}`} className="hover:text-navy">
+                    {contactDetails.phone}
+                  </a>
+                </li>
+              ) : null}
+              {addressRows.length > 0 ? (
+                <li className="site-footer-flip flex items-start gap-3" style={flip(contactSlot++)}>
+                  <LocationIcon />
+                  <span>
+                    {addressRows.map((line) => (
+                      <span key={line} className="block">
+                        {line}
+                      </span>
+                    ))}
+                  </span>
+                </li>
+              ) : null}
+            </ul>
+          </div>
+        ) : null}
       </Container>
     </footer>
   );

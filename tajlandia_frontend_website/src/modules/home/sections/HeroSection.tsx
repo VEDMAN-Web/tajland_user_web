@@ -1,5 +1,7 @@
 import { HomeMedia } from "../components/HomeMedia";
 import { Button } from "@/components/ui/Button";
+import type { Locale } from "@/lib/i18n/locale";
+import { homeStrings } from "../data/home.strings";
 import { GetInTouchLauncher } from "../components/GetInTouchLauncher";
 import { HeroFilm } from "../components/HeroFilm";
 import { HeroFilmIntro } from "../components/HeroFilmIntro";
@@ -9,6 +11,7 @@ import type { HomePageContent } from "../types/home.types";
 
 type HeroSectionProps = {
   content: HomePageContent["hero"];
+  locale?: Locale;
 };
 
 function heroHeading(content: HomePageContent["hero"]) {
@@ -20,12 +23,13 @@ function heroHeading(content: HomePageContent["hero"]) {
 }
 
 type HeroFilmSectionProps = {
+  locale: Locale;
   content: HomePageContent["hero"];
   film: NonNullable<HomePageContent["hero"]["film"]>;
   heading: string;
 };
 
-function HeroFilmSection({ content, film, heading }: HeroFilmSectionProps) {
+function HeroFilmSection({ content, film, heading, locale }: HeroFilmSectionProps) {
   const story = content.story ?? [];
 
   return (
@@ -89,7 +93,7 @@ function HeroFilmSection({ content, film, heading }: HeroFilmSectionProps) {
           aria-hidden="true"
           className="pointer-events-none absolute bottom-8 left-1/2 z-20 flex -translate-x-1/2 flex-col items-center gap-3 font-[family-name:var(--font-manrope)] text-[11px] font-semibold uppercase tracking-[0.4em] text-white/80 max-md:hidden [@media(max-height:500px)]:hidden"
         >
-          Scroll
+          {homeStrings[locale].scrollHint}
           <span className="hero-film-cue relative h-12 w-px overflow-hidden bg-white/25" />
         </div>
 
@@ -98,17 +102,17 @@ function HeroFilmSection({ content, film, heading }: HeroFilmSectionProps) {
           className="hero-film-progress pointer-events-none absolute inset-x-0 bottom-0 z-20 h-[3px] origin-left bg-brand-red"
         />
 
-        <GetInTouchLauncher />
+        <GetInTouchLauncher locale={locale} />
       </HeroFilm>
     </section>
   );
 }
 
-export function HeroSection({ content }: HeroSectionProps) {
+export function HeroSection({ content, locale = "en" }: HeroSectionProps) {
   const heading = heroHeading(content);
 
   if (content.film) {
-    return <HeroFilmSection content={content} film={content.film} heading={heading} />;
+    return <HeroFilmSection content={content} film={content.film} heading={heading} locale={locale} />;
   }
 
   return (
@@ -151,7 +155,7 @@ export function HeroSection({ content }: HeroSectionProps) {
           ) : null}
         </ScrollAnimatedElement>
       </div>
-      <GetInTouchLauncher />
+      <GetInTouchLauncher locale={locale} />
     </section>
   );
 }

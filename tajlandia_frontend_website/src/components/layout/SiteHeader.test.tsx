@@ -27,4 +27,20 @@ describe("SiteHeader", () => {
     );
     expect(screen.getByRole("link", { name: "Login" })).toHaveAttribute("href", "/login");
   });
+
+  it("renders Polish labels and prefixed links on /pl", () => {
+    render(<SiteHeader locale="pl" />);
+
+    expect(screen.getByRole("link", { name: "Mapa" })).toHaveAttribute("href", "/pl/explore");
+    expect(screen.getByRole("link", { name: "Kontakt" })).toHaveAttribute("href", "/pl/contact");
+    // Auth pages have no Polish version yet, so these stay unprefixed.
+    expect(screen.getByRole("link", { name: "Zaloguj się" })).toHaveAttribute("href", "/login");
+    expect(screen.getByRole("link", { name: "EN" })).toHaveAttribute("href", "/");
+  });
+
+  it("links to the Polish version from the English header", () => {
+    render(<SiteHeader />);
+
+    expect(screen.getByRole("link", { name: "PL" })).toHaveAttribute("href", "/pl");
+  });
 });
