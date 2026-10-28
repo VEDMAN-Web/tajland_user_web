@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import React, { useState } from "react";
+import { GoogleLogin, GoogleOAuthProvider, type CredentialResponse } from "@react-oauth/google";
 import Link from "next/link";
 import { routes } from "@/lib/constants/routes";
 import { toSafeInternalRedirect } from "@/lib/security/redirects";
@@ -10,10 +11,13 @@ import { ScrollAnimatedElement } from "@/components/animations/ScrollAnimatedEle
 import { setAuthToken, setAuthUser } from "@/lib/api/auth.utils";
 import { getRememberedLogin, saveRememberedLogin } from "@/lib/api/remember-me.utils";
 import { loginSchema, type LoginFormValues } from "./schemas/login.schema";
-import { loginAction } from "./services/login.service";
+import { googleLoginAction, loginAction } from "./services/login.service";
 import { BackLink } from "@/components/ui/BackLink";
 
 type LoginErrors = Partial<Record<keyof LoginFormValues, string>>;
+
+// Public OAuth client ID; the client secret lives only on the backend.
+const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
 
 function EyeIcon({ hidden }: { hidden: boolean }) {
   return hidden ? (
@@ -71,6 +75,17 @@ export function LoginPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   // Skeleton until the (large) side photo has loaded.
   const [imageLoaded, setImageLoaded] = useState(false);
+  // Google renders its own button at a fixed pixel width, so match the grid cell.
+  const googleButtonRef = React.useRef<HTMLDivElement>(null);
+  const [googleButtonWidth, setGoogleButtonWidth] = useState<number>();
+
+  React.useEffect(() => {
+    const element = googleButtonRef.current;
+    if (!element) return;
+    const observer = new ResizeObserver(() => setGoogleButtonWidth(Math.min(400, Math.round(element.offsetWidth))));
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
 
   React.useEffect(() => {
     const rememberedLogin = getRememberedLogin();
@@ -127,6 +142,43 @@ export function LoginPage() {
       }
     } catch {
       setApiError("Unable to log in right now. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  async function handleGoogleSuccess({ credential }: CredentialResponse) {
+    if (isSubmitting) return;
+
+    if (!credential) {
+      setApiError("Google sign-in failed. Please try again.");
+      return;
+    }
+
+    setErrors({});
+    setApiError("");
+    setIsSubmitting(true);
+
+    try {
+      const actionResult = await googleLoginAction(credential);
+
+      if (actionResult.ok) {
+        // Google Sign-In has no "remember me" checkbox of its own, so always persist
+        // the session the way the page's checkbox does when checked (localStorage).
+        // Without this, the session landed in sessionStorage and was invisible to new tabs.
+        if (actionResult.token) {
+          setAuthToken(actionResult.token, true);
+        }
+        if (actionResult.user) {
+          setAuthUser(actionResult.user, true);
+        }
+        const nextPath = toSafeInternalRedirect(new URLSearchParams(window.location.search).get("next"));
+        router.push(nextPath ?? routes.dashboard);
+      } else {
+        setApiError(actionResult.message);
+      }
+    } catch {
+      setApiError("Unable to sign in with Google right now. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
@@ -251,9 +303,40 @@ export function LoginPage() {
               <button type="button" className="flex h-11 cursor-pointer items-center justify-center gap-2 rounded-[12px] bg-[#f4f5f7] text-[13px] text-[#1c1c1c] transition hover:bg-[#eceef1] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy">
                 <AppleIcon /> Continue with Apple
               </button>
-              <button type="button" className="flex h-11 cursor-pointer items-center justify-center gap-2 rounded-[12px] bg-[#f4f5f7] text-[13px] text-[#1c1c1c] transition hover:bg-[#eceef1] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy">
-                <GoogleIcon /> Continue with Google
-              </button>
+              {GOOGLE_CLIENT_ID ? (
+                // Google's rendered button can't be restyled, so it is kept mounted and
+                // genuinely clickable but invisible, layered over a button styled to match
+                // the Apple button exactly. The click still goes through Google's real flow.
+                <div
+                  ref={googleButtonRef}
+                  className={`group relative h-11 overflow-hidden rounded-[12px] ${isSubmitting ? "pointer-events-none opacity-60" : ""}`}
+                >
+                  <div
+                    aria-hidden="true"
+                    className="pointer-events-none flex h-11 items-center justify-center gap-2 rounded-[12px] bg-[#f4f5f7] text-[13px] text-[#1c1c1c] transition group-hover:bg-[#eceef1] group-focus-within:outline-2 group-focus-within:outline-offset-2 group-focus-within:outline-navy"
+                  >
+                    <GoogleIcon /> Continue with Google
+                  </div>
+                  {googleButtonWidth ? (
+                    <div className="absolute inset-0 flex items-center justify-center opacity-0" aria-busy={isSubmitting}>
+                      <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
+                        <GoogleLogin
+                          onSuccess={handleGoogleSuccess}
+                          onError={() => setApiError("Google sign-in failed. Please try again.")}
+                          text="continue_with"
+                          shape="rectangular"
+                          size="large"
+                          width={googleButtonWidth}
+                        />
+                      </GoogleOAuthProvider>
+                    </div>
+                  ) : null}
+                </div>
+              ) : (
+                <button type="button" className="flex h-11 cursor-pointer items-center justify-center gap-2 rounded-[12px] bg-[#f4f5f7] text-[13px] text-[#1c1c1c] transition hover:bg-[#eceef1] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy">
+                  <GoogleIcon /> Continue with Google
+                </button>
+              )}
             </div>
 
             <p className="mt-7 text-center text-[14px] text-[#1c1c1c]">

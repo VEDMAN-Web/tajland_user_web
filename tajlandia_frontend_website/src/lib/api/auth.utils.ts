@@ -1,6 +1,11 @@
 const TOKEN_KEY = "tajlandia_auth_token";
 const USER_KEY = "tajlandia_user";
 
+// Exported so other modules (e.g. useAuth's cross-tab storage listener) can react to
+// these keys without duplicating the literal strings.
+export const AUTH_TOKEN_KEY = TOKEN_KEY;
+export const AUTH_USER_KEY = USER_KEY;
+
 export function getStoredToken(): string | null {
   try {
     return localStorage.getItem(TOKEN_KEY) ?? sessionStorage.getItem(TOKEN_KEY);
