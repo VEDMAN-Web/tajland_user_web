@@ -49,3 +49,44 @@ export async function loginAction(values: LoginFormValues): Promise<LoginActionR
     return { ok: false, message: "Unable to log in right now. Please try again." };
   }
 }
+
+export async function googleLoginAction(credential: string): Promise<LoginActionResult> {
+  if (typeof credential !== "string" || !credential || credential.length > 4096) {
+    return { ok: false, message: "Google sign-in failed. Please try again." };
+  }
+
+  try {
+    // The backend verifies the Google ID token and issues our own JWTs (same response as /auth/login)
+    const response = await apiPost("/auth/google", { credential }, loginResponseSchema);
+
+    if (!response.success) {
+      return { ok: false, message: response.message || "Google sign-in failed. Please try again." };
+    }
+
+    return {
+      ok: true,
+      token: response.data?.accessToken,
+      user: response.data?.user,
+    };
+  } catch (error) {
+    if (isApiError(error)) {
+      if (error.status === 409) {
+        return {
+          ok: false,
+          message: "An account with this email already exists. Please log in with your email and password.",
+        };
+      }
+
+      // 401 covers expired tokens, unverified Google emails and inactive accounts; the message is already sanitized
+      if (error.status === 401 && error.message !== "The request failed") {
+        return { ok: false, message: error.message };
+      }
+
+      if (error.status === 400 || error.status === 401) {
+        return { ok: false, message: "Google sign-in failed or expired. Please try again." };
+      }
+    }
+
+    return { ok: false, message: "Unable to sign in with Google right now. Please try again." };
+  }
+}

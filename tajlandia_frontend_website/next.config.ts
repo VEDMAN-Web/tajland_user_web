@@ -33,6 +33,11 @@ const nextConfig: NextConfig = {
         source: "/:path*",
         headers: getStaticSecurityHeaders(process.env.NODE_ENV === "production"),
       },
+      {
+        // Sign in with Google opens a popup that must message back to this page.
+        source: "/login",
+        headers: [{ key: "Cross-Origin-Opener-Policy", value: "same-origin-allow-popups" }],
+      },
     ];
   },
 };
