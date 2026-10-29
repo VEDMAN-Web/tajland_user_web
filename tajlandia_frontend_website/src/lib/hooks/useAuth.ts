@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { getStoredToken, getStoredUser } from '@/lib/api/auth.utils';
+import { useCallback, useEffect, useState } from 'react';
+import { AUTH_TOKEN_KEY, AUTH_USER_KEY, getStoredToken, getStoredUser } from '@/lib/api/auth.utils';
 
 export interface AuthUser {
   id?: string;
@@ -31,7 +31,7 @@ export function useAuth(): AuthState {
     isLoading: true,
   });
 
-  useEffect(() => {
+  const readAuthState = useCallback(() => {
     // Check if user is authenticated by checking for stored token
     const token = getStoredToken();
     const user = getStoredUser() as AuthUser | null;
@@ -52,6 +52,21 @@ export function useAuth(): AuthState {
       });
     }
   }, []);
+
+  useEffect(() => {
+    readAuthState();
+
+    // `storage` fires only in *other* same-origin tabs, so a login or logout there
+    // (e.g. from AccountMenu's clearAuth()) is reflected here without a manual refresh.
+    function handleStorage(event: StorageEvent) {
+      if (event.key === AUTH_TOKEN_KEY || event.key === AUTH_USER_KEY || event.key === null) {
+        readAuthState();
+      }
+    }
+
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
+  }, [readAuthState]);
 
   return authState;
 }

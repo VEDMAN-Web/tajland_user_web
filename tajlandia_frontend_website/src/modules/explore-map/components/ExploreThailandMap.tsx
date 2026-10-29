@@ -80,7 +80,7 @@ export function ExploreThailandMap({ mapRef, regions, onRegionClick }: ExploreTh
   return (
     <div
       ref={frameRef}
-      className="aspect-[1217/580] w-full overflow-hidden rounded-[1.35rem]"
+      className="aspect-[4/3] w-full overflow-hidden rounded-[1.35rem] sm:aspect-[1217/580]"
     >
       <MapboxMap
         ref={mapRef}
@@ -93,7 +93,7 @@ export function ExploreThailandMap({ mapRef, regions, onRegionClick }: ExploreTh
       />
       <div
         className={cn(
-          "pointer-events-none absolute right-5 top-5 z-20 flex origin-top-right items-center gap-4 rounded-full bg-white/95 px-4 py-2 text-[10px] text-[#171717] shadow-[0_4px_12px_rgba(11,31,77,0.12)] sm:right-7 sm:top-7",
+          "pointer-events-none absolute right-4 top-4 z-20 flex origin-top-right items-center gap-2.5 rounded-full bg-white/95 px-3 py-1.5 text-[10px] sm:gap-4 sm:px-4 sm:py-2 text-[#171717] shadow-[0_4px_12px_rgba(11,31,77,0.12)] sm:right-7 sm:top-7",
           landed ? "legend-pop" : "opacity-0",
         )}
       >

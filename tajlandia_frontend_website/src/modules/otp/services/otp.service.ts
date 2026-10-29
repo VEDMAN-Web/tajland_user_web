@@ -1,6 +1,7 @@
 "use server";
 
 import { apiPost, isApiError } from "@/lib/api/client";
+import { RATE_LIMITED_MESSAGE } from "@/lib/api/errors";
 import { verifyOtpResponseSchema, requestOtpResponseSchema, loginResponseSchema } from "@/lib/api/auth.schemas";
 import type { SignupFormValues } from "@/modules/signup/schemas/signup.schema";
 
@@ -32,6 +33,10 @@ export async function verifyOtpAction(email: string, otp: string): Promise<Verif
     };
   } catch (error) {
     if (isApiError(error)) {
+      if (error.status === 429) {
+        return { ok: false, message: RATE_LIMITED_MESSAGE };
+      }
+
       if (error.message !== "The request failed") {
         return { ok: false, message: error.message };
       }
@@ -77,6 +82,10 @@ export async function requestOtpAction(email: string): Promise<RequestOtpActionR
     return { ok: true };
   } catch (error) {
     if (isApiError(error)) {
+      if (error.status === 429) {
+        return { ok: false, message: RATE_LIMITED_MESSAGE };
+      }
+
       if (error.message !== "The request failed") {
         return { ok: false, message: error.message };
       }
@@ -96,7 +105,7 @@ export async function requestOtpAction(email: string): Promise<RequestOtpActionR
 
 export type ResendOtpActionResult =
   | { ok: true }
-  | { ok: false; message: string };
+  | { ok: false; message: string; rateLimited?: boolean };
 
 export type CompleteSignupWithOtpResult =
   | { ok: true; token?: string; user?: Record<string, unknown> }
@@ -158,6 +167,10 @@ export async function resendOtpAction(email: string): Promise<ResendOtpActionRes
     return { ok: true };
   } catch (error) {
     if (isApiError(error)) {
+      if (error.status === 429) {
+        return { ok: false, message: RATE_LIMITED_MESSAGE, rateLimited: true };
+      }
+
       if (error.message !== "The request failed") {
         return { ok: false, message: error.message };
       }

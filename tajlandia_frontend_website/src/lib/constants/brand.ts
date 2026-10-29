@@ -4,9 +4,9 @@ export const brand = {
   description:
     "Explore Thailand through an interactive map, choose your plots and create your own digital collection.",
   logo: {
-    src: "/images/brand/tajlandia-logo.png",
+    src: "/images/brand/tajlandia-logo.svg",
     alt: "tajlandia.com",
-    width: 220,
-    height: 72,
+    width: 377,
+    height: 244,
   },
 } as const;

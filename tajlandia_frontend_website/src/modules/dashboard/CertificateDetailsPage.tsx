@@ -527,10 +527,10 @@ function ShareDialog({
         </svg>
       </button>
       <Image
-        src="/images/brand/tajlandia-logo.png"
+        src="/images/brand/tajlandia-logo.svg"
         alt="Tajlandia"
         width={150}
-        height={64}
+        height={97}
         className="mx-auto mt-2 h-auto w-[112px] object-contain"
       />
       <h2 className="mt-6 text-[24px] font-semibold leading-8 text-[#171717]">{t("Share your Certificate")}</h2>
