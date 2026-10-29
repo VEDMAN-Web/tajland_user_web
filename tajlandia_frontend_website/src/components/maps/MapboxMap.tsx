@@ -369,6 +369,8 @@ type MapboxMapProps = {
 };
 
 const CLICKABLE_PLOT_LAYERS = ["plot-areas-fill", "plot-points", "plot-labels"];
+// How long the loading card may show before we stop waiting for "idle".
+const MAP_LOAD_TIMEOUT_MS = 15000;
 
 export const MapboxMap = forwardRef<MapboxMapHandle, MapboxMapProps>(function MapboxMap(
   {
@@ -519,6 +521,13 @@ export const MapboxMap = forwardRef<MapboxMapHandle, MapboxMapProps>(function Ma
     map.once("idle", () => {
       if (!disposed) setStatus("ready");
     });
+    // "idle" never fires if a tile request hangs; don't spin forever.
+    const loadTimeout = window.setTimeout(() => {
+      if (disposed) return;
+      setStatus((current) =>
+        current !== "loading" ? current : map.isStyleLoaded() ? "ready" : "error",
+      );
+    }, MAP_LOAD_TIMEOUT_MS);
     function reportView() {
       const bounds = map.getBounds();
       if (!bounds) return;
@@ -549,6 +558,7 @@ export const MapboxMap = forwardRef<MapboxMapHandle, MapboxMapProps>(function Ma
 
     return () => {
       disposed = true;
+      window.clearTimeout(loadTimeout);
       resizeObserver.disconnect();
       map.remove();
       mapRef.current = null;
@@ -733,8 +743,15 @@ export const MapboxMap = forwardRef<MapboxMapHandle, MapboxMapProps>(function Ma
         </div>
       ) : null}
       {status === "error" && showErrorOverlay ? (
-        <div className="absolute inset-0 z-10 flex items-center justify-center bg-[#74d0e1] px-6 text-center text-sm text-navy">
+        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-4 bg-[#74d0e1] px-6 text-center text-sm text-navy">
           The map could not be loaded. Please check your connection and try again.
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            className="rounded-full bg-navy px-5 py-2 text-[13px] font-semibold text-white"
+          >
+            Try again
+          </button>
         </div>
       ) : null}
     </div>

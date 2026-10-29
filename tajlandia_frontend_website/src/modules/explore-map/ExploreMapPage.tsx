@@ -177,13 +177,13 @@ export function ExploreMapPage({ regions = [] }: ExploreMapPageProps) {
             <h1 className="font-[family-name:var(--font-playfair-display)] text-[42px] font-semibold leading-[1.05] tracking-[-0.03em] text-navy sm:text-[52px]">
               Discover <span className="italic text-brand-red">Thailand</span>
             </h1>
-            <p className="mx-auto mt-4 max-w-[38rem] font-[family-name:var(--font-manrope)] text-[16px] font-normal leading-[1.55] text-[#8a99aa] sm:mt-5 sm:text-[17px]">
-              Explore remarkable destinations across Thailand, discover beautiful
+            <p className="mx-auto mt-4 max-w-[38rem] font-[family-name:var(--font-manrope)] text-[16px] font-normal leading-[1.55] text-[#64748b] sm:mt-5 sm:text-[17px]">
+              Explore remarkable destinations across Thailand, discover beautiful{" "}
               <br className="hidden sm:block" />
               locations, and find a place that feels like yours.
             </p>
             <form onSubmit={searchDestination} className="mx-auto mt-7 w-full max-w-[540px] sm:mt-8">
-              <label className="flex h-[52px] items-center gap-3 rounded-[16px] border border-[#e6ebf2] bg-white px-5 text-left shadow-[0_8px_24px_rgba(11,31,77,0.06)]">
+              <label className="flex h-[52px] items-center gap-2 rounded-[16px] border border-[#e6ebf2] bg-white px-4 text-left sm:gap-3 sm:px-5 shadow-[0_8px_24px_rgba(11,31,77,0.06)]">
                 <input
                   type="search"
                   value={query}
@@ -191,8 +191,8 @@ export function ExploreMapPage({ regions = [] }: ExploreMapPageProps) {
                     setQuery(event.target.value);
                     setMessage("");
                   }}
-                  placeholder="Search a city, region, or destination..."
-                  className="min-w-0 flex-1 bg-transparent font-[family-name:var(--font-manrope)] text-[15px] text-navy outline-none placeholder:text-[#a0aab6]"
+                  placeholder="Search city or destination..."
+                  className="min-w-0 flex-1 bg-transparent font-[family-name:var(--font-manrope)] text-[14px] text-navy outline-none placeholder:text-[#a0aab6] sm:text-[15px]"
                 />
                 <button type="submit" aria-label="Search Thailand" disabled={isSearching} className="text-[#9aa6b2]">
                   <SearchIcon />
@@ -301,25 +301,25 @@ export function ExploreMapPage({ regions = [] }: ExploreMapPageProps) {
               <h2 className="mt-3 text-[32px] font-semibold leading-[1.15] tracking-[-0.03em] text-navy sm:text-[40px]">
                 Thailand, One Place at a Time.
               </h2>
-              <p className="mt-3 max-w-[34rem] font-[family-name:var(--font-manrope)] text-[15px] font-normal leading-[1.6] text-[#8a99aa] sm:text-[16px]">
+              <p className="mt-3 max-w-[34rem] font-[family-name:var(--font-manrope)] text-[15px] font-normal leading-[1.6] text-[#64748b] sm:text-[16px]">
                 From island coastlines to mountain cities, discover the places, landscapes,
                 and destinations that make Thailand unforgettable.
               </p>
               <div className="mt-7 grid max-w-[520px] grid-cols-2 gap-x-8 gap-y-6 border-t border-[#e6ebf2] pt-6">
                 <div>
-                  <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-[#8a99aa]">Destinations</p>
+                  <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-[#64748b]">Destinations</p>
                   <p className="mt-1.5 text-[18px] font-semibold text-navy">03 Regions</p>
                 </div>
                 <div>
-                  <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-[#8a99aa]">Zones</p>
+                  <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-[#64748b]">Zones</p>
                   <p className="mt-1.5 text-[18px] font-semibold text-navy">03 Zones</p>
                 </div>
                 <div>
-                  <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-[#8a99aa]">Plots to explore</p>
+                  <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-[#64748b]">Plots to explore</p>
                   <p className="mt-1.5 text-[18px] font-semibold leading-snug text-navy">Available across Thailand</p>
                 </div>
                 <div>
-                  <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-[#8a99aa]">Minimum collection</p>
+                  <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-[#64748b]">Minimum collection</p>
                   <p className="mt-1.5 text-[18px] font-semibold text-navy">100 Rai</p>
                 </div>
               </div>

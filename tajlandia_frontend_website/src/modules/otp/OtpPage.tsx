@@ -202,6 +202,8 @@ function OtpPageContent() {
           setMessage((current) => (current === RESEND_SUCCESS_MESSAGE ? "" : current));
         }, RESEND_MESSAGE_DURATION_MS);
       } else {
+        // Rate limited: start the cooldown again so the button isn't spammed.
+        if (actionResult.rateLimited) setSecondsRemaining(RESEND_COOLDOWN_SECONDS);
         setError(actionResult.message);
       }
     } catch {
@@ -229,7 +231,8 @@ function OtpPageContent() {
               <span className="block">Your little piece of</span>
               <span className="mt-1 block">
                 <span className="font-display text-[1.08em] font-medium italic">Thailand</span>
-                <span className="ml-1.5">awaits.</span>
+                {" "}
+                <span>awaits.</span>
               </span>
             </h1>
             <p className="mt-3 text-[13px] font-normal leading-5 text-white sm:text-[14px]">

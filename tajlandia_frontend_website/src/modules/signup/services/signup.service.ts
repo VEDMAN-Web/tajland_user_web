@@ -1,6 +1,7 @@
 "use server";
 
 import { apiPost, isApiError } from "@/lib/api/client";
+import { RATE_LIMITED_MESSAGE } from "@/lib/api/errors";
 import { registerResponseSchema, requestOtpResponseSchema } from "@/lib/api/auth.schemas";
 import { signupSchema, type SignupFormValues } from "../schemas/signup.schema";
 
@@ -32,6 +33,10 @@ export async function requestSignupOtpAction(signupData: SignupFormValues): Prom
     }
   } catch (error) {
     if (isApiError(error)) {
+      if (error.status === 429) {
+        return { ok: false, message: RATE_LIMITED_MESSAGE };
+      }
+
       if (error.status === 409) {
         return { ok: false, message: "An account with this email already exists. Please log in." };
       }

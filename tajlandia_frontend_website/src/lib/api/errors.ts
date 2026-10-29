@@ -14,6 +14,9 @@ export function isApiError(error: unknown): error is ApiError {
   return error instanceof ApiError;
 }
 
+/** Shown when the API answers 429 (its rate limit on login, sign-up and OTP requests). */
+export const RATE_LIMITED_MESSAGE = "Too many attempts. Please wait a minute and try again.";
+
 const SAFE_API_MESSAGE = /^[\w\s.,'!?:()-]{1,180}$/;
 
 /** Reads `message` from a backend JSON body, or returns the fallback if it is missing or unsafe to show. */

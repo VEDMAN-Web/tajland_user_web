@@ -63,7 +63,7 @@ export function CertificateReveal({ children, className }: CertificateRevealProp
       <span
         aria-hidden="true"
         // Sits on the certificate's right border, in the empty band beside the details card.
-        className="pointer-events-none absolute right-0 top-[47%] h-16 w-16 translate-x-1/3 -translate-y-1/2 sm:h-20 sm:w-20"
+        className="pointer-events-none absolute right-0 top-[47%] h-16 w-16 translate-x-[10%] -translate-y-1/2 sm:h-20 sm:w-20 sm:translate-x-1/3"
       >
         <span className={cn("absolute inset-0 rounded-full border-2 border-brand-red", inView ? "cert-seal-ring" : "opacity-0")} />
         <span className={cn("absolute inset-0 block", inView ? "cert-stamp" : "opacity-0")}>

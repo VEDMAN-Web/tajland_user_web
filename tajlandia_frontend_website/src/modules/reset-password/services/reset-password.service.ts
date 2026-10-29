@@ -3,6 +3,7 @@
 import { cookies } from "next/headers";
 import { z } from "zod";
 import { apiPost, isApiError } from "@/lib/api/client";
+import { RATE_LIMITED_MESSAGE } from "@/lib/api/errors";
 import { resetPasswordResponseSchema } from "@/lib/api/auth.schemas";
 import { resetPasswordSchema, type ResetPasswordFormValues } from "../schemas/reset-password.schema";
 
@@ -19,6 +20,10 @@ function normalizeEmail(email: string) {
 }
 
 function apiMessage(error: unknown, fallback: string) {
+  if (isApiError(error) && error.status === 429) {
+    return RATE_LIMITED_MESSAGE;
+  }
+
   if (isApiError(error) && error.message !== "The request failed" && error.message !== "Validation failed") {
     return error.message;
   }

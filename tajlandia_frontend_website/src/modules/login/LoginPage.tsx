@@ -208,7 +208,8 @@ export function LoginPage() {
               <span className="block">Your little piece of</span>
               <span className="mt-1 block">
                 <span className="font-display text-[1.08em] font-medium italic">Thailand</span>
-                <span className="ml-1.5">awaits.</span>
+                {" "}
+                <span>awaits.</span>
               </span>
             </h1>
             <p className="mt-3 text-[13px] font-normal leading-5 text-white sm:text-[14px]">
@@ -222,7 +223,7 @@ export function LoginPage() {
             <BackLink href={routes.home}>Back to Home</BackLink>
 
             <h2 className="mt-8 text-[28px] font-semibold tracking-[-0.03em] text-navy sm:text-[30px]">Welcome back</h2>
-            <p className="mt-2 text-[14px] text-[#8b939e]">Sign in to continue your Tajlandia journey.</p>
+            <p className="mt-2 text-[14px] text-[#64748b]">Sign in to continue your Tajlandia journey.</p>
 
             <form className="mt-8" noValidate onSubmit={handleSubmit}>
               <div>
@@ -271,7 +272,7 @@ export function LoginPage() {
               </div>
 
               <div className="mt-4 flex items-center justify-between gap-4 text-[13px]">
-                <label className="flex cursor-pointer items-center gap-2 text-[#9aa3ad]">
+                <label className="flex cursor-pointer items-center gap-2 text-[#64748b]">
                   <input
                     type="checkbox"
                     checked={rememberMe}
@@ -293,7 +294,7 @@ export function LoginPage() {
               </button>
             </form>
 
-            <div className="my-6 flex items-center gap-3 text-[11px] tracking-[0.08em] text-[#c5c8ce]">
+            <div className="my-6 flex items-center gap-3 text-[11px] tracking-[0.08em] text-[#64748b]">
               <span className="h-px flex-1 bg-[#ececee]" />
               <span>OR CONTINUE WITH</span>
               <span className="h-px flex-1 bg-[#ececee]" />

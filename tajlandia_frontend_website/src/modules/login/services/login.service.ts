@@ -1,6 +1,7 @@
 "use server";
 
 import { apiPost, isApiError } from "@/lib/api/client";
+import { RATE_LIMITED_MESSAGE } from "@/lib/api/errors";
 import { loginResponseSchema } from "@/lib/api/auth.schemas";
 import { loginSchema, type LoginFormValues } from "../schemas/login.schema";
 
@@ -33,6 +34,10 @@ export async function loginAction(values: LoginFormValues): Promise<LoginActionR
     };
   } catch (error) {
     if (isApiError(error)) {
+      if (error.status === 429) {
+        return { ok: false, message: RATE_LIMITED_MESSAGE };
+      }
+
       if (error.status === 401 || error.status === 403) {
         return { ok: false, message: "Invalid email or password." };
       }
