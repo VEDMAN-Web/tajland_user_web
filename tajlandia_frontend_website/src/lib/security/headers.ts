@@ -9,7 +9,7 @@ export function getStaticSecurityHeaders(isProduction: boolean) {
       // geolocation=(self): the Explore Map "Current location" button needs it.
       value: "camera=(), microphone=(), geolocation=(self), browsing-topics=()",
     },
-    { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
+    { key: "Cross-Origin-Opener-Policy", value: "same-origin-allow-popups" },
     { key: "Cross-Origin-Resource-Policy", value: "same-origin" },
     { key: "X-Permitted-Cross-Domain-Policies", value: "none" },
   ];

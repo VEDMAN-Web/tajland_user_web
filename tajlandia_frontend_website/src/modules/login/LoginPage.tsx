@@ -300,10 +300,10 @@ export function LoginPage() {
               <span className="h-px flex-1 bg-[#ececee]" />
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <button type="button" className="flex h-11 cursor-pointer items-center justify-center gap-2 rounded-[12px] bg-[#f4f5f7] text-[13px] text-[#1c1c1c] transition hover:bg-[#eceef1] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy">
+            <div className="grid grid-cols-1 gap-3">
+              {/* <button type="button" className="flex h-11 cursor-pointer items-center justify-center gap-2 rounded-[12px] bg-[#f4f5f7] text-[13px] text-[#1c1c1c] transition hover:bg-[#eceef1] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy">
                 <AppleIcon /> Continue with Apple
-              </button>
+              </button> */}
               {GOOGLE_CLIENT_ID ? (
                 // Google's rendered button can't be restyled, so it is kept mounted and
                 // genuinely clickable but invisible, layered over a button styled to match
