@@ -13,7 +13,6 @@ import { BackLink } from "@/components/ui/BackLink";
 import { PageLoader } from "@/components/ui/PageLoader";
 import { CertificateDownloadFailedDialog } from "./CertificateDownloadFailedDialog";
 import { CertificatePreview } from "./CertificatePreview";
-import { DashboardNavbar } from "./DashboardNavbar";
 import { useDashboardLanguage } from "./DashboardLanguageContext";
 import type { CertificateDetail } from "./schemas/certificates.schema";
 import type { OrderDetail } from "./schemas/orders.schema";
@@ -177,8 +176,7 @@ export function CertificateDetailsPage({ certificateId }: { certificateId: strin
 
   return (
     <div className="min-h-[100svh] bg-[#f5f9fc] text-navy">
-      <DashboardNavbar active="none" />
-      <main className="mx-auto w-[92%] max-w-none px-5 pb-12 pt-10 sm:px-8 sm:pt-14">
+      <main className="mx-auto w-[92%] max-w-none px-5 pb-12 pt-10 sm:px-8 sm:pt-14 lg:pt-8">
         <BackLink href={routes.certificates}>{t("Back to My Certificates")}</BackLink>
         <div className="mt-5 flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
           <div>

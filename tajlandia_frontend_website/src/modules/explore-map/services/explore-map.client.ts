@@ -9,6 +9,7 @@ import { exploreMapSchema } from "../schemas/explore-map.schema";
 import {
   explorePlotDetailSchema,
   explorePlotsPageSchema,
+  ownedPlotOrdersPageSchema,
   type ExplorePlot,
   type ExplorePlotDetail,
 } from "../schemas/explore-plots.schema";
@@ -243,4 +244,23 @@ export function getFilterOptions(regionId: string, signal?: AbortSignal): Promis
  */
 export async function addPlotToCart(plotId: string): Promise<void> {
   await authedPost("/cart/items", { plotId }, ignoredResultSchema);
+}
+
+const OWNED_PLOTS_PAGE_SIZE = 100;
+
+/**
+ * The order whose certificate (the "deed") covers this owned plot, from `GET /lands/plots`
+ * (one row per paid plot, so it's paged through until the plot turns up); null when the
+ * plot isn't on any paid order.
+ */
+export async function getPlotDeedOrderId(plotId: string, signal?: AbortSignal): Promise<string | null> {
+  for (let page = 1; ; page += 1) {
+    const result = await authedGet("/lands/plots", ownedPlotOrdersPageSchema, {
+      signal,
+      query: { page, limit: OWNED_PLOTS_PAGE_SIZE },
+    });
+    const match = result.plots.find((plot) => plot.plotId === plotId);
+    if (match) return match.orderId ?? null;
+    if (page >= result.pagination.totalPages) return null;
+  }
 }

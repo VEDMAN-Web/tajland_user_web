@@ -25,7 +25,6 @@ import {
   ZONE_COLORS,
 } from "./CartSummaryCard";
 import { readAppliedCoupon, saveAppliedCoupon, type AppliedCoupon } from "./cart-coupon";
-import { DashboardNavbar } from "./DashboardNavbar";
 import { useDashboardLanguage } from "./DashboardLanguageContext";
 import { PageLoader } from "@/components/ui/PageLoader";
 import type { CartItem, CartSummary } from "./schemas/cart.schema";
@@ -271,7 +270,6 @@ export function CartPage() {
 
   return (
     <div className="min-h-[100svh] bg-[#f7f9fc] text-navy">
-      <DashboardNavbar active="none" />
       <main className="mx-auto w-full max-w-[1240px] px-4 pb-16 pt-6 sm:px-8 sm:pt-8">
         <section>
           <h1 className="font-manrope text-[26px] font-semibold leading-none tracking-[-0.03em] text-navy sm:text-[32px]">
@@ -761,7 +759,7 @@ function CartItemCard({
   t: Translate;
 }) {
   const location = item.city ?? item.region?.name;
-  const title = item.name ?? item.plotNumber ?? item.zone?.name;
+  const title = item.plotName?.trim() || item.name || item.plotNumber || item.zone?.name;
   const tier = item.zone?.tier;
 
   return (
@@ -941,7 +939,7 @@ function RemovePlotDialog({
   t: Translate;
 }) {
   const titleId = "remove-plot-title";
-  const title = item.name ?? item.plotNumber ?? item.zone?.name ?? t("this plot");
+  const title = item.plotName?.trim() || item.name || item.plotNumber || item.zone?.name || t("this plot");
   const image = item.images?.[0] ?? item.imageUrl;
   const location = item.city ?? item.region?.name;
   const tier = item.zone?.tier;

@@ -1,14 +1,13 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
-import { useState, type ReactNode } from "react";
-import { isAllowedRemoteImage } from "@/lib/config/remote-images";
+import type { ReactNode } from "react";
 import { routes } from "@/lib/constants/routes";
 import { cn } from "@/lib/utils/cn";
 import { plotCardStatus } from "../constants/plot-status";
 import type { Translate } from "../types/explore-filters.types";
 import type { ExplorePlotDetail } from "../types/explore-map.types";
+import { PlotPhotoSlider } from "./PlotPhotoSlider";
 
 type PlotDetailPanelProps = {
   plot: ExplorePlotDetail;
@@ -16,12 +15,14 @@ type PlotDetailPanelProps = {
   /** True while this plot's Add to Cart request runs. */
   isAddingToCart: boolean;
   onAddToCart: () => void;
+  /** True while this plot's deed (certificate) is being looked up. */
+  isOpeningDeed: boolean;
+  onViewDeed: () => void;
   /** Back to the area's plot list. */
   onBack: () => void;
   t: Translate;
 };
 
-const PLACEHOLDER_SRC = "/images/explore/place-placeholder.svg";
 const SQM_PER_SQFT = 0.09290304;
 
 // Cart progress is static until the cart flow is wired up.
@@ -127,41 +128,14 @@ function DetailRow({ label, children }: { label: string; children: ReactNode }) 
 // Actions (share, gallery) aren't wired up yet.
 const decorative = "cursor-pointer";
 
-/** Plot image; the local placeholder when missing, from a host we don't allow, or broken. */
-function PlotImage({ src, alt }: { src: string | null | undefined; alt: string }) {
-  const [failedSrc, setFailedSrc] = useState<string | null>(null);
-  const [loadedSrc, setLoadedSrc] = useState<string | null>(null);
-  const usable = isAllowedRemoteImage(src) && failedSrc !== src;
-  // Remote images can be slow; pulse until this one has loaded.
-  const loading = usable && loadedSrc !== src;
-
-  return (
-    <Image
-      src={usable ? src : PLACEHOLDER_SRC}
-      alt={alt}
-      fill
-      sizes="(max-width: 640px) 100vw, 420px"
-      unoptimized={!usable}
-      onLoad={() => {
-        if (usable) setLoadedSrc(src);
-      }}
-      onError={() => {
-        if (usable) setFailedSrc(src);
-      }}
-      className={cn(
-        "object-cover",
-        loading && "animate-pulse bg-[#eef1f5] motion-reduce:animate-none",
-      )}
-    />
-  );
-}
-
 /** Plot detail (Figma "Added to cart / rei calc") from `GET /explore/plots/{plotId}`. */
 export function PlotDetailPanel({
   plot,
   onFocusPlot,
   isAddingToCart,
   onAddToCart,
+  isOpeningDeed,
+  onViewDeed,
   onBack,
   t,
 }: PlotDetailPanelProps) {
@@ -169,31 +143,21 @@ export function PlotDetailPanel({
   const status = STATUS_STYLE[statusKey];
   const progress = Math.min(100, (CART_DEMO.cartRai / CART_DEMO.minimumRai) * 100);
   const tier = plot.zone?.tier;
+  const plotName = plot.plotName?.trim() || plot.name;
   const sizeSqm = plotSizeSqm(plot.sizeSquareFeet);
   const place = [plot.location?.name, plot.region.name].filter(Boolean).join(", ");
   // `images` (Cloudinary) first; plots without them fall back to the single `imageUrl`.
   const photos = plot.images?.length ? plot.images : plot.imageUrl ? [plot.imageUrl] : [];
-  // Back to the first photo whenever another plot is opened.
-  const [photo, setPhoto] = useState({ plotId: plot.id, index: 0 });
-  const photoIndex = photo.plotId === plot.id ? photo.index : 0;
-  const showPhoto = (step: number) =>
-    setPhoto({ plotId: plot.id, index: (photoIndex + step + photos.length) % photos.length });
-
   return (
     <article className="flex flex-col" aria-label={t("Plot details")}>
-      {/* Image header: edge to edge, 190px tall, dark gradient (60% -> 0% -> 20%). */}
-      <div className="relative h-[190px] w-full shrink-0 overflow-hidden">
-        <PlotImage src={photos[photoIndex]} alt={plot.name} />
-        <span
-          aria-hidden="true"
-          className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.6)_0%,rgba(0,0,0,0)_45%,rgba(0,0,0,0.2)_100%)]"
-        />
+      {/* Image header: edge to edge, 190px tall; slides through the photos on its own. */}
+      <PlotPhotoSlider key={plot.id} photos={photos} alt={plotName} t={t}>
         {/* Top-left, opposite the status badge. */}
         <button
           type="button"
           onClick={onBack}
           aria-label={t("Back to plots")}
-          className="absolute left-3 top-3 flex h-[26px] cursor-pointer items-center gap-1 rounded-full bg-white pl-2 pr-2.5 text-[11px] font-semibold text-[#001f54] shadow-[0_2px_8px_rgba(0,0,0,0.15)] transition-colors hover:bg-[#f1f4f9] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+          className="absolute left-3 top-3 z-10 flex h-[26px] cursor-pointer items-center gap-1 rounded-full bg-white pl-2 pr-2.5 text-[11px] font-semibold text-[#001f54] shadow-[0_2px_8px_rgba(0,0,0,0.15)] transition-colors hover:bg-[#f1f4f9] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
         >
           <Chevron direction="left" />
           {t("Back")}
@@ -201,34 +165,13 @@ export function PlotDetailPanel({
         <span
           className={cn(
             // Figma: top-right of the image (sharing lives in the title row).
-            "absolute right-3 top-3 rounded-full bg-white px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.06em]",
+            "absolute right-3 top-3 z-10 rounded-full bg-white px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.06em]",
             status.text,
           )}
         >
           {t(status.label)}
         </span>
-        {/* Only with more than one photo. */}
-        {photos.length > 1 ? (
-          <>
-            <button
-              type="button"
-              onClick={() => showPhoto(-1)}
-              aria-label={t("Previous image")}
-              className="absolute left-3 top-1/2 flex h-6 w-6 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full bg-black/25 text-white transition-colors hover:bg-black/40"
-            >
-              <Chevron direction="left" />
-            </button>
-            <button
-              type="button"
-              onClick={() => showPhoto(1)}
-              aria-label={t("Next image")}
-              className="absolute right-3 top-1/2 flex h-6 w-6 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full bg-black/25 text-white transition-colors hover:bg-black/40"
-            >
-              <Chevron direction="right" />
-            </button>
-          </>
-        ) : null}
-      </div>
+      </PlotPhotoSlider>
 
       <div className="px-4 pb-6 pt-4">
         <div className="flex items-center justify-between gap-2">
@@ -253,18 +196,19 @@ export function PlotDetailPanel({
             <ShareIcon />
           </button>
         </div>
-        <h2 className="mt-1 text-[19px] font-semibold leading-7 text-[#0b1f33]">
-          {plot.name}
+        {/* The full name, wrapping over as many lines as it needs. */}
+        <h2 className="mt-1.5 break-words text-[18px] font-semibold leading-[26px] text-[#0b1f33] text-pretty">
+          {plotName}
         </h2>
-        <p className="mt-0.5 flex items-center gap-1 text-[11px] text-[#6b7785]">
-          <svg viewBox="0 0 16 16" aria-hidden="true" className="h-3 w-3 shrink-0">
+        <p className="mt-1.5 flex items-start gap-1 text-[11px] leading-4 text-[#6b7785]">
+          <svg viewBox="0 0 16 16" aria-hidden="true" className="mt-px h-3 w-3 shrink-0">
             <path
               d="M8 14.5s4.5-4.2 4.5-7.8a4.5 4.5 0 1 0-9 0c0 3.6 4.5 7.8 4.5 7.8Z"
               fill="currentColor"
             />
             <circle cx="8" cy="6.7" r="1.6" fill="white" />
           </svg>
-          <span className="truncate">
+          <span className="min-w-0 break-words">
             {plot.zone ? `${place} • ${plot.zone.name}` : place}
           </span>
         </p>
@@ -341,7 +285,7 @@ export function PlotDetailPanel({
           />
         </div>
 
-        {/* In the cart: View Cart. Available: Add to Cart. Otherwise its status. */}
+        {/* In the cart: View Cart. Available: Add to Cart. Yours: View Deed. Otherwise its status. */}
         <div className="mt-4">
           {statusKey === "inCart" ? (
             <Link
@@ -358,6 +302,15 @@ export function PlotDetailPanel({
               className="flex h-11 w-full cursor-pointer items-center justify-center rounded-[10px] bg-[#001f54] text-[13px] font-medium text-white hover:bg-[#0b2d6b] disabled:cursor-wait disabled:opacity-70"
             >
               {t(isAddingToCart ? "Adding..." : "Add to Cart")}
+            </button>
+          ) : statusKey === "owned" ? (
+            <button
+              type="button"
+              disabled={isOpeningDeed}
+              onClick={onViewDeed}
+              className="flex h-11 w-full cursor-pointer items-center justify-center rounded-[10px] bg-[#eef2f7] text-[13px] font-medium text-[#001f54] hover:bg-[#e2e8f1] disabled:cursor-wait disabled:opacity-70"
+            >
+              {isOpeningDeed ? t("Opening...") : `${t("View Deed")} →`}
             </button>
           ) : (
             <p className="flex h-11 items-center justify-center rounded-[10px] bg-[#eef1f5] text-[13px] font-medium text-[#8a94a3]">

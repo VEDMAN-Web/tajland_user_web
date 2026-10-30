@@ -11,8 +11,6 @@ import { routes } from "@/lib/constants/routes";
 import { useAuth } from "@/lib/hooks/useAuth";
 import { logError } from "@/lib/logging/logger";
 import { PageLoader } from "@/components/ui/PageLoader";
-import { AccountMenu } from "./AccountMenu";
-import { DashboardNavbar } from "./DashboardNavbar";
 import { useDashboardLanguage } from "./DashboardLanguageContext";
 import type { OrderDetail, OrderDetailItem } from "./schemas/orders.schema";
 import { getOrderDetail } from "./services/orders.client";
@@ -130,9 +128,7 @@ export function OrderDetailsPage({ orderId }: { orderId: string }) {
 
   return (
     <div className="min-h-[100svh] bg-[#f7f9fc] text-navy">
-      <DashboardNavbar active="none" />
-      <main className="mx-auto grid w-full max-w-[1180px] gap-6 px-5 pb-14 pt-8 sm:px-8 lg:grid-cols-[240px_minmax(0,1fr)] lg:items-start lg:gap-7">
-        <AccountMenu active="purchases" />
+      <main className="w-full px-5 pb-14 pt-6 sm:px-8 lg:p-0 lg:[&>section]:mx-auto lg:[&>section]:w-full lg:[&>section]:max-w-[1120px] lg:[&>section]:px-10 lg:[&>section]:py-8">
         <section className="min-w-0">
           <BackLink href={routes.purchases}>{t("Back to Purchases")}</BackLink>
           <div className="mt-4 flex items-start justify-between gap-4">
@@ -275,7 +271,7 @@ function PlotRow({ item, currency }: { item: OrderDetailItem; currency: string }
   const { t } = useDashboardLanguage();
   const zone = ZONES.find((entry) => entry.type === zoneOf(item));
   const code = item.plotNumber?.trim() ?? "";
-  const name = item.name?.trim() || code || t("Plot");
+  const name = item.plotName?.trim() || item.name?.trim() || code || t("Plot");
   const image = item.images?.[0] ?? item.imageUrl;
   const location = item.location?.trim() || item.region?.name?.trim() || "";
   const mapHref =
@@ -283,7 +279,7 @@ function PlotRow({ item, currency }: { item: OrderDetailItem; currency: string }
       ? `${routes.dashboardExplore}?${new URLSearchParams({
           plotId: item.plotId,
           // Drawn on the map right away, before Explore loads the plots in view.
-          plotNumber: code || name,
+          plotNumber: item.plotName?.trim() || code || name,
           lat: String(item.latitude),
           lng: String(item.longitude),
           zoom: String(PLOT_MAP_ZOOM),

@@ -13,6 +13,7 @@ const orderListItemSchema = z.object({
   rai: z.number().nonnegative(),
   price: z.number().nonnegative(),
   plotNumber: z.string().nullish(),
+  plotName: z.string().nullish(),
   name: z.string().nullish(),
   region: z.object({ name: z.string().nullish() }).nullish(),
 });

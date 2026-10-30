@@ -12,7 +12,6 @@ import { routes } from "@/lib/constants/routes";
 import { logError } from "@/lib/logging/logger";
 import { ScrollAnimatedElement } from "@/components/animations/ScrollAnimatedElement";
 import { useAuth } from "@/lib/hooks/useAuth";
-import { DashboardNavbar } from "./DashboardNavbar";
 import { useDashboardLanguage } from "./DashboardLanguageContext";
 import { PageLoader } from "@/components/ui/PageLoader";
 import type { DashboardData, FeaturedRegion } from "./schemas/dashboard.schema";
@@ -103,7 +102,6 @@ export function DashboardPage() {
 
   return (
     <div className="min-h-[100svh] bg-[#f7f9fc] text-navy">
-      <DashboardNavbar active="home" />
 
       <main className="mx-auto w-full max-w-[1180px] px-5 pb-14 pt-6 sm:px-8 sm:pt-8">
         <ScrollAnimatedElement animation="fade-in" duration={600}>
@@ -207,6 +205,7 @@ export function DashboardPage() {
           {/* Hidden only when the API turns gifting off. */}
           {data?.gift?.enabled === false ? null : (
           <div className="relative overflow-hidden rounded-[22px] border border-[#f3c3c3] bg-[#fff8f8] px-5 py-6 sm:px-8 sm:py-7 lg:px-10">
+            <span aria-hidden="true" className="gift-shine pointer-events-none absolute inset-y-0 left-0 z-20 w-[18%] bg-linear-to-r from-transparent via-white/70 to-transparent" />
             <Image
               src="/images/dashboard/gift-ribbon.png"
               alt=""
@@ -361,7 +360,7 @@ function StatSkeleton() {
 }
 
 const cardSize =
-  "min-w-0 snap-start flex-[0_0_86%] rounded-[18px] border border-[#eef1f4] bg-white p-3 shadow-[0_10px_28px_rgba(11,31,77,0.06)] sm:flex-[0_0_48%] lg:flex-[0_0_calc((100%-2rem)/3)]";
+  "min-w-0 snap-start flex-[0_0_86%] rounded-[18px] border border-[#eef1f4] bg-white p-3 shadow-[0_1px_2px_rgba(11,31,77,0.05)] sm:flex-[0_0_48%] lg:flex-[0_0_calc((100%-2rem)/3)]";
 
 function ExploreCardSkeleton() {
   return (
@@ -397,54 +396,105 @@ function RegionImage({ src, alt }: { src: string | null | undefined; alt: string
 function ExploreCard({ region }: { region: FeaturedRegion }) {
   const { t } = useDashboardLanguage();
   return (
-    <article className={cardSize}>
-      <div className="relative">
-        <RegionImage src={region.imageUrl} alt={region.name} />
-        {/* Shown as the API sends it, one style for every badge. */}
-        {region.badge ? (
-          <span className="absolute left-3 top-3 rounded-full bg-white/92 px-2 py-0.5 font-manrope text-[10px] font-semibold uppercase tracking-[0.06em] text-[#5c6570]">
-            {t(region.badge)}
+    <article
+      className={`${cardSize} transition duration-300 hover:-translate-y-1.5 hover:border-navy/15 hover:shadow-[0_18px_32px_-20px_rgba(11,31,77,0.35)] motion-reduce:transition-none motion-reduce:hover:translate-y-0`}
+    >
+      <Link
+        href={regionExploreHref(region)}
+        className="group relative flex h-full flex-col overflow-hidden rounded-[18px] outline-none focus-visible:ring-4 focus-visible:ring-navy/15"
+      >
+        <div className="relative overflow-hidden rounded-[14px]">
+          <div className="transition-transform duration-700 ease-out group-hover:scale-[1.06] motion-reduce:transition-none motion-reduce:group-hover:scale-100">
+            <RegionImage src={region.imageUrl} alt={region.name} />
+          </div>
+          <div
+            aria-hidden="true"
+            className="absolute inset-0 bg-linear-to-t from-[#071536]/45 via-transparent to-transparent"
+          />
+          {/* Shown as the API sends it, one style for every badge. */}
+          {region.badge ? (
+            <span className="absolute left-3 top-3 rounded-full bg-white/95 px-2.5 py-1 font-manrope text-[10px] font-semibold uppercase leading-none tracking-[0.06em] text-navy shadow-[0_2px_8px_rgba(11,31,77,0.18)]">
+              {t(region.badge)}
+            </span>
+          ) : null}
+          <span className="absolute bottom-3 left-3 inline-flex items-center gap-1.5 rounded-full bg-black/30 px-2.5 py-1 font-manrope text-[11px] font-medium leading-none text-white">
+            <svg viewBox="0 0 16 16" aria-hidden="true" className="h-3 w-3">
+              <path
+                d="M8 14.5s5-4.2 5-8.2A5 5 0 0 0 3 6.3c0 4 5 8.2 5 8.2Z"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.4"
+                strokeLinejoin="round"
+              />
+              <circle cx="8" cy="6.3" r="1.7" fill="currentColor" />
+            </svg>
+            {`${numberFormat.format(region.locationCount)} ${t(region.locationCount === 1 ? "location" : "locations")}`}
           </span>
-        ) : null}
-      </div>
-      <div className="px-1.5 pt-3">
-        <h3 className="font-manrope text-[18px] font-semibold leading-6 text-navy">{region.name}</h3>
-        {region.description ? (
-          <p className="font-manrope mt-1 text-[13px] leading-5 text-[#8b939e]">
-            {t(region.description)}
-          </p>
-        ) : null}
-      </div>
-      <div className="font-manrope mt-3 flex items-center justify-between border-t border-[#eef1f4] px-1.5 pt-3 text-[12px]">
-        <span className="text-[#8b939e]">
-          {`${numberFormat.format(region.locationCount)} ${t(region.locationCount === 1 ? "location" : "locations")}`}
-        </span>
-        <Link
-          href={regionExploreHref(region)}
-          className="cursor-pointer font-semibold text-navy hover:underline"
-        >
-          {t("Discover Plots →")}
-        </Link>
-      </div>
+        </div>
+        <div className="relative flex flex-1 flex-col px-1.5 pt-4">
+          <h3 className="font-manrope text-[19px] font-semibold leading-6 tracking-[-0.02em] text-navy">{region.name}</h3>
+          {region.description ? (
+            <p className="font-manrope mt-1 line-clamp-2 text-[13px] leading-5 text-[#8b939e]">
+              {t(region.description)}
+            </p>
+          ) : null}
+          <div className="mt-auto pt-4">
+            <span className="font-manrope inline-flex items-center gap-2 rounded-full border border-[#e6e8ef] bg-white py-1 pl-4 pr-1 text-[13px] font-medium text-navy shadow-[0_1px_2px_rgba(11,31,77,0.06)] transition-colors group-hover:border-navy/25 group-hover:bg-[#f5f7fb]">
+              {t("Discover Plots")}
+              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#f1f4f9] transition-colors group-hover:bg-navy group-hover:text-white">
+                <svg viewBox="0 0 16 16" aria-hidden="true" className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5 motion-reduce:transition-none">
+                  <path d="M3 8h10m-4-4 4 4-4 4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </span>
+            </span>
+          </div>
+        </div>
+      </Link>
     </article>
+  );
+}
+
+function ArrowButton({ direction, disabled, onClick }: { direction: "prev" | "next"; disabled: boolean; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      aria-label={direction === "prev" ? "Previous regions" : "Next regions"}
+      disabled={disabled}
+      onClick={onClick}
+      className="group flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border border-[#e6e8ef] bg-white text-navy shadow-[0_1px_2px_rgba(11,31,77,0.06)] transition hover:border-navy hover:bg-navy hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-[#e6e8ef] disabled:hover:bg-white disabled:hover:text-navy motion-reduce:transition-none"
+    >
+      <svg viewBox="0 0 16 16" aria-hidden="true" className={`h-4 w-4 ${direction === "prev" ? "rotate-180" : ""}`}>
+        <path d="M3 8h10m-4-4 4 4-4 4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    </button>
   );
 }
 
 function ExploreCarousel({ regions }: { regions: FeaturedRegion[] }) {
   const carouselRef = useRef<HTMLDivElement>(null);
   const [activePage, setActivePage] = useState(0);
+  const [canScroll, setCanScroll] = useState({ prev: false, next: false });
 
   useEffect(() => {
     const carousel = carouselRef.current;
     if (!carousel) return;
 
-    const updateActivePage = () => {
+    const update = () => {
       setActivePage(carousel.scrollLeft > 24 ? 1 : 0);
+      setCanScroll({
+        prev: carousel.scrollLeft > 8,
+        next: carousel.scrollLeft + carousel.clientWidth < carousel.scrollWidth - 8,
+      });
     };
 
-    carousel.addEventListener("scroll", updateActivePage, { passive: true });
-    return () => carousel.removeEventListener("scroll", updateActivePage);
-  }, []);
+    carousel.addEventListener("scroll", update, { passive: true });
+    const observer = new ResizeObserver(update);
+    observer.observe(carousel);
+    return () => {
+      carousel.removeEventListener("scroll", update);
+      observer.disconnect();
+    };
+  }, [regions.length]);
 
   function moveCarousel(event: React.WheelEvent<HTMLDivElement>) {
     const carousel = carouselRef.current;
@@ -456,19 +506,32 @@ function ExploreCarousel({ regions }: { regions: FeaturedRegion[] }) {
     });
   }
 
+  function step(direction: 1 | -1) {
+    const carousel = carouselRef.current;
+    const card = carousel?.firstElementChild as HTMLElement | null;
+    if (!carousel || !card) return;
+    carousel.scrollBy({ left: direction * (card.offsetWidth + 16), behavior: "smooth" });
+  }
+
   return (
-    <>
+    <div className="relative">
+      {canScroll.prev || canScroll.next ? (
+        <div className="absolute -top-14 right-0 flex gap-2">
+          <ArrowButton direction="prev" disabled={!canScroll.prev} onClick={() => step(-1)} />
+          <ArrowButton direction="next" disabled={!canScroll.next} onClick={() => step(1)} />
+        </div>
+      ) : null}
       <div
         ref={carouselRef}
         onWheel={moveCarousel}
-        className="mt-4 flex snap-x snap-mandatory gap-4 overflow-x-auto overscroll-contain pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        className="-mx-3 mt-2 flex scroll-px-3 snap-x snap-mandatory gap-4 overflow-x-auto overscroll-contain px-3 pb-10 pt-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
         {regions.map((region) => (
           <ExploreCard key={region.id} region={region} />
         ))}
       </div>
       <div
-        className="mt-3 flex items-center justify-center gap-1.5"
+        className="-mt-5 flex items-center justify-center gap-1.5"
         aria-label="Explore carousel position"
       >
         <span
@@ -478,6 +541,6 @@ function ExploreCarousel({ regions }: { regions: FeaturedRegion[] }) {
           className={`rounded-full transition-all ${activePage === 1 ? "h-1.5 w-6 bg-navy" : "h-1.5 w-1.5 bg-[#c7cbd1]"}`}
         />
       </div>
-    </>
+    </div>
   );
 }

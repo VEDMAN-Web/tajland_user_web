@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
@@ -11,36 +10,43 @@ import { CART_CHANGED_EVENT } from "@/lib/cart/cart-events";
 import { routes } from "@/lib/constants/routes";
 import { logError } from "@/lib/logging/logger";
 import { useDashboardLanguage } from "./DashboardLanguageContext";
+import { LanguageDropdown, SidebarContent, type NavbarActive } from "./DashboardSidebar";
 import { getCart } from "./services/cart.client";
 
 type DashboardNavbarProps = {
-  active: "home" | "explore" | "leaderboard" | "my-land" | "none";
+  active: NavbarActive;
   overlay?: boolean;
 };
-
-const LANGUAGE_OPTIONS = [
-  { code: "EN", label: "English", flag: "/images/dashboard/en-flag.svg" },
-  { code: "PL", label: "Polish", flag: "/images/dashboard/pl-flag.svg" },
-  { code: "TH", label: "Thai", flag: "/images/dashboard/th-flag.png" },
-] as const;
 
 const controlHeight = "h-11";
 const controlShadow = "shadow-[0_6px_20px_rgba(11,31,77,0.08)]";
 
+// Round icon button. With a `label` (inside a `group` link) it grows into a pill on
+// hover / keyboard focus and shows the label beside the icon.
 function Icon({
   children,
   active = false,
   badge,
+  label,
 }: {
   children: React.ReactNode;
   active?: boolean;
   badge?: number;
+  label?: string;
 }) {
   return (
     <span
-      className={`relative box-border flex ${controlHeight} w-11 items-center justify-center rounded-full ${controlShadow} ${active ? "bg-navy" : "bg-white"}`}
+      className={`relative box-border flex ${controlHeight} min-w-11 items-center justify-center rounded-full px-3 ${controlShadow} transition-shadow duration-300 group-hover:shadow-[0_8px_24px_rgba(11,31,77,0.16)] group-focus-visible:shadow-[0_8px_24px_rgba(11,31,77,0.16)] motion-reduce:transition-none ${active ? "bg-navy text-white" : "bg-white text-navy"}`}
     >
       {children}
+      {label ? (
+        <span
+          aria-hidden="true"
+          className="max-w-0 overflow-hidden whitespace-nowrap font-manrope text-[14px] font-medium leading-none opacity-0 transition-[max-width,opacity,margin] duration-300 ease-out group-hover:ml-2 group-hover:mr-0.5 group-hover:max-w-[96px] group-hover:opacity-100 group-focus-visible:ml-2 group-focus-visible:mr-0.5 group-focus-visible:max-w-[96px] group-focus-visible:opacity-100 motion-reduce:transition-none"
+        >
+          {label}
+        </span>
+      ) : null}
       {badge && badge > 0 ? (
         <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#e11d2e] px-1 font-manrope text-[10px] font-semibold leading-none text-white">
           {badge}
@@ -83,10 +89,33 @@ function useCartCount() {
   return count;
 }
 
+function CartLink({ count, isActive, label }: { count: number; isActive: boolean; label: string }) {
+  return (
+    <Link
+      href={routes.cart}
+      aria-label={count > 0 ? `Cart, ${count} items` : "Cart"}
+      className="group inline-flex rounded-full outline-none focus-visible:ring-2 focus-visible:ring-navy/40"
+    >
+      <Icon active={isActive} badge={count} label={label}>
+        <img
+          src={isActive ? "/images/dashboard/navbar/cart-active.png" : "/images/dashboard/navbar/cart-default.png"}
+          alt=""
+          className="h-5 w-5 object-contain"
+        />
+      </Icon>
+    </Link>
+  );
+}
+
+/**
+ * The dashboard's top chrome that is not the sidebar:
+ * - lg and up: just the cart button, floating at the top right (the links live in the sidebar);
+ * - below lg: a fixed top bar (logo, cart, profile, menu button) and the drawer that slides
+ *   in from the right with the same links and the language choice.
+ */
 export function DashboardNavbar({ active, overlay = false }: DashboardNavbarProps) {
   const pathname = usePathname();
-  const { language, setLanguage, t } = useDashboardLanguage();
-  const [isLanguageOpen, setIsLanguageOpen] = useState(false);
+  const { t } = useDashboardLanguage();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const cartCount = useCartCount();
   const isCartActive = pathname === routes.cart;
@@ -102,23 +131,17 @@ export function DashboardNavbar({ active, overlay = false }: DashboardNavbarProp
     routes.dashboardPrivacy,
   ];
   const isProfileActive = accountMenuRoutes.some((route) => pathname === route);
-  const isHomeActive = active === "home" && pathname === routes.dashboard;
-  const activeClass = "bg-navy text-white";
   // Overlay (Explore Map): above the map's search bar (z-20) and panels (z-30), so
-  // the mobile menu and account dropdown open on top of them.
-  const navClass = overlay ? "absolute inset-x-0 top-0 z-40" : "sticky top-0 z-50";
-  const mobileLinks = [
-    { href: routes.dashboard, label: t("Home"), active: isHomeActive },
-    { href: routes.dashboardExplore, label: t("Explore Map"), active: active === "explore" },
-    { href: routes.leaderboard, label: t("Leaderboard"), active: active === "leaderboard" },
-    { href: routes.land, label: t("My Land"), active: active === "my-land" },
-  ];
+  // the drawer opens on top of them. `w-screen` (the full window, scrollbar included)
+  // rather than `inset-x-0`: the map page has no page scrollbar and most pages do, so
+  // otherwise the bar would be a scrollbar wider on one of them.
+  const barClass = overlay ? "fixed left-0 top-0 z-40 w-screen" : "fixed left-0 top-0 z-50 w-screen";
 
   function closeMobileMenu() {
     setIsMobileMenuOpen(false);
   }
 
-  // Open sidebar: Escape closes it and the page behind doesn't scroll.
+  // Open drawer: Escape closes it and the page behind doesn't scroll.
   useEffect(() => {
     if (!isMobileMenuOpen) return;
     function handleKey(event: KeyboardEvent) {
@@ -134,144 +157,24 @@ export function DashboardNavbar({ active, overlay = false }: DashboardNavbarProp
   }, [isMobileMenuOpen]);
 
   return (
-    <header
-      className={`relative ${navClass} ${overlay ? "bg-transparent" : "bg-[#f7f9fc]"}`}
-    >
-      <div className="mx-auto flex h-16 w-full max-w-[1180px] items-center justify-between px-5 sm:px-8">
-        <BrandLogo compact href={routes.dashboard} />
-        <div className="flex items-center gap-3">
-          <nav className={`hidden ${controlHeight} items-center gap-0.5 rounded-full bg-white p-1 ${controlShadow} lg:flex`}>
-            <Link
-              href={routes.dashboard}
-              className={`inline-flex h-9 items-center rounded-full px-4 font-manrope text-[14px] font-medium leading-none ${isHomeActive ? activeClass : "text-navy"}`}
-            >
-              {t("Home")}
-            </Link>
-            <Link
-              href="/dashboard/explore"
-              className={`inline-flex h-9 items-center rounded-full px-4 font-manrope text-[14px] font-medium leading-none ${active === "explore" ? activeClass : "text-navy"}`}
-            >
-              {t("Explore Map")}
-            </Link>
-            <Link
-              href={routes.leaderboard}
-              className={`inline-flex h-9 items-center rounded-full px-4 font-manrope text-[14px] font-medium leading-none ${active === "leaderboard" ? activeClass : "text-navy"}`}
-            >
-              {t("Leaderboard")}
-            </Link>
-            <Link
-              href={routes.land}
-              className={`inline-flex h-9 items-center rounded-full px-4 font-manrope text-[14px] font-medium leading-none ${active === "my-land" ? activeClass : "text-navy"}`}
-            >
-              {t("My Land")}
-            </Link>
-          </nav>
-          <button
-            type="button"
-            aria-label={t("Open dashboard menu")}
-            aria-expanded={isMobileMenuOpen}
-            onClick={() => setIsMobileMenuOpen((open) => !open)}
-            className={`flex ${controlHeight} w-11 flex-col items-center justify-center gap-1.5 rounded-full bg-white ${controlShadow} lg:hidden`}
-          >
-            <span className="h-0.5 w-4 rounded-full bg-navy" />
-            <span className="h-0.5 w-4 rounded-full bg-navy" />
-            <span className="h-0.5 w-4 rounded-full bg-navy" />
-          </button>
+    <>
+      {/* lg and up: language + cart, top right (above the Explore Map's own controls, which start lower). */}
+      <div className="fixed right-6 top-4 z-40 hidden items-center gap-2 lg:flex">
+        <LanguageDropdown />
+        <CartLink count={cartCount} isActive={isCartActive} label={t("Cart")} />
+      </div>
+
+      <header className={`${barClass} border-b border-[#e6eaf3] bg-white lg:hidden`}>
+        <div className="relative mx-auto flex h-16 w-full items-center justify-between px-5 sm:px-8">
+          <BrandLogo compact href={routes.dashboard} />
           <div className="flex items-center gap-2">
-            <div className="relative hidden lg:block" data-language-selector="true">
-              <button
-                type="button"
-                aria-expanded={isLanguageOpen}
-                onClick={() => setIsLanguageOpen((open) => !open)}
-                className={`flex ${controlHeight} items-center gap-2 rounded-full bg-white px-3.5 font-manrope text-[14px] font-medium leading-none text-navy ${controlShadow}`}
-              >
-                <Image
-                  src={
-                    language === "EN"
-                      ? "/images/dashboard/en-flag.svg"
-                      : language === "PL"
-                        ? "/images/dashboard/pl-flag.svg"
-                        : "/images/dashboard/th-flag.png"
-                  }
-                  alt=""
-                  width={20}
-                  height={14}
-                  className="h-3.5 w-5 rounded-[2px] object-cover"
-                />
-                <span>{language}</span>
-                <svg viewBox="0 0 12 12" aria-hidden="true" className="h-2.5 w-2.5">
-                  <path d="M2.5 4.25 6 7.75l3.5-3.5" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </button>
-              {isLanguageOpen ? (
-                <div className="absolute right-0 top-12 z-20 w-40 rounded-xl bg-white p-1 text-[12px] shadow-[0_8px_24px_rgba(11,31,77,0.14)]">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setLanguage("EN");
-                      setIsLanguageOpen(false);
-                    }}
-                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left hover:bg-[#f5f7fa]"
-                  >
-                    <Image
-                      src="/images/dashboard/en-flag.svg"
-                      alt=""
-                      width={20}
-                      height={14}
-                    />{" "}
-                    EN — English
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setLanguage("PL");
-                      setIsLanguageOpen(false);
-                    }}
-                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left hover:bg-[#f5f7fa]"
-                  >
-                    <Image
-                      src="/images/dashboard/pl-flag.svg"
-                      alt=""
-                      width={20}
-                      height={14}
-                    />{" "}
-                    PL — Polish
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setLanguage("TH");
-                      setIsLanguageOpen(false);
-                    }}
-                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left hover:bg-[#f5f7fa]"
-                  >
-                    <Image
-                      src="/images/dashboard/th-flag.png"
-                      alt=""
-                      width={20}
-                      height={14}
-                      className="h-[14px] w-5 object-cover"
-                    />{" "}
-                    TH — Thai
-                  </button>
-                </div>
-              ) : null}
-            </div>
-            <Link href={routes.cart} aria-label={cartCount > 0 ? `Cart, ${cartCount} items` : "Cart"} className="inline-flex">
-              <Icon active={isCartActive} badge={cartCount}>
-                <img
-                  src={
-                    isCartActive
-                      ? "/images/dashboard/navbar/cart-active.png"
-                      : "/images/dashboard/navbar/cart-default.png"
-                  }
-                  alt=""
-                  className="h-5 w-5 object-contain"
-                />
-              </Icon>
-            </Link>
-            <Link href={routes.profile} aria-label="Profile" className="inline-flex">
-              <Icon active={isProfileActive}>
+            <CartLink count={cartCount} isActive={isCartActive} label={t("Cart")} />
+            <Link
+              href={routes.profile}
+              aria-label="Profile"
+              className="group inline-flex rounded-full outline-none focus-visible:ring-2 focus-visible:ring-navy/40"
+            >
+              <Icon active={isProfileActive} label={t("Profile")}>
                 <img
                   src={
                     isProfileActive
@@ -283,11 +186,22 @@ export function DashboardNavbar({ active, overlay = false }: DashboardNavbarProp
                 />
               </Icon>
             </Link>
+            <button
+              type="button"
+              aria-label={t("Open dashboard menu")}
+              aria-expanded={isMobileMenuOpen}
+              onClick={() => setIsMobileMenuOpen((open) => !open)}
+              className={`flex ${controlHeight} w-11 flex-col items-center justify-center gap-1.5 rounded-full bg-white ${controlShadow}`}
+            >
+              <span className="h-0.5 w-4 rounded-full bg-navy" />
+              <span className="h-0.5 w-4 rounded-full bg-navy" />
+              <span className="h-0.5 w-4 rounded-full bg-navy" />
+            </button>
           </div>
         </div>
-      </div>
-      {/* Phones / tablets: the menu slides in from the right as a sidebar. Kept
-          mounted so it can animate out. */}
+      </header>
+
+      {/* Phones / tablets: the menu slides in from the right. Kept mounted so it can animate out. */}
       <div
         className={`fixed inset-0 z-[60] lg:hidden ${isMobileMenuOpen ? "" : "pointer-events-none"}`}
         aria-hidden={!isMobileMenuOpen}
@@ -304,7 +218,7 @@ export function DashboardNavbar({ active, overlay = false }: DashboardNavbarProp
           role="dialog"
           aria-modal="true"
           aria-label={t("Menu")}
-          className={`absolute inset-y-0 right-0 flex w-[min(300px,85vw)] flex-col bg-white shadow-[-12px_0_32px_rgba(11,31,77,0.16)] transition-transform duration-300 ease-out motion-reduce:transition-none ${isMobileMenuOpen ? "translate-x-0" : "translate-x-full"}`}
+          className={`absolute inset-y-0 right-0 flex w-[min(300px,85vw)] flex-col overflow-y-auto bg-white shadow-[-12px_0_32px_rgba(11,31,77,0.16)] transition-transform duration-300 ease-out motion-reduce:transition-none ${isMobileMenuOpen ? "translate-x-0" : "translate-x-full"}`}
         >
           <div className="flex h-16 shrink-0 items-center justify-between border-b border-[#edf0f3] px-5">
             <BrandLogo compact href={routes.dashboard} />
@@ -319,43 +233,9 @@ export function DashboardNavbar({ active, overlay = false }: DashboardNavbarProp
               </svg>
             </button>
           </div>
-          <nav className="grid gap-1 px-4 pt-4">
-            {mobileLinks.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                onClick={closeMobileMenu}
-                aria-current={link.active ? "page" : undefined}
-                className={`rounded-[10px] px-4 py-3 font-manrope text-[14px] font-medium ${link.active ? "bg-navy text-white" : "text-navy hover:bg-[#f5f7fa]"}`}
-              >
-                {link.label}
-              </Link>
-            ))}
-          </nav>
-          <div className="mt-auto border-t border-[#edf0f3] px-4 pb-6 pt-4" data-language-selector="true">
-            <p className="px-1 font-manrope text-[10px] font-semibold uppercase tracking-[0.08em] text-[#8b949e]">
-              {t("Language")}
-            </p>
-            <div className="mt-2.5 grid gap-1.5">
-              {LANGUAGE_OPTIONS.map((option) => (
-                <button
-                  key={option.code}
-                  type="button"
-                  aria-pressed={language === option.code}
-                  onClick={() => {
-                    setLanguage(option.code);
-                    closeMobileMenu();
-                  }}
-                  className={`flex cursor-pointer items-center gap-3 rounded-[10px] border px-3 py-2.5 font-manrope text-[13px] ${language === option.code ? "border-navy bg-navy text-white" : "border-[#e3e8ed] text-navy hover:bg-[#f5f7fa]"}`}
-                >
-                  <Image src={option.flag} alt="" width={20} height={14} className="h-3.5 w-5 rounded-[2px] object-cover" />
-                  {option.label}
-                </button>
-              ))}
-            </div>
-          </div>
+          <SidebarContent mode="main" active={active} account={null} showLogo={false} showLanguage onNavigate={closeMobileMenu} />
         </aside>
       </div>
-    </header>
+    </>
   );
 }

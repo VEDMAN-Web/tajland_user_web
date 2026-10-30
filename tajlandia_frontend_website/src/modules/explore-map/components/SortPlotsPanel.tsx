@@ -58,7 +58,7 @@ export function SortPlotsPanel({
       title={t("Sort by")}
       subtitle={t("Reorder the plot list")}
       closeLabel={t("Close")}
-      widthClassName="sm:w-[340px]"
+      widthClassName="sm:w-full sm:top-full sm:h-[calc(100svh-9.1rem)] sm:max-h-none sm:rounded-none sm:border-0 sm:border-t sm:border-[#e3e7ef] sm:shadow-none"
       onClose={onClose}
       footer={
         <>

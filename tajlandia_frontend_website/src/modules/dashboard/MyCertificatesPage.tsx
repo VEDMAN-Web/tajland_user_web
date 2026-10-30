@@ -9,10 +9,8 @@ import { routes } from "@/lib/constants/routes";
 import { useAuth } from "@/lib/hooks/useAuth";
 import { logError } from "@/lib/logging/logger";
 import { PageLoader } from "@/components/ui/PageLoader";
-import { AccountMenu } from "./AccountMenu";
 import { CertificateDownloadFailedDialog } from "./CertificateDownloadFailedDialog";
 import { CertificatePreview } from "./CertificatePreview";
-import { DashboardNavbar } from "./DashboardNavbar";
 import { useDashboardLanguage } from "./DashboardLanguageContext";
 import type { CertificateListItem } from "./schemas/certificates.schema";
 import {
@@ -228,9 +226,7 @@ export function MyCertificatesPage() {
 
   return (
     <div className="min-h-[100svh] bg-[#f7f9fc] text-navy">
-      <DashboardNavbar active="none" />
-      <main className="mx-auto grid w-full max-w-[1180px] gap-6 px-5 pb-14 pt-8 sm:px-8 lg:grid-cols-[240px_minmax(0,1fr)] lg:items-start lg:gap-7">
-        <AccountMenu active="certificates" />
+      <main className="w-full px-5 pb-14 pt-6 sm:px-8 lg:p-0 lg:[&>section]:mx-auto lg:[&>section]:w-full lg:[&>section]:max-w-[1120px] lg:[&>section]:px-10 lg:[&>section]:py-8">
         <section className="min-w-0">
           <h1 className="font-manrope text-[28px] font-semibold leading-none tracking-[-0.03em] text-navy sm:text-[32px]">
             {t("My Certificates")}

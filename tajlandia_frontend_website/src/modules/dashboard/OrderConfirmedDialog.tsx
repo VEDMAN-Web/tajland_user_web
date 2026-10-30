@@ -329,7 +329,7 @@ function PurchasedPlotCard({
           ) : null}
         </div>
         <p className="mt-0.5 truncate text-[17px] font-medium leading-6 text-navy">
-          {item.name ?? item.plotNumber ?? t("Plot")}
+          {item.plotName?.trim() || item.name || item.plotNumber || t("Plot")}
         </p>
         {item.location ? (
           <p className="flex items-center gap-1 text-[12px] font-medium leading-4 text-[#9aa3ad]">

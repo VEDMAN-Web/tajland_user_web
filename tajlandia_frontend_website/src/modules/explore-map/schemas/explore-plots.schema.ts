@@ -23,6 +23,8 @@ const explorePlotSchema = z.object({
   images: z.array(z.string()).nullish(),
   isOwned: z.boolean().optional(),
   isInCart: z.boolean().optional(),
+  // The plot's name (card title and detail heading); the number is shown when it has none.
+  plotName: z.string().nullish(),
   // In the Figma card but not in the list response yet; shown once the backend sends them.
   name: z.string().min(1).optional(),
   isGifted: z.boolean().optional(),
@@ -67,3 +69,9 @@ export const explorePlotDetailSchema = explorePlotSchema.extend({
 });
 
 export type ExplorePlotDetail = z.infer<typeof explorePlotDetailSchema>;
+
+// `GET /lands/plots`: the user's paid plots; only what View Deed needs (which order holds the plot).
+export const ownedPlotOrdersPageSchema = z.object({
+  plots: z.array(z.object({ plotId: z.string(), orderId: z.string().nullish() })),
+  pagination: z.object({ page: z.number().int().positive(), totalPages: z.number().int().nonnegative() }),
+});

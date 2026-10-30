@@ -88,7 +88,10 @@ export function PlotOptionsPanel({
             </svg>
           </button>
         </header>
-        <div className="min-h-0 flex-1 overflow-y-auto">{children}</div>
+        {/* Slim, rounded, arrow-less scrollbar, as in the search panel lists. */}
+        <div className="min-h-0 flex-1 overflow-y-auto [scrollbar-width:thin] [scrollbar-color:#d9e1ea_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-[#d9e1ea] [&::-webkit-scrollbar-track]:bg-transparent">
+          {children}
+        </div>
         <footer className="flex shrink-0 items-center justify-between gap-3 bg-[#f7f9fc] px-5 py-[15px]">
           {footer}
         </footer>
