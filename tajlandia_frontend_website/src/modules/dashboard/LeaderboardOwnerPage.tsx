@@ -11,11 +11,11 @@ import { routes } from "@/lib/constants/routes";
 import { useAuth } from "@/lib/hooks/useAuth";
 import { logError } from "@/lib/logging/logger";
 import { PageLoader } from "@/components/ui/PageLoader";
-import { DashboardNavbar } from "./DashboardNavbar";
 import { useDashboardLanguage } from "./DashboardLanguageContext";
 import type { LeaderboardPlot, LeaderboardProfile } from "./schemas/leaderboard.schema";
 import { getLeaderboardProfile } from "./services/leaderboard.client";
 import { BackLink } from "@/components/ui/BackLink";
+import { OwnedPlotCard } from "./OwnedPlotCard";
 
 type ProfileState =
   | { status: "loading" }
@@ -23,13 +23,7 @@ type ProfileState =
   | { status: "not-found" }
   | { status: "ready"; profile: LeaderboardProfile };
 
-const PLOT_PLACEHOLDER_IMAGE = "/images/explore/place-placeholder.svg";
 const PLOT_MAP_ZOOM = 12.5;
-const TIER_BADGES: Record<string, string> = {
-  ICON: "bg-[#fff6d6] text-[#c4a035]",
-  POPULAR: "bg-[#e3f4f3] text-[#16807f]",
-  STANDARD: "bg-[#eef1f4] text-[#6b7785]",
-};
 const number = new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 });
 
 const isQuietError = (error: unknown) =>
@@ -82,7 +76,6 @@ export function LeaderboardOwnerPage({ userId }: { userId: string }) {
 
   return (
     <div className="min-h-[100svh] bg-white text-navy">
-      <DashboardNavbar active="leaderboard" />
       <main className="mx-auto w-full max-w-[1180px] px-4 pb-16 pt-6 sm:px-8 sm:pt-8">
         <BackLink href={routes.leaderboard}>{t("Back to Top Owners")}</BackLink>
 
@@ -261,7 +254,7 @@ function OwnerProfile({
           {t("View Plots")}
         </h2>
         {plots.length ? (
-          <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+          <div className="mt-4 grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
             {plots.map((plot) => (
               <PlotCard key={plot.plotId} plot={plot} t={t} />
             ))}
@@ -292,9 +285,11 @@ function StatCard({
   detail: string;
 }) {
   return (
-    <article className="rounded-[18px] border border-[#e7edf5] bg-white px-5 py-5 shadow-[0_8px_24px_rgba(11,31,77,0.04)]">
+    <article className="group rounded-[18px] border border-[#e7edf5] bg-white px-5 py-5 shadow-[0_8px_24px_rgba(11,31,77,0.04)] transition duration-300 hover:-translate-y-1 hover:border-navy/15 hover:shadow-[0_16px_30px_-20px_rgba(11,31,77,0.35)] motion-reduce:transition-none motion-reduce:hover:translate-y-0">
       <div className="flex items-center justify-between gap-3">
-        <span className="shrink-0">{icon}</span>
+        <span className="shrink-0 transition-transform duration-300 group-hover:scale-110 motion-reduce:transition-none motion-reduce:group-hover:scale-100">
+          {icon}
+        </span>
         <p className="rounded-full bg-[#f2f4f7] px-2.5 py-1 font-manrope text-[11px] font-medium leading-none text-[#8b939e]">
           {eyebrow}
         </p>
@@ -318,88 +313,37 @@ function PlotCard({
   plot: LeaderboardPlot;
   t: (source: string) => string;
 }) {
-  const tier = plot.tier.toUpperCase();
-  const tierLabel = tier.charAt(0) + tier.slice(1).toLowerCase();
-  const title = plot.plotName?.trim() || plot.plotCode;
-  const image = plot.images?.[0] ?? plot.image;
+  const images = [...(plot.images ?? []), plot.image].filter(
+    (src, index, all): src is string => isAllowedRemoteImage(src) && all.indexOf(src) === index,
+  );
   const place = [plot.city, plot.province].filter(Boolean).join(", ");
-  const location = [place, plot.zone].filter(Boolean).join(" · ");
   const mapHref =
     plot.latitude != null && plot.longitude != null
       ? `${routes.dashboardExplore}?${new URLSearchParams({
           plotId: plot.plotId,
           // Drawn on the map right away, before Explore loads the plots in view.
-          plotNumber: plot.plotCode,
+          plotNumber: plot.plotName?.trim() || plot.plotCode,
           lat: String(plot.latitude),
           lng: String(plot.longitude),
           zoom: String(PLOT_MAP_ZOOM),
         }).toString()}`
       : null;
-  const certificateUrl = plot.certificateUrl?.startsWith("https://") ? plot.certificateUrl : null;
-  const buttonBase = "inline-flex h-10 items-center rounded-[10px] px-4 font-manrope text-[13px] font-medium";
 
   return (
-    <article className="overflow-hidden rounded-[16px] border border-[#eef1f4] bg-white shadow-[0_8px_22px_rgba(11,31,77,0.05)]">
-      <div className="relative h-[168px] w-full bg-[#eef1f5]">
-        <Image
-          src={isAllowedRemoteImage(image) ? image : PLOT_PLACEHOLDER_IMAGE}
-          alt={title}
-          fill
-          sizes="(min-width: 1280px) 360px, (min-width: 768px) 50vw, 100vw"
-          className="object-cover"
-        />
-      </div>
-      <div className="px-4 pb-4 pt-3">
-        <div className="flex items-center justify-between gap-2">
-          <span className="min-w-0 truncate font-manrope text-[11px] font-semibold uppercase tracking-[0.06em] text-[#8b939e]">
-            {[plot.province, plot.plotCode].filter(Boolean).join(" · ")}
-          </span>
-          <span
-            className={`shrink-0 rounded-full px-2 py-0.5 font-manrope text-[10px] font-semibold uppercase tracking-[0.04em] ${
-              TIER_BADGES[tier] ?? TIER_BADGES.STANDARD
-            }`}
-          >
-            {t(tierLabel)}
-          </span>
-        </div>
-        <h3 className="mt-2 truncate font-manrope text-[16px] font-semibold leading-5 text-[#1a1a1a]">{title}</h3>
-        {location ? (
-          <p className="mt-1 flex items-center gap-1 font-manrope text-[12px] leading-4 text-[#8b939e]">
-            <PinIcon className="h-3.5 w-3.5 shrink-0" />
-            <span className="truncate">{location}</span>
-          </p>
-        ) : null}
-        <div className="mt-4 flex flex-wrap items-center gap-2">
-          {mapHref ? (
-            <Link href={mapHref} className={`${buttonBase} cursor-pointer bg-navy text-white hover:bg-navy-deep`}>
-              {t("View Map")} →
-            </Link>
-          ) : (
-            <span aria-disabled="true" className={`${buttonBase} cursor-not-allowed bg-navy/40 text-white`}>
-              {t("View Map")} →
-            </span>
-          )}
-          {certificateUrl ? (
-            <a
-              href={certificateUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={`${buttonBase} cursor-pointer border border-[#e4e9ef] bg-white text-navy hover:bg-[#f5f7fb]`}
-            >
-              {t("View Certificate")}
-            </a>
-          ) : (
-            <span
-              aria-disabled="true"
-              title={t("Certificate not ready yet")}
-              className={`${buttonBase} cursor-not-allowed border border-[#e4e9ef] bg-white text-[#b0b7c0]`}
-            >
-              {t("View Certificate")}
-            </span>
-          )}
-        </div>
-      </div>
-    </article>
+    <OwnedPlotCard
+      title={plot.plotName?.trim() || plot.plotCode}
+      plotCode={plot.plotCode}
+      tier={plot.tier}
+      location={[place, plot.zone].filter(Boolean).join(" · ")}
+      images={images}
+      stats={[
+        { label: t("Total Rai"), value: `${number.format(plot.sizeRai)} ${t("Rai")}` },
+        { label: t("Total Price"), value: formatMoney(plot.price) },
+      ]}
+      mapHref={mapHref}
+      certificateUrl={plot.certificateUrl?.startsWith("https://") ? plot.certificateUrl : null}
+      t={t}
+    />
   );
 }
 
@@ -487,20 +431,6 @@ function LayersIcon() {
         strokeLinejoin="round"
       />
     </StatIcon>
-  );
-}
-
-function PinIcon({ className = "h-4 w-4" }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 16 16" aria-hidden="true" className={className}>
-      <path
-        d="M8 14s4.5-4.1 4.5-7.2A4.5 4.5 0 0 0 8 2.3a4.5 4.5 0 0 0-4.5 4.5C3.5 9.9 8 14 8 14Z"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.3"
-      />
-      <circle cx="8" cy="6.7" r="1.4" fill="currentColor" />
-    </svg>
   );
 }
 

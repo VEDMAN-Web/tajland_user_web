@@ -15,6 +15,9 @@ type PlotCardProps = {
   /** True while this plot's Add to Cart request runs. */
   isAddingToCart: boolean;
   onAddToCart: (plot: ExplorePlot) => void;
+  /** True while this plot's deed (certificate) is being looked up. */
+  isOpeningDeed: boolean;
+  onViewDeed: (plot: ExplorePlot) => void;
   t: Translate;
 };
 
@@ -24,6 +27,28 @@ const STATUS_BADGE: Record<PlotCardStatus, { label: string; className: string }>
   locked: { label: "Locked", className: "border-[#f6df9c] text-[#c8941a]" },
   taken: { label: "Taken", className: "border-[#f6c4c4] text-[#d64242]" },
   owned: { label: "Your plot", className: "border-[#c9d3e6] text-[#001f54]" },
+};
+
+/** Glass tint per zone category: card wash, border, glow and the corner tag. */
+const TIER_THEME: Record<string, { card: string; border: string; glow: string; tag: string }> = {
+  icon: {
+    card: "bg-linear-to-br from-[#fff3cf] via-[#fffaea] to-white",
+    border: "border-[#f2dd9c]",
+    glow: "bg-[#f5c542]/35",
+    tag: "bg-[#fde68a] text-[#8a5a00]",
+  },
+  popular: {
+    card: "bg-linear-to-br from-[#d9f5e5] via-[#f1fbf5] to-white",
+    border: "border-[#b9e7cc]",
+    glow: "bg-[#2cbf65]/30",
+    tag: "bg-[#bbf0d0] text-[#0f7a41]",
+  },
+  standard: {
+    card: "bg-linear-to-br from-[#dce9ff] via-[#f1f6ff] to-white",
+    border: "border-[#c3d6f6]",
+    glow: "bg-[#4f8cf0]/30",
+    tag: "bg-[#cfe0fb] text-[#1d4a99]",
+  },
 };
 
 function formatMoney(amount: number, currency: string) {
@@ -91,11 +116,15 @@ export function PlotCard({
   onSelect,
   isAddingToCart,
   onAddToCart,
+  isOpeningDeed,
+  onViewDeed,
   t,
 }: PlotCardProps) {
   const status = plotCardStatus(plot.status, plot.isOwned, plot.isInCart);
   const badge = STATUS_BADGE[status];
   const tier = plot.zone?.tier;
+  const plotName = plot.plotName?.trim() || plot.name;
+  const theme = tier ? TIER_THEME[tier.toLowerCase()] : undefined;
 
   const actionClass =
     "flex h-[38px] min-w-[120px] shrink-0 items-center justify-center gap-2 rounded-[8px] px-4 text-[12px] font-medium";
@@ -104,10 +133,28 @@ export function PlotCard({
     <article
       className={cn(
         // Content height on phones; Figma's fixed 184px from sm up.
-        "relative flex shrink-0 flex-col gap-3 rounded-[12px] border bg-white p-[14px] shadow-[0_1px_2px_rgba(0,0,0,0.05)] transition-colors sm:h-[184px]",
-        selected ? "border-[#001f54]" : "border-[#e9ecef] hover:border-[#cfd8e3]",
+        "group relative isolate flex shrink-0 flex-col gap-3 rounded-[16px] border p-[14px] shadow-[0_1px_2px_rgba(0,0,0,0.05),inset_0_1px_0_rgba(255,255,255,0.9)] transition-[border-color,box-shadow] duration-200 hover:shadow-[0_8px_20px_-12px_rgba(11,31,77,0.3),inset_0_1px_0_rgba(255,255,255,0.9)] sm:h-[184px]",
+        theme ? theme.card : "bg-white",
+        selected
+          ? "border-[#001f54]"
+          : theme
+            ? theme.border
+            : "border-[#e9ecef] hover:border-[#cfd8e3]",
       )}
     >
+      {theme ? (
+        // Frosted look: a coloured glow in the corner and a soft white sheen, behind the content.
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 -z-10 overflow-hidden rounded-[15px]"
+        >
+          <span className={cn("absolute -right-6 -top-8 h-28 w-28 rounded-full blur-2xl", theme.glow)} />
+          <span className="absolute inset-0 bg-linear-to-br from-white/70 via-white/10 to-transparent" />
+          {/* Shimmer: one diagonal sweep when the card is hovered. Only a transform, no
+              running animation, so a long list stays light. */}
+          <span className="absolute inset-y-0 left-0 w-1/3 -translate-x-[130%] -skew-x-[20deg] bg-linear-to-r from-transparent via-white/80 to-transparent group-hover:translate-x-[430%] group-hover:transition-transform group-hover:duration-[900ms] group-hover:ease-out motion-reduce:hidden" />
+        </span>
+      ) : null}
       {selected ? (
         <span className="absolute -top-2 right-3 flex items-center gap-1 rounded-full bg-[#001f54] px-2 py-[3px] text-[8px] font-bold uppercase leading-none tracking-[0.06em] text-white">
           <span aria-hidden="true" className="h-1 w-1 rounded-full bg-white" />
@@ -129,27 +176,27 @@ export function PlotCard({
             className="h-[84px] w-[84px] rounded-[12px] sm:h-[99px] sm:w-[99px]"
           />
           {tier ? (
-            <span className="absolute left-1.5 top-1.5 rounded-[4px] bg-[#fde68a] px-1.5 py-0.5 text-[8px] font-semibold uppercase leading-none text-[#8a5a00]">
+            <span
+              className={cn(
+                "absolute left-1.5 top-1.5 rounded-[4px] px-1.5 py-0.5 text-[8px] font-semibold uppercase leading-none shadow-[0_1px_3px_rgba(0,0,0,0.15)]",
+                theme?.tag ?? "bg-[#fde68a] text-[#8a5a00]",
+              )}
+            >
               {t(tier.charAt(0) + tier.slice(1).toLowerCase())}
             </span>
           ) : null}
         </span>
 
         <span className="flex min-w-0 flex-1 flex-col">
-          <span className="flex items-start justify-between gap-2">
-            <span className="min-w-0">
-              <strong className="block truncate text-[13px] font-medium leading-5 text-[#0b1f33]">
-                {plot.name ?? plot.plotNumber}
-              </strong>
-              <span className="mt-0.5 flex items-center gap-1 truncate text-[10px] leading-4 text-[#6b7785]">
-                {plot.isGifted ? (
-                  <span className="text-[#001f54]" title={t("Gifted plot")}>
-                    <GiftIcon />
-                  </span>
-                ) : null}
-                {plot.name ? plot.plotNumber : (plot.region?.name ?? "")}
-              </span>
-            </span>
+          {/* Name on one line ("…" when too long, full name on hover) with the status badge
+              pinned to the top-right corner of the row. */}
+          <span className="flex items-center justify-between gap-2">
+            <strong
+              title={plotName ?? undefined}
+              className="min-w-0 flex-1 truncate text-[13px] font-medium leading-5 text-[#0b1f33]"
+            >
+              {plotName ?? plot.plotNumber}
+            </strong>
             <span
               className={cn(
                 "shrink-0 rounded-full border bg-white px-2 py-[3px] text-[8px] font-bold uppercase leading-none tracking-[0.06em]",
@@ -157,6 +204,16 @@ export function PlotCard({
               )}
             >
               {t(badge.label)}
+            </span>
+          </span>
+          <span className="mt-0.5 flex min-w-0 items-center gap-1 text-[10px] leading-4 text-[#6b7785]">
+            {plot.isGifted ? (
+              <span className="text-[#001f54]" title={t("Gifted plot")}>
+                <GiftIcon />
+              </span>
+            ) : null}
+            <span className="truncate">
+              {plotName ? plot.plotNumber : (plot.region?.name ?? "")}
             </span>
           </span>
 
@@ -194,7 +251,6 @@ export function PlotCard({
           </span>
         </div>
 
-        {/* TODO: wire "View Deed" to the deed API. */}
         {status === "available" ? (
           <button
             type="button"
@@ -221,12 +277,14 @@ export function PlotCard({
         ) : status === "owned" ? (
           <button
             type="button"
+            disabled={isOpeningDeed}
+            onClick={() => onViewDeed(plot)}
             className={cn(
               actionClass,
-              "cursor-pointer bg-[#eef2f7] text-[#001f54] hover:bg-[#e2e8f1]",
+              "cursor-pointer bg-[#eef2f7] text-[#001f54] hover:bg-[#e2e8f1] disabled:cursor-wait disabled:opacity-70",
             )}
           >
-            {`${t("View Deed")} →`}
+            {isOpeningDeed ? t("Opening...") : `${t("View Deed")} →`}
           </button>
         ) : (
           <button

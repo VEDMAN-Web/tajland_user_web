@@ -46,10 +46,20 @@ function EyeIcon({ hidden }: { hidden: boolean }) {
   );
 }
 
-function AppleIcon() {
+function MailIcon({ className }: { className?: string }) {
   return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-4 w-4 fill-current">
-      <path d="M16.7 12.7c0-2 1.6-3 1.7-3.1a3.8 3.8 0 0 0-3-1.6c-1.3-.1-2.5.8-3.1.8-.7 0-1.7-.8-2.8-.8a4.2 4.2 0 0 0-3.5 2.1c-1.5 2.6-.4 6.5 1 8.6.7 1 1.5 2.1 2.6 2.1 1 0 1.4-.6 2.7-.6s1.7.6 2.7.6c1.1 0 1.8-1 2.5-2.1.8-1.2 1.1-2.4 1.1-2.5-.1 0-1.9-.7-1.9-3.5Zm-2.1-6c.6-.7 1-1.7.9-2.7-.9 0-2 .6-2.7 1.3-.6.6-1 1.6-.9 2.6 1 .1 2-.5 2.7-1.2Z" />
+    <svg viewBox="0 0 24 24" aria-hidden="true" className={className}>
+      <rect x="3" y="5" width="18" height="14" rx="3" fill="none" stroke="currentColor" strokeWidth="1.5" />
+      <path d="m4 7.5 8 5.5 8-5.5" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" />
+    </svg>
+  );
+}
+
+function LockIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className={className}>
+      <rect x="4.5" y="10.5" width="15" height="9.5" rx="2.5" fill="none" stroke="currentColor" strokeWidth="1.5" />
+      <path d="M8 10.5V8a4 4 0 0 1 8 0v2.5" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="1.5" />
     </svg>
   );
 }
@@ -184,68 +194,97 @@ export function LoginPage() {
     }
   }
 
-  const fieldClass = "h-12 w-full rounded-[12px] border border-[#e6e8ee] bg-white px-3.5 text-[14px] text-[#1c1c1c] outline-none transition placeholder:text-[#c5c9d1] focus:border-navy focus:ring-2 focus:ring-navy/10 aria-[invalid=true]:border-[#d52b35]";
+  const fieldClass = "h-12 w-full rounded-[14px] border border-[#e3e7ef] bg-white pl-11 pr-3.5 text-[14px] text-[#1c1c1c] shadow-[0_1px_2px_rgba(11,31,77,0.04)] outline-none transition placeholder:text-[#b4bbc8] hover:border-[#cfd6e4] focus:border-navy focus:ring-4 focus:ring-navy/10 aria-[invalid=true]:border-[#d52b35] aria-[invalid=true]:focus:ring-[#d52b35]/10";
+  const iconClass = "pointer-events-none absolute left-3.5 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-[#9aa5b8]";
 
   return (
-    <section className="flex flex-1 items-center bg-white px-4 py-8 sm:px-8 lg:px-12 lg:py-10">
-      <div className="mx-auto grid w-full max-w-[1080px] items-center gap-8 lg:grid-cols-[1.05fr_0.95fr] lg:gap-14">
-        <div className="relative min-h-[420px] overflow-hidden rounded-[28px] bg-[#0b1f4d] text-white sm:min-h-[520px] lg:min-h-[640px]">
-          {!imageLoaded ? (
-            <span aria-hidden="true" className="absolute inset-0 animate-pulse bg-[#e6eaf0] motion-reduce:animate-none" />
-          ) : null}
-          <Image
-            src="/images/auth/img_login.png"
-            alt=""
-            fill
-            priority
-            sizes="(max-width: 1024px) 100vw, 540px"
-            onLoad={() => setImageLoaded(true)}
-            className={`object-cover object-center transition-opacity duration-500 ${imageLoaded ? "opacity-100" : "opacity-0"}`}
-          />
-          <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-transparent" />
-          <div className="relative z-10 px-7 py-8 [text-shadow:0_1px_10px_rgba(0,0,0,0.35)] sm:px-8 sm:py-9">
-            <h1 className="text-[26px] font-semibold leading-[1.15] tracking-[-0.03em] text-white sm:text-[30px]">
+    <section className="flex min-h-[100svh] flex-1 flex-col bg-white lg:grid lg:grid-cols-[1.08fr_1fr]">
+      <aside className="relative isolate h-[300px] shrink-0 overflow-hidden bg-[#0b1f4d] text-white sm:h-[360px] lg:sticky lg:top-0 lg:h-[100svh]">
+        {!imageLoaded ? (
+          <span aria-hidden="true" className="absolute inset-0 animate-pulse bg-[#1a2f63] motion-reduce:animate-none" />
+        ) : null}
+        <Image
+          src="/images/auth/img_login.png"
+          alt=""
+          fill
+          priority
+          sizes="(max-width: 1024px) 100vw, 55vw"
+          onLoad={() => setImageLoaded(true)}
+          className={`object-cover object-center transition-opacity duration-700 ${imageLoaded ? "auth-hero-zoom opacity-100" : "opacity-0"}`}
+        />
+        <div aria-hidden="true" className="absolute inset-0 bg-linear-to-b from-black/35 via-transparent to-[#071536]/85" />
+        <div aria-hidden="true" className="absolute inset-0 bg-linear-to-r from-[#071536]/30 to-transparent" />
+
+        <div className="relative z-10 flex h-full flex-col justify-between px-6 pb-12 pt-6 sm:px-10 sm:pt-8 lg:px-14 lg:pb-14 lg:pt-12">
+          <span className="inline-flex w-fit items-center gap-2 rounded-full border border-white/25 bg-black/25 px-3.5 py-1.5 text-[11px] font-medium uppercase tracking-[0.16em] text-white/90">
+            <span className="h-1.5 w-1.5 rounded-full bg-[#ff4b5c]" />
+            Tajlandia
+          </span>
+
+          <div>
+            <h1 className="text-[30px] font-semibold leading-[1.08] tracking-[-0.035em] text-white [text-shadow:0_2px_20px_rgba(0,0,0,0.35)] sm:text-[40px] lg:text-[54px]">
               <span className="block">Your little piece of</span>
-              <span className="mt-1 block">
-                <span className="font-display text-[1.08em] font-medium italic">Thailand</span>
-                {" "}
+              <span className="block">
+                <span className="font-display text-[1.1em] font-medium italic">Thailand</span>{" "}
                 <span>awaits.</span>
               </span>
             </h1>
-            <p className="mt-3 text-[13px] font-normal leading-5 text-white sm:text-[14px]">
+            <p className="mt-4 inline-flex max-w-full rounded-full border border-white/25 bg-black/25 px-4 py-2 text-[12px] leading-5 text-white/95 sm:text-[14px]">
               Explore. Choose. Claim. Make a memory yours.
             </p>
           </div>
         </div>
+      </aside>
 
-        <div className="flex items-center px-1 py-2 sm:px-4">
-          <ScrollAnimatedElement animation="slide-in-right" duration={600} className="mx-auto w-full max-w-[420px]">
+      <div className="relative z-10 -mt-8 flex flex-1 items-center justify-center rounded-t-[32px] bg-white px-5 pb-10 pt-8 sm:px-10 lg:mt-0 lg:rounded-none lg:bg-[#f6f8fc] lg:px-12 lg:py-4">
+        <div aria-hidden="true" className="pointer-events-none absolute inset-0 hidden overflow-hidden lg:block">
+          <div className="absolute -right-24 -top-24 h-72 w-72 rounded-full bg-[#e11d2e]/[0.05] blur-3xl" />
+          <div className="absolute -bottom-24 -left-16 h-72 w-72 rounded-full bg-navy/[0.07] blur-3xl" />
+          <svg viewBox="0 0 800 300" preserveAspectRatio="xMidYMax slice" className="absolute inset-x-0 bottom-0 h-[42%] w-full text-navy">
+            <path d="M0 215 L80 150 L140 185 L235 100 L325 195 L415 135 L515 205 L620 120 L715 185 L800 150 V300 H0 Z" fill="currentColor" fillOpacity="0.035" />
+            <path d="M0 245 L70 200 L130 228 L210 170 L300 235 L400 190 L500 240 L600 180 L700 232 L800 205 V300 H0 Z" fill="currentColor" fillOpacity="0.045" />
+            <path d="M0 262 C110 232 190 282 310 258 S530 228 650 258 S760 250 800 244 V300 H0 Z" fill="currentColor" fillOpacity="0.06" />
+            <path d="M0 262 C110 232 190 282 310 258 S530 228 650 258 S760 250 800 244" fill="none" stroke="currentColor" strokeOpacity="0.12" strokeWidth="1.2" />
+          </svg>
+          <svg viewBox="0 0 800 300" preserveAspectRatio="xMidYMax slice" className="absolute inset-x-0 top-0 h-[42%] w-full rotate-180 text-navy">
+            <path d="M0 215 L80 150 L140 185 L235 100 L325 195 L415 135 L515 205 L620 120 L715 185 L800 150 V300 H0 Z" fill="currentColor" fillOpacity="0.035" />
+            <path d="M0 245 L70 200 L130 228 L210 170 L300 235 L400 190 L500 240 L600 180 L700 232 L800 205 V300 H0 Z" fill="currentColor" fillOpacity="0.045" />
+            <path d="M0 262 C110 232 190 282 310 258 S530 228 650 258 S760 250 800 244 V300 H0 Z" fill="currentColor" fillOpacity="0.06" />
+            <path d="M0 262 C110 232 190 282 310 258 S530 228 650 258 S760 250 800 244" fill="none" stroke="currentColor" strokeOpacity="0.12" strokeWidth="1.2" />
+          </svg>
+        </div>
+
+        <ScrollAnimatedElement animation="slide-in-right" duration={600} className="relative mx-auto w-full max-w-[440px]">
+          <div className="rounded-[28px] bg-white lg:p-7 lg:shadow-[0_24px_60px_-24px_rgba(11,31,77,0.22)] lg:ring-1 lg:ring-[#e6eaf3]">
             <BackLink href={routes.home}>Back to Home</BackLink>
+            <h2 className="mt-6 lg:mt-4 text-[24px] font-semibold tracking-[-0.03em] text-navy sm:text-[26px]">Welcome back</h2>
+            <p className="mt-2 text-[14px] leading-6 text-[#64748b]">Sign in to continue your Tajlandia journey.</p>
 
-            <h2 className="mt-8 text-[28px] font-semibold tracking-[-0.03em] text-navy sm:text-[30px]">Welcome back</h2>
-            <p className="mt-2 text-[14px] text-[#64748b]">Sign in to continue your Tajlandia journey.</p>
-
-            <form className="mt-8" noValidate onSubmit={handleSubmit}>
+            <form className="mt-7 lg:mt-5" noValidate onSubmit={handleSubmit}>
               <div>
-                <label htmlFor="login-email" className="text-[14px] font-medium text-[#1c1c1c]">Email</label>
-                <input
-                  id="login-email"
-                  name="email"
-                  type="email"
-                  autoComplete="email"
-                  placeholder="Enter your email"
-                  value={values.email}
-                  onChange={(event) => updateField("email", event.target.value)}
-                  aria-invalid={Boolean(errors.email)}
-                  aria-describedby={errors.email ? "login-email-error" : undefined}
-                  className={`mt-2 ${fieldClass}`}
-                />
+                <label htmlFor="login-email" className="text-[13px] font-medium text-[#1c1c1c]">Email</label>
+                <div className="relative mt-2">
+                  <MailIcon className={iconClass} />
+                  <input
+                    id="login-email"
+                    name="email"
+                    type="email"
+                    autoComplete="email"
+                    placeholder="Enter your email"
+                    value={values.email}
+                    onChange={(event) => updateField("email", event.target.value)}
+                    aria-invalid={Boolean(errors.email)}
+                    aria-describedby={errors.email ? "login-email-error" : undefined}
+                    className={fieldClass}
+                  />
+                </div>
                 {errors.email ? <p id="login-email-error" className="mt-1.5 text-[12px] text-[#d52b35]">{errors.email}</p> : null}
               </div>
 
-              <div className="mt-5">
-                <label htmlFor="login-password" className="text-[14px] font-medium text-[#1c1c1c]">Password</label>
+              <div className="mt-5 lg:mt-4">
+                <label htmlFor="login-password" className="text-[13px] font-medium text-[#1c1c1c]">Password</label>
                 <div className="relative mt-2">
+                  <LockIcon className={iconClass} />
                   <input
                     id="login-password"
                     name="password"
@@ -263,7 +302,7 @@ export function LoginPage() {
                     aria-label={showPassword ? "Hide password" : "Show password"}
                     onMouseDown={(event) => event.preventDefault()}
                     onClick={() => setShowPassword((current) => !current)}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 cursor-pointer rounded-sm text-[#b7b8bb] outline-none focus-visible:ring-2 focus-visible:ring-[#9aaabd]"
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 cursor-pointer rounded-sm text-[#9aa5b8] outline-none transition hover:text-navy focus-visible:ring-2 focus-visible:ring-[#9aaabd]"
                   >
                     <EyeIcon hidden={!showPassword} />
                   </button>
@@ -271,13 +310,13 @@ export function LoginPage() {
                 {errors.password ? <p id="login-password-error" className="mt-1.5 text-[12px] text-[#d52b35]">{errors.password}</p> : null}
               </div>
 
-              <div className="mt-4 flex items-center justify-between gap-4 text-[13px]">
+              <div className="mt-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 text-[13px]">
                 <label className="flex cursor-pointer items-center gap-2 text-[#64748b]">
                   <input
                     type="checkbox"
                     checked={rememberMe}
                     onChange={(event) => setRememberMe(event.target.checked)}
-                    className="h-4 w-4 rounded border-[#d7d8da] accent-navy"
+                    className="h-4 w-4 cursor-pointer rounded border-[#d7d8da] accent-navy"
                   />
                   Remember me
                 </label>
@@ -285,36 +324,44 @@ export function LoginPage() {
               </div>
 
               {apiError ? (
-                <p role="alert" className="mt-4 text-center text-[13px] text-[#d52b35]">
+                <p role="alert" className="mt-4 rounded-[12px] border border-[#f6c9cd] bg-[#fff4f5] px-3.5 py-2.5 text-center text-[13px] text-[#d52b35]">
                   {apiError}
                 </p>
               ) : null}
-              <button type="submit" disabled={isSubmitting} className="mt-5 h-12 w-full cursor-pointer rounded-[12px] bg-navy text-[15px] font-medium text-white transition hover:bg-navy-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy disabled:cursor-not-allowed disabled:opacity-60">
-                {isSubmitting ? "Logging in..." : "Log In"}
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="mt-5 lg:mt-4 inline-flex h-12 lg:h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-[14px] bg-linear-to-b from-[#12307a] to-navy text-[15px] font-medium text-white shadow-[0_10px_24px_-10px_rgba(11,31,77,0.7)] transition hover:-translate-y-px hover:shadow-[0_14px_28px_-10px_rgba(11,31,77,0.75)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0 motion-reduce:transition-none"
+              >
+                {isSubmitting ? (
+                  <>
+                    <span aria-hidden="true" className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white motion-reduce:animate-none" />
+                    Logging in...
+                  </>
+                ) : (
+                  "Log In"
+                )}
               </button>
             </form>
 
-            <div className="my-6 flex items-center gap-3 text-[11px] tracking-[0.08em] text-[#64748b]">
-              <span className="h-px flex-1 bg-[#ececee]" />
+            <div className="my-6 lg:my-4 flex items-center gap-3 text-[11px] tracking-[0.1em] text-[#8b95a7]">
+              <span className="h-px flex-1 bg-[#e6eaf3]" />
               <span>OR CONTINUE WITH</span>
-              <span className="h-px flex-1 bg-[#ececee]" />
+              <span className="h-px flex-1 bg-[#e6eaf3]" />
             </div>
 
             <div className="grid grid-cols-1 gap-3">
-              {/* <button type="button" className="flex h-11 cursor-pointer items-center justify-center gap-2 rounded-[12px] bg-[#f4f5f7] text-[13px] text-[#1c1c1c] transition hover:bg-[#eceef1] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy">
-                <AppleIcon /> Continue with Apple
-              </button> */}
               {GOOGLE_CLIENT_ID ? (
                 // Google's rendered button can't be restyled, so it is kept mounted and
-                // genuinely clickable but invisible, layered over a button styled to match
-                // the Apple button exactly. The click still goes through Google's real flow.
+                // genuinely clickable but invisible, layered over a button styled to match.
+                // The click still goes through Google's real flow.
                 <div
                   ref={googleButtonRef}
-                  className={`group relative h-11 overflow-hidden rounded-[12px] ${isSubmitting ? "pointer-events-none opacity-60" : ""}`}
+                  className={`group relative h-11 overflow-hidden rounded-[14px] ${isSubmitting ? "pointer-events-none opacity-60" : ""}`}
                 >
                   <div
                     aria-hidden="true"
-                    className="pointer-events-none flex h-11 items-center justify-center gap-2 rounded-[12px] bg-[#f4f5f7] text-[13px] text-[#1c1c1c] transition group-hover:bg-[#eceef1] group-focus-within:outline-2 group-focus-within:outline-offset-2 group-focus-within:outline-navy"
+                    className="pointer-events-none flex h-11 items-center justify-center gap-2.5 rounded-[14px] border border-[#e3e7ef] bg-white text-[13px] font-medium text-[#1c1c1c] shadow-[0_1px_2px_rgba(11,31,77,0.04)] transition group-hover:border-[#cfd6e4] group-hover:bg-[#f9fafc] group-focus-within:outline-2 group-focus-within:outline-offset-2 group-focus-within:outline-navy"
                   >
                     <GoogleIcon /> Continue with Google
                   </div>
@@ -334,17 +381,18 @@ export function LoginPage() {
                   ) : null}
                 </div>
               ) : (
-                <button type="button" className="flex h-11 cursor-pointer items-center justify-center gap-2 rounded-[12px] bg-[#f4f5f7] text-[13px] text-[#1c1c1c] transition hover:bg-[#eceef1] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy">
+                <button type="button" className="flex h-11 cursor-pointer items-center justify-center gap-2.5 rounded-[14px] border border-[#e3e7ef] bg-white text-[13px] font-medium text-[#1c1c1c] shadow-[0_1px_2px_rgba(11,31,77,0.04)] transition hover:border-[#cfd6e4] hover:bg-[#f9fafc] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy">
                   <GoogleIcon /> Continue with Google
                 </button>
               )}
             </div>
 
-            <p className="mt-7 text-center text-[14px] text-[#1c1c1c]">
-              Don&apos;t have an account? <Link href="/signup" className="font-medium text-[#e11d2e] hover:underline">Create Account</Link>
+            <p className="mt-7 lg:mt-5 text-center text-[14px] text-[#64748b]">
+              Don&apos;t have an account?{" "}
+              <Link href="/signup" className="font-semibold text-[#e11d2e] hover:underline">Create Account</Link>
             </p>
-          </ScrollAnimatedElement>
-        </div>
+          </div>
+        </ScrollAnimatedElement>
       </div>
     </section>
   );

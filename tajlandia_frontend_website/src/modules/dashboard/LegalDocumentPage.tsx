@@ -3,8 +3,6 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/hooks/useAuth";
-import { AccountMenu } from "./AccountMenu";
-import { DashboardNavbar } from "./DashboardNavbar";
 import { SiteFooter } from "@/components/layout/SiteFooter";
 import { SiteHeader } from "@/components/layout/SiteHeader";
 import { routes } from "@/lib/constants/routes";
@@ -340,15 +338,14 @@ export function LegalDocumentPage({
 
   return (
     <div className="min-h-[100svh] bg-[#f7f9fc] text-navy">
-      {publicPage ? <SiteHeader /> : <DashboardNavbar active="home" />}
+      {publicPage ? <SiteHeader /> : null}
       <main
         className={
           publicPage
-            ? "mx-auto w-full max-w-[1180px] px-5 pb-16 pt-10 sm:px-8"
-            : "mx-auto grid w-full max-w-[1180px] gap-6 px-5 pb-14 pt-8 sm:px-8 lg:grid-cols-[240px_minmax(0,1fr)] lg:items-start lg:gap-7"
+            ? "mx-auto w-full max-w-[1180px] px-5 pb-16 pt-10 sm:px-8 lg:pt-8"
+            : "w-full px-5 pb-14 pt-6 sm:px-8 lg:p-0 lg:[&>section]:mx-auto lg:[&>section]:w-full lg:[&>section]:max-w-[1120px] lg:[&>section]:px-10 lg:[&>section]:py-8"
         }
       >
-        {publicPage ? null : <AccountMenu active={isPrivacy ? "privacy" : "terms"} />}
         <section className="min-w-0">
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">

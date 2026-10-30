@@ -1166,3 +1166,49 @@ nextjs-portal {
     animation: fade-in 1.6s ease-in-out infinite alternate !important;
   }
 }
+
+/* Slow zoom-in/out on the login/signup hero photo (Ken Burns). */
+@keyframes auth-hero-zoom {
+  from {
+    transform: scale3d(1, 1, 1);
+  }
+  to {
+    transform: scale3d(1.1, 1.1, 1);
+  }
+}
+
+.auth-hero-zoom {
+  animation: auth-hero-zoom 5s ease-in-out infinite alternate;
+  backface-visibility: hidden;
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-hero-zoom {
+    animation: none;
+  }
+}
+
+
+/* Soft diagonal glass sheen that sweeps across a card now and then. */
+@keyframes gift-shine {
+  0% {
+    transform: translate3d(-160%, 0, 0) skewX(-20deg);
+  }
+  40%,
+  100% {
+    transform: translate3d(620%, 0, 0) skewX(-20deg);
+  }
+}
+
+.gift-shine {
+  animation: gift-shine 6s ease-in-out infinite;
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gift-shine {
+    animation: none;
+    opacity: 0;
+  }
+}

@@ -8,7 +8,6 @@ import { notifyCartChanged } from "@/lib/cart/cart-events";
 import { routes } from "@/lib/constants/routes";
 import { logError } from "@/lib/logging/logger";
 import { useAuth } from "@/lib/hooks/useAuth";
-import { DashboardNavbar } from "@/modules/dashboard/DashboardNavbar";
 import {
   MapboxMap,
   type MapboxMapHandle,
@@ -39,6 +38,7 @@ import {
   clearRecentSearches,
   deleteRecentSearch,
   getExploreMap,
+  getPlotDeedOrderId,
   getRecentSearches,
   RECENT_SEARCH_PAGE_SIZE,
   saveRecentSearch,
@@ -115,29 +115,27 @@ function polygonBounds(plot: Pick<ExplorePlot, "geometry">): MapBounds | null {
   };
 }
 
-// From sm the plot list is a 420px panel, 32px from the left edge.
-const PLOT_PANEL_RIGHT_EDGE = 32 + 420;
-// Narrowest strip of map kept for the plots beside the panel (small tablets).
-const MIN_VISIBLE_MAP_WIDTH = 160;
+// From sm up the list is a 340px panel over the left of the map.
+const PANEL_WIDTH = 340;
 
-/** Tablets (sm up to lg): the 420px list panel covers much of the map. */
-function isTabletWidth() {
-  return window.matchMedia("(min-width: 640px) and (max-width: 1023px)").matches;
+function isSmUp() {
+  return window.matchMedia("(min-width: 640px)").matches;
 }
 
-/** Keeps a focused plot in the visible map: right of the side panel, or above the phone sheet. */
-function plotFocusPadding() {
-  if (window.matchMedia("(min-width: 1024px)").matches) {
-    return { top: 170, bottom: 60, left: 500, right: 80 };
-  }
-  if (isTabletWidth()) {
-    const right = 40;
-    // Clear of the panel, but never so much that the fit has no room (Mapbox then fails).
-    const left = Math.max(
-      40,
-      Math.min(PLOT_PANEL_RIGHT_EDGE + 24, window.innerWidth - right - MIN_VISIBLE_MAP_WIDTH),
-    );
-    return { top: 170, bottom: 60, left, right };
+/** The Thailand-wide view, leaving the panel's part of the map out when it is open. */
+function thailandViewPadding(panelOpen: boolean) {
+  return panelOpen && isSmUp()
+    ? { ...THAILAND_VIEW_PADDING, left: THAILAND_VIEW_PADDING.left + PANEL_WIDTH }
+    : THAILAND_VIEW_PADDING;
+}
+
+/**
+ * Keeps a focused plot in the visible map: right of the panel (when it is open) and
+ * below the header (top 64px); on phones, above the bottom sheet.
+ */
+function plotFocusPadding(panelOpen: boolean) {
+  if (isSmUp()) {
+    return { top: 120, bottom: 60, left: 60 + (panelOpen ? PANEL_WIDTH : 0), right: 60 };
   }
   return {
     top: 140,
@@ -170,13 +168,24 @@ function plotsBounds(plots: ExplorePlot[]): MapBounds | null {
   };
 }
 
+// Plot names can be long ("[DEMO] Roadside Land Plot in Bang Saray, Pattaya"); a pill that
+// wide would hide its neighbours, so the map shows the start of the name.
+const MAP_LABEL_MAX_LENGTH = 22;
+function mapLabel(text: string) {
+  const label = text.trim();
+  return label.length > MAP_LABEL_MAX_LENGTH ? `${label.slice(0, MAP_LABEL_MAX_LENGTH - 1).trimEnd()}…` : label;
+}
+
 function toMapPlot(plot: ExplorePlot): MapPlot {
   return {
     id: plot.id,
     color: plotColor(plot.status, plot.isOwned),
     center: [plot.coordinates.lng, plot.coordinates.lat],
     polygon: plot.geometry?.coordinates,
-    label: plot.plotNumber,
+    // The plot's name; its number when it has none (as on the plot cards).
+    label: mapLabel(plot.plotName?.trim() || plot.name || plot.plotNumber),
+    // When labels collide: the user's own plots first, then available, locked, taken.
+    priority: plot.isOwned ? 0 : plot.status === "AVAILABLE" ? 1 : plot.status === "LOCKED" ? 2 : 3,
     fill: plot.isOwned ? OWNED_PLOT_FILL : undefined,
   };
 }
@@ -282,6 +291,14 @@ export function AuthenticatedExploreMapPage() {
   });
   const [search, setSearch] = useState(linkedRegion?.name ?? "");
   const [isSearchExpanded, setIsSearchExpanded] = useState(Boolean(linkedRegion));
+  // From sm up the left panel is always there; this only slides it away (the map gets the room).
+  const [isPanelCollapsed, setIsPanelCollapsed] = useState(false);
+  // Same value, readable inside the map callbacks right after a handler changes it.
+  const isPanelCollapsedRef = useRef(false);
+  function setPanelCollapsed(collapsed: boolean) {
+    isPanelCollapsedRef.current = collapsed;
+    setIsPanelCollapsed(collapsed);
+  }
   // While the browser looks up the user's location (can take a few seconds).
   const [isLocating, setIsLocating] = useState(false);
   // Why "Current location" failed, shown in a toast beside the map controls.
@@ -371,6 +388,8 @@ export function AuthenticatedExploreMapPage() {
   const [plotDetailReloadKey, setPlotDetailReloadKey] = useState(0);
   // Plots whose Add to Cart request is running (buttons show "Adding...").
   const [addingPlotIds, setAddingPlotIds] = useState<string[]>([]);
+  // Plot whose deed (certificate) is being looked up after View Deed.
+  const [openingDeedId, setOpeningDeedId] = useState<string | null>(null);
   // Zoomed in with no area open: the plots in view (`GET /explore/plots?bbox=`).
   const [viewportPlots, setViewportPlots] = useState<ExplorePlot[]>([]);
   const [mapView, setMapView] = useState<MapView | null>(null);
@@ -431,7 +450,7 @@ export function AuthenticatedExploreMapPage() {
       return undefined;
     return {
       id: plotId,
-      label: searchParams.get("plotNumber") ?? "",
+      label: mapLabel(searchParams.get("plotNumber") ?? ""),
       coordinates: [longitude, latitude] as [number, number],
       zoom: Number.isFinite(zoom) ? zoom : 16,
     };
@@ -477,7 +496,7 @@ export function AuthenticatedExploreMapPage() {
           })),
         );
         if (!hasSelectedPlot && !hasNavigatedRef.current) {
-          mapRef.current?.fitBounds(map.bounds, { padding: THAILAND_VIEW_PADDING });
+          mapRef.current?.fitBounds(map.bounds, { padding: thailandViewPadding(!isPanelCollapsedRef.current) });
         }
       })
       .catch((error: unknown) => {
@@ -511,8 +530,7 @@ export function AuthenticatedExploreMapPage() {
           const bounds = plotsBounds(items);
           if (bounds) {
             mapRef.current?.fitBounds(bounds, {
-              // Tablets: frame them beside the panel. Desktop keeps the default.
-              ...(isTabletWidth() && { padding: plotFocusPadding() }),
+              padding: plotFocusPadding(!isPanelCollapsedRef.current),
               duration: 1200,
             });
           }
@@ -719,16 +737,13 @@ export function AuthenticatedExploreMapPage() {
     // The area's plots (with their labels) mark it, so fly without a pin that would cover them.
     hasNavigatedRef.current = true;
     mapRef.current?.clearMarker();
-    // Tablets: land the place in the map left beside the list panel, in the same
-    // single fly (no second zoom once the plots arrive). Desktop has room as is.
-    const tabletPadding = isTabletWidth() ? plotFocusPadding() : null;
+    // With the panel open, land the place in the middle of the map beside it.
+    const panelShift = isSmUp() && !isPanelCollapsedRef.current ? PANEL_WIDTH / 2 : 0;
     void mapRef.current?.flyToView({
       center: [place.location.lng, place.location.lat],
       zoom: PLACE_ZOOM[place.type.toUpperCase()] ?? 11,
       duration: 1500,
-      ...(tabletPadding && {
-        offset: [Math.round((tabletPadding.left - tabletPadding.right) / 2), 0] as [number, number],
-      }),
+      ...(panelShift && { offset: [panelShift, 0] as [number, number] }),
     });
     showAreaPlots(scope, place.name);
     if (remember) rememberPlace(place);
@@ -844,7 +859,7 @@ export function AuthenticatedExploreMapPage() {
     const bounds = polygonBounds(plot);
     if (bounds) {
       mapRef.current?.fitBounds(bounds, {
-        padding: plotFocusPadding(),
+        padding: plotFocusPadding(!isPanelCollapsedRef.current),
         maxZoom: PLOT_FOCUS_MAX_ZOOM,
         duration,
       });
@@ -904,13 +919,34 @@ export function AuthenticatedExploreMapPage() {
     }
   }
 
+  // View Deed: the deed is the certificate of the order that bought the plot, so find that
+  // order (`GET /lands/plots`) and open its certificate page.
+  async function viewDeed(plotId: string) {
+    if (openingDeedId) return;
+    setOpeningDeedId(plotId);
+    setSearchMessage("");
+    try {
+      const orderId = await getPlotDeedOrderId(plotId);
+      if (orderId) {
+        router.push(`${routes.certificates}/${encodeURIComponent(orderId)}`);
+        return;
+      }
+      showSearchMessage("Your deed isn't ready yet.");
+    } catch (error) {
+      if (isApiError(error) && error.code === "API_SESSION_EXPIRED") return;
+      logError(error, "Failed to open deed");
+      showSearchMessage("Couldn't open the deed. Please try again.");
+    }
+    setOpeningDeedId(null);
+  }
+
   // Back to the area's list: zoom out so all its plots show again (the detail zoomed to one).
   function closePlotDetail() {
     setDetailPlotId(null);
     const bounds = plotsBounds(plots);
     if (!bounds) return;
     hasNavigatedRef.current = true;
-    mapRef.current?.fitBounds(bounds, { padding: plotFocusPadding(), duration: 1200 });
+    mapRef.current?.fitBounds(bounds, { padding: plotFocusPadding(!isPanelCollapsedRef.current), duration: 1200 });
   }
 
   function retryPlotDetail() {
@@ -919,14 +955,21 @@ export function AuthenticatedExploreMapPage() {
     setPlotDetailReloadKey((key) => key + 1);
   }
 
+  // Opens the left panel if it was slid away, then runs `action` (which frames the
+  // map for the open panel).
+  function withPanelOpen(action: () => void) {
+    if (isPanelCollapsed) setPanelCollapsed(false);
+    action();
+  }
+
   function handleMapPlotClick(plotId: string) {
     const plot = plots.find((item) => item.id === plotId);
     if (plot) {
-      openPlotDetail(plot);
+      withPanelOpen(() => openPlotDetail(plot));
       return;
     }
     const inView = viewportPlots.find((item) => item.id === plotId);
-    if (inView) openViewportPlot(inView);
+    if (inView) withPanelOpen(() => openViewportPlot(inView));
   }
 
   // A plot seen while browsing: open its region's list, then its detail.
@@ -948,15 +991,17 @@ export function AuthenticatedExploreMapPage() {
     const region = mapRegions.find((item) => item.id === regionId);
     if (!region) return;
     setIsSearchExpanded(true);
-    openPlace(
-      {
-        type: "region",
-        id: region.id,
-        name: region.name,
-        imageUrl: null,
-        location: region.location,
-      },
-      { remember: false },
+    withPanelOpen(() =>
+      openPlace(
+        {
+          type: "region",
+          id: region.id,
+          name: region.name,
+          imageUrl: null,
+          location: region.location,
+        },
+        { remember: false },
+      ),
     );
   }
 
@@ -1240,7 +1285,7 @@ export function AuthenticatedExploreMapPage() {
 
   return (
     <main
-      className={`relative min-h-[100svh] overflow-hidden text-navy ${mapStatus === "error" ? "bg-[#eef3f6]" : "bg-[#74d0e1]"}`}
+      className={`relative min-h-[100svh] overflow-hidden text-navy [&_.mapboxgl-ctrl-top-right]:mt-[66px] [&_.mapboxgl-ctrl-bottom-left]:transition-[margin] [&_.mapboxgl-ctrl-bottom-left]:duration-300 ${isPanelCollapsed ? "" : "sm:[&_.mapboxgl-ctrl-bottom-left]:ml-[340px]"} ${mapStatus === "error" ? "bg-[#eef3f6]" : "bg-[#74d0e1]"}`}
     >
       <MapboxMap
         key={mapKey}
@@ -1253,11 +1298,7 @@ export function AuthenticatedExploreMapPage() {
         // search panel (sm up), or between the search bar and the plot list's
         // bottom sheet (phones).
         loadingOverlayClassName={
-          isSearchExpanded
-            ? showPlotList
-              ? "max-sm:pb-[58svh] max-sm:pt-32 sm:pl-[calc(2rem+420px)]"
-              : "sm:pl-[calc(2rem+304px)]"
-            : undefined
+          `${isSearchExpanded && showPlotList ? "max-sm:pb-[58svh] max-sm:pt-32" : ""} ${isPanelCollapsed ? "" : "sm:pl-[340px]"}`
         }
         loadingLabels={{
           title: t("Loading Map"),
@@ -1275,7 +1316,7 @@ export function AuthenticatedExploreMapPage() {
         // Centred on screen; from sm up it slides right of the search panel while
         // that is open, matching the search box's 300ms width transition.
         <div
-          className={`pointer-events-none absolute inset-0 z-30 flex items-center justify-center px-4 transition-[padding] duration-300 ease-out motion-reduce:transition-none ${isSearchExpanded ? "sm:pl-[calc(2rem+304px+1rem)]" : ""}`}
+          className={`pointer-events-none absolute inset-0 z-30 flex items-center justify-center px-4 transition-[padding] duration-300 ease-out motion-reduce:transition-none ${isPanelCollapsed ? "" : "sm:pl-[340px]"}`}
         >
           {/* Container query: the dialog adapts to the room left beside the panel. */}
           <div className="pointer-events-auto flex w-full justify-center @container">
@@ -1288,17 +1329,20 @@ export function AuthenticatedExploreMapPage() {
         </div>
       ) : null}
 
-      <DashboardNavbar active="explore" overlay />
-
+      {/* From sm up: a full-height white panel on the left (the search bar with its Filter/Sort icons, then the list). On phones the wrapper disappears
+          (display: contents) and the pieces keep their own positions. */}
+      <div
+        className={`contents sm:absolute sm:bottom-0 sm:left-0 sm:top-[65px] lg:top-0 sm:z-20 sm:flex sm:w-[340px] sm:flex-col sm:border-r sm:border-[#e6eaf3] sm:bg-white sm:shadow-[4px_0_24px_-12px_rgba(11,31,77,0.2)] sm:transition-transform sm:duration-300 motion-reduce:sm:transition-none ${isPanelCollapsed ? "sm:-translate-x-full" : ""}`}
+      >
       <div
         ref={searchAreaRef}
         // An open Filter/Sort panel is inside this box, so the box itself must sit
         // above the plot list (phones: a z-30 bottom sheet) or it covers "Apply".
-        className={`absolute inset-x-4 top-20 flex items-start gap-2 sm:inset-x-auto sm:left-8 sm:top-24 ${isFilterOpen || isSortOpen ? "z-40" : "z-20"}`}
+        className={`absolute inset-x-4 top-20 flex items-start gap-2 sm:relative sm:inset-x-auto sm:top-auto sm:grid sm:shrink-0 sm:gap-0 sm:p-4 ${isFilterOpen || isSortOpen ? "z-40" : "z-20"}`}
         onMouseEnter={() => setIsSearchExpanded(true)}
       >
         <label
-          className={`flex h-11 min-w-0 flex-1 items-center gap-2 rounded-[10px] bg-white/95 px-4 text-[12px] text-[#aab2bd] shadow-[0_3px_12px_rgba(11,31,77,0.12)] transition-[width] duration-300 sm:flex-none ${isSearchExpanded ? (showPlotList ? "sm:w-[420px]" : "sm:w-[300px]") : "sm:w-[150px]"}`}
+          className={`flex h-11 min-w-0 flex-1 items-center gap-2 rounded-[10px] bg-white/95 px-4 text-[12px] text-[#aab2bd] shadow-[0_3px_12px_rgba(11,31,77,0.12)] sm:h-12 sm:flex-none sm:gap-3 sm:rounded-[12px] sm:border sm:border-[#dde3ec] sm:bg-white sm:px-4 sm:text-[14px] sm:shadow-none sm:transition-colors sm:focus-within:border-navy sm:[grid-area:1/1] ${plotScope && !detailPlotId ? "sm:pr-[84px]" : ""}`}
         >
           <span className="sr-only">{t("Search Maps")}</span>
           <span className="relative flex min-w-0 flex-1 items-center">
@@ -1369,7 +1413,7 @@ export function AuthenticatedExploreMapPage() {
                 mapRef.current?.clearMarker();
                 mapRef.current?.fitBounds(initialBoundsRef.current, {
                   duration: 1200,
-                  padding: THAILAND_VIEW_PADDING,
+                  padding: thailandViewPadding(!isPanelCollapsedRef.current),
                 });
                 hasNavigatedRef.current = false;
               }}
@@ -1388,9 +1432,9 @@ export function AuthenticatedExploreMapPage() {
           ) : null}
         </label>
         {/* Filter and Sort act on an area's plots, so they show once one is open. */}
-        {isSearchExpanded && plotScope ? (
-          <>
-            <div className="relative">
+        {plotScope && !detailPlotId ? (
+          <div className={`contents sm:z-10 sm:mr-2 sm:flex sm:gap-0.5 sm:self-center sm:justify-self-end sm:[grid-area:1/1] ${isSearchExpanded ? "" : "max-sm:hidden"}`}>
+            <div className="relative sm:static">
               <button
                 type="button"
                 aria-expanded={isFilterOpen}
@@ -1399,10 +1443,14 @@ export function AuthenticatedExploreMapPage() {
                   setIsSortOpen(false);
                 }}
                 aria-label={t("Filter")}
-                className="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center gap-1 rounded-[10px] bg-white/95 text-[12px] text-[#6d7784] shadow-[0_3px_12px_rgba(11,31,77,0.12)] sm:w-auto sm:px-3"
+                className={`flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-[10px] bg-white/95 text-[12px] text-[#6d7784] shadow-[0_3px_12px_rgba(11,31,77,0.12)] transition-colors sm:h-9 sm:w-9 sm:rounded-lg sm:border sm:px-0 sm:shadow-none ${isFilterOpen ? "sm:border-navy sm:bg-navy sm:text-white sm:hover:bg-navy" : hasActiveFilters ? "sm:border-navy sm:bg-[#eef3fb] sm:text-navy sm:hover:bg-[#e3ebf7]" : "sm:border-transparent sm:bg-transparent sm:text-[#5b6472] sm:hover:bg-[#f1f4f9]"}`}
               >
-                <span aria-hidden="true">☷</span>
-                <span className="hidden sm:inline">{t("Filter")}</span>
+                <svg viewBox="0 0 20 20" aria-hidden="true" className="h-[18px] w-[18px]" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
+                  <path d="M3 6h8M15 6h2M3 14h2M9 14h8" />
+                  <circle cx="13" cy="6" r="2" />
+                  <circle cx="7" cy="14" r="2" />
+                </svg>
+                <span className="hidden">{t("Filter")}</span>
               </button>
               {isFilterOpen ? (
                 <FilterPlotsPanel
@@ -1419,7 +1467,7 @@ export function AuthenticatedExploreMapPage() {
                 />
               ) : null}
             </div>
-            <div className="relative">
+            <div className="relative sm:static">
               <button
                 type="button"
                 aria-expanded={isSortOpen}
@@ -1428,10 +1476,12 @@ export function AuthenticatedExploreMapPage() {
                   setIsFilterOpen(false);
                 }}
                 aria-label={t("Sort")}
-                className="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center gap-1 rounded-[10px] bg-white/95 text-[12px] text-[#6d7784] shadow-[0_3px_12px_rgba(11,31,77,0.12)] sm:w-auto sm:px-3"
+                className={`flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-[10px] bg-white/95 text-[12px] text-[#6d7784] shadow-[0_3px_12px_rgba(11,31,77,0.12)] transition-colors sm:h-9 sm:w-9 sm:rounded-lg sm:border sm:px-0 sm:shadow-none ${isSortOpen ? "sm:border-navy sm:bg-navy sm:text-white sm:hover:bg-navy" : "sm:border-transparent sm:bg-transparent sm:text-[#5b6472] sm:hover:bg-[#f1f4f9]"}`}
               >
-                <span aria-hidden="true">↕</span>
-                <span className="hidden sm:inline">{t("Sort")}</span>
+                <svg viewBox="0 0 20 20" aria-hidden="true" className="h-[18px] w-[18px]" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M7 16V4M7 4 4 7M7 4l3 3M13 4v12m0 0-3-3m3 3 3-3" />
+                </svg>
+                <span className="hidden">{t("Sort")}</span>
               </button>
               {isSortOpen ? (
                 <SortPlotsPanel
@@ -1445,24 +1495,25 @@ export function AuthenticatedExploreMapPage() {
                 />
               ) : null}
             </div>
-          </>
+          </div>
         ) : null}
       </div>
 
-      {isSearchExpanded ? (
+      {(
         <section
           ref={searchPanelRef}
           className={
-            showPlotList
+            (isSearchExpanded ? "" : "max-sm:hidden ") +
+            (showPlotList
               ? // Phones: bottom sheet so the map stays visible. From sm: Figma
                 // "list of plots" panel (420 wide, radius 24), 16px below the search box and
                 // 16px above the screen bottom; scrolls inside.
-                "fixed inset-x-0 bottom-0 z-30 flex h-[58svh] flex-col overflow-hidden rounded-t-[24px] bg-white shadow-[0_-8px_24px_rgba(0,0,0,0.12)] sm:absolute sm:inset-x-auto sm:bottom-auto sm:left-8 sm:top-[156px] sm:z-10 sm:h-[calc(100svh-172px)] sm:w-[420px] sm:rounded-[24px] sm:shadow-[2px_0_20px_rgba(0,0,0,0.08)]"
-              : `absolute inset-x-4 top-32 z-10 flex max-h-[calc(100svh-12rem)] flex-col sm:inset-x-auto sm:w-[304px] overflow-hidden rounded-[18px] bg-white/95 p-4 shadow-[0_5px_20px_rgba(11,31,77,0.14)] sm:left-8 sm:top-36 ${hasMapError ? "h-[calc(100svh-15rem)]" : ""} ${
+                "fixed inset-x-0 bottom-0 z-30 flex h-[58svh] flex-col overflow-hidden rounded-t-[24px] bg-white shadow-[0_-8px_24px_rgba(0,0,0,0.12)] sm:pointer-events-auto sm:relative sm:inset-x-auto sm:bottom-auto sm:z-10 sm:h-auto sm:min-h-0 sm:flex-1 sm:rounded-none sm:border-t sm:border-[#eef1f4] sm:shadow-none"
+              : `absolute inset-x-4 top-32 z-10 flex max-h-[calc(100svh-12rem)] flex-col overflow-hidden rounded-[18px] bg-white/95 p-4 shadow-[0_5px_20px_rgba(11,31,77,0.14)] sm:pointer-events-auto sm:relative sm:inset-x-auto sm:top-auto sm:max-h-[calc(100svh-11rem)] sm:min-h-0 sm:rounded-none sm:border-t sm:border-[#eef1f4] sm:bg-white sm:px-3 sm:pb-3 sm:pt-2 sm:shadow-none ${hasMapError ? "h-[calc(100svh-15rem)]" : ""} ${
                   // Phones: the error dialog would sit on top of this panel, so
                   // hide it until "Continue" (it then shows "Map unavailable").
                   hasMapError && !isErrorDismissed ? "max-sm:hidden" : ""
-                }`
+                }`)
           }
         >
           {showPlotList ? (
@@ -1503,6 +1554,8 @@ export function AuthenticatedExploreMapPage() {
                       onFocusPlot={() => focusPlot(openDetail.plot)}
                       isAddingToCart={addingPlotIds.includes(openDetail.plot.id)}
                       onAddToCart={() => void addToCart(openDetail.plot.id)}
+                      isOpeningDeed={openingDeedId === openDetail.plot.id}
+                      onViewDeed={() => void viewDeed(openDetail.plot.id)}
                       onBack={closePlotDetail}
                       t={t}
                     />
@@ -1543,6 +1596,8 @@ export function AuthenticatedExploreMapPage() {
                       onSelect={openPlotDetail}
                       isAddingToCart={addingPlotIds.includes(plot.id)}
                       onAddToCart={(item) => void addToCart(item.id)}
+                      isOpeningDeed={openingDeedId === plot.id}
+                      onViewDeed={(item) => void viewDeed(item.id)}
                       t={t}
                     />
                   ))
@@ -1658,11 +1713,25 @@ export function AuthenticatedExploreMapPage() {
             </>
           )}
         </section>
-      ) : null}
+      )}
+      </div>
 
-      {/* Hidden under the open plot list (as in Figma); the cards show each status. */}
+      {/* Slides the left panel away and back (sm and up). */}
+      <button
+        type="button"
+        aria-label={t(isPanelCollapsed ? "Open panel" : "Close panel")}
+        aria-expanded={!isPanelCollapsed}
+        onClick={() => setPanelCollapsed(!isPanelCollapsed)}
+        className={`absolute top-1/2 z-30 hidden h-14 w-7 -translate-y-1/2 cursor-pointer items-center justify-center rounded-r-[10px] border border-l-0 border-[#e6eaf3] bg-white text-navy shadow-[2px_0_12px_-4px_rgba(11,31,77,0.25)] transition-[left] duration-300 hover:bg-[#f5f7fb] motion-reduce:transition-none sm:flex ${isPanelCollapsed ? "left-0" : "left-[340px]"}`}
+      >
+        <svg viewBox="0 0 16 16" aria-hidden="true" className={`h-4 w-4 ${isPanelCollapsed ? "rotate-180" : ""}`}>
+          <path d="m10 3-5 5 5 5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </button>
+
+      {/* Bottom right corner. On phones it hides under the open plot sheet. */}
       <div
-        className={`absolute bottom-9 left-5 flex max-w-[calc(100%-6rem)] flex-wrap items-center gap-3 rounded-md bg-white/95 px-3 py-2 text-[9px] text-[#273044] shadow-[0_3px_12px_rgba(11,31,77,0.12)] sm:bottom-10 sm:left-8 sm:max-w-none ${showPlotList && isSearchExpanded ? "hidden" : ""}`}
+        className={`absolute bottom-3 right-3 flex max-w-[calc(100%-8rem)] flex-wrap items-center justify-end gap-3 rounded-md bg-white/95 px-3 py-2 text-[9px] text-[#273044] shadow-[0_3px_12px_rgba(11,31,77,0.12)] sm:bottom-3 sm:right-4 sm:max-w-none sm:rounded-full sm:px-4 ${showPlotList && isSearchExpanded ? "max-sm:hidden" : ""}`}
       >
         <span className="font-medium uppercase tracking-wide">{t("Plot Status")}</span>
         <span className="flex items-center gap-1">
@@ -1687,7 +1756,7 @@ export function AuthenticatedExploreMapPage() {
         // Beside the map controls, level with the "Current location" button.
         <div
           role="status"
-          className="absolute bottom-[7.5rem] right-[4.25rem] z-20 flex w-[min(320px,calc(100vw-6rem))] items-start gap-2.5 rounded-[12px] border border-[#fde2b8] bg-white p-3 shadow-[0_8px_24px_rgba(11,31,77,0.14)] sm:bottom-[7.75rem] sm:right-[5.25rem]"
+          className="absolute bottom-[8.8rem] right-[4.25rem] z-20 flex w-[min(320px,calc(100vw-6rem))] items-start gap-2.5 rounded-[12px] border border-[#fde2b8] bg-white p-3 shadow-[0_8px_24px_rgba(11,31,77,0.14)] sm:bottom-[9.3rem] sm:right-[5rem]"
         >
           <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#fff4e5] text-[#b45309]">
             <LocationOffIcon />
@@ -1711,7 +1780,7 @@ export function AuthenticatedExploreMapPage() {
         </div>
       ) : null}
 
-      <div className="absolute bottom-9 right-5 flex flex-col items-center gap-3 sm:bottom-10 sm:right-8">
+      <div className="absolute bottom-12 right-5 flex flex-col items-center gap-3 sm:bottom-14 sm:right-6">
         <button
           type="button"
           aria-label={t("Current location")}
@@ -1729,27 +1798,27 @@ export function AuthenticatedExploreMapPage() {
               })
               .finally(() => setIsLocating(false));
           }}
-          className="cursor-pointer flex h-9 w-9 items-center justify-center rounded-full bg-white/95 shadow-[0_3px_12px_rgba(11,31,77,0.12)] disabled:cursor-wait"
+          className="cursor-pointer flex h-10 w-10 items-center justify-center rounded-full bg-white text-[#5f6368] shadow-[0_1px_4px_rgba(60,64,67,0.3)] transition-colors hover:bg-[#f1f3f4] disabled:cursor-wait"
         >
           <span className={isLocating ? "animate-pulse motion-reduce:animate-none" : undefined}>
             <LocateIcon />
           </span>
         </button>
-        <div className="flex flex-col overflow-hidden rounded-full bg-white/95 shadow-[0_3px_12px_rgba(11,31,77,0.12)]">
+        <div className="flex flex-col overflow-hidden rounded-[20px] bg-white text-[20px] leading-none text-[#5f6368] shadow-[0_1px_4px_rgba(60,64,67,0.3)]">
           <button
             type="button"
             aria-label={t("Zoom in")}
             onClick={() => mapRef.current?.zoomIn()}
-            className="cursor-pointer flex h-9 w-9 items-center justify-center hover:bg-[#f4f7fa]"
+            className="cursor-pointer flex h-10 w-10 items-center justify-center transition-colors hover:bg-[#f1f3f4]"
           >
             +
           </button>
-          <span className="mx-auto h-px w-4 bg-line" />
+          <span className="mx-auto h-px w-6 bg-[#e3e6ea]" />
           <button
             type="button"
             aria-label={t("Zoom out")}
             onClick={() => mapRef.current?.zoomOut()}
-            className="cursor-pointer flex h-9 w-9 items-center justify-center hover:bg-[#f4f7fa]"
+            className="cursor-pointer flex h-10 w-10 items-center justify-center transition-colors hover:bg-[#f1f3f4]"
           >
             −
           </button>

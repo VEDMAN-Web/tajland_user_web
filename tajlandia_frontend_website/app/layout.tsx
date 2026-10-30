@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import {
   Cormorant_Garamond,
+  Dancing_Script,
   Inter,
   Manrope,
   Playfair_Display,
@@ -26,6 +27,13 @@ const playfairDisplay = Playfair_Display({
   subsets: ["latin"],
   weight: ["600"],
   style: ["normal", "italic"],
+});
+
+// Script face for the 2nd / 3rd place numerals on the leaderboard podium.
+const dancingScript = Dancing_Script({
+  variable: "--font-script",
+  subsets: ["latin"],
+  weight: ["700"],
 });
 
 const manrope = Manrope({
@@ -62,7 +70,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${plusJakarta.variable} ${cormorant.variable} ${playfairDisplay.variable} ${manrope.variable} ${inter.variable} h-full antialiased`}
+      className={`${plusJakarta.variable} ${cormorant.variable} ${playfairDisplay.variable} ${manrope.variable} ${inter.variable} ${dancingScript.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col font-sans">{children}</body>
     </html>

@@ -4,6 +4,7 @@ import { z } from "zod";
 const cartItemSchema = z.object({
   plotId: z.string().min(1),
   plotNumber: z.string().nullish(),
+  plotName: z.string().nullish(),
   name: z.string().nullish(),
   imageUrl: z.string().nullish(),
   images: z.array(z.string()).nullish(),
@@ -130,6 +131,7 @@ export const orderSchema = z.object({
       rai: z.number(),
       price: z.number(),
       plotNumber: z.string().nullish(),
+      plotName: z.string().nullish(),
       name: z.string().nullish(),
       imageUrl: z.string().nullish(),
       images: z.array(z.string()).nullish(),

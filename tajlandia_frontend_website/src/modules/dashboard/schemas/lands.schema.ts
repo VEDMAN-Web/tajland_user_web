@@ -13,8 +13,8 @@ export const landOverviewSchema = z.object({
 const landPlotSchema = z.object({
   plotId: z.string().min(1),
   plotNumber: z.string(),
-  // Not sent yet; the card falls back to the zone name.
-  name: z.string().nullish(),
+  // The plot's name, e.g. "Sunrise Villa Plot"; null when it has none.
+  plotName: z.string().nullish(),
   imageUrl: z.string().nullish(),
   images: z.array(z.string()).nullish(),
   zone: z.string(),

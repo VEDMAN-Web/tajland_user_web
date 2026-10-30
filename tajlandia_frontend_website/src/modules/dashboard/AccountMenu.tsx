@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { clearAuth } from "@/lib/api/auth.utils";
 import { routes } from "@/lib/constants/routes";
 import { useDashboardLanguage } from "./DashboardLanguageContext";
@@ -23,73 +23,29 @@ function MenuIcon({ src, active = false }: { src: string; active?: boolean }) {
   );
 }
 
-export function AccountMenu({
-  active,
+export type AccountKey =
+  | "profile"
+  | "password"
+  | "purchases"
+  | "certificates"
+  | "settings"
+  | "help"
+  | "terms"
+  | "privacy";
+
+/** A button that opens the "Log Out of Tajlandia?" confirmation and signs the user out. */
+export function LogoutButton({
+  className,
+  children,
+  label,
 }: {
-  active:
-    | "profile"
-    | "password"
-    | "purchases"
-    | "certificates"
-    | "settings"
-    | "help"
-    | "terms"
-    | "privacy";
+  className: string;
+  children: React.ReactNode;
+  label?: string;
 }) {
   const router = useRouter();
-  const { t } = useDashboardLanguage();
   const [isLogoutOpen, setIsLogoutOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const items = [
-    {
-      label: t("Profile"),
-      icon: "/images/dashboard/account-menu/profile.png",
-      href: routes.profile,
-      key: "profile" as const,
-    },
-    {
-      label: t("Change Password"),
-      icon: "/images/dashboard/account-menu/change-password.png",
-      href: routes.changePassword,
-      key: "password" as const,
-    },
-    {
-      label: t("My Purchases"),
-      icon: "/images/dashboard/account-menu/purchases.png",
-      href: routes.purchases,
-      key: "purchases" as const,
-    },
-    {
-      label: t("My Certificates"),
-      icon: "/images/dashboard/account-menu/certificates.png",
-      href: routes.certificates,
-      key: "certificates" as const,
-    },
-    {
-      label: t("Settings"),
-      icon: "/images/dashboard/account-menu/settings.png",
-      href: routes.settings,
-      key: "settings" as const,
-    },
-    {
-      label: t("Help & Support"),
-      icon: "/images/dashboard/account-menu/help-support.png",
-      href: routes.helpSupport,
-      key: "help" as const,
-    },
-    {
-      label: t("Term & Condition"),
-      icon: "/images/dashboard/account-menu/terms.png",
-      href: routes.dashboardTerms,
-      key: "terms" as const,
-    },
-    {
-      label: t("Privacy Policy"),
-      icon: "/images/dashboard/account-menu/privacy.png",
-      href: routes.dashboardPrivacy,
-      key: "privacy" as const,
-    },
-  ];
 
   async function confirmLogout() {
     if (isLoggingOut) return;
@@ -105,33 +61,9 @@ export function AccountMenu({
 
   return (
     <>
-      {/* Desktop: pinned below the sticky navbar (h-16) while the page scrolls. */}
-      <aside className="h-fit rounded-[16px] lg:sticky lg:top-[88px] lg:max-h-[calc(100svh-104px)] lg:overflow-y-auto bg-white p-4 shadow-[0_8px_28px_rgba(11,31,77,0.06)] sm:p-5">
-        <p className="px-2 font-manrope text-[11px] font-semibold uppercase tracking-[0.14em] text-[#8b939e]">
-          {t("Account Menu")}
-        </p>
-        <nav className="mt-3 space-y-0.5">
-          {items.map((item) => {
-            const isActive = item.key === active;
-            const className = `flex h-10 items-center gap-3 rounded-[12px] px-3 font-manrope text-[13px] font-medium leading-none ${isActive ? "bg-navy text-white" : "text-[#66717c] hover:bg-[#f4f7fa]"}`;
-            return (
-              <Link key={item.label} href={item.href} className={className}>
-                <MenuIcon src={item.icon} active={isActive} />
-                {item.label}
-              </Link>
-            );
-          })}
-        </nav>
-        <div className="my-3 border-t border-[#e8edf1]" />
-        <button
-          type="button"
-          onClick={() => setIsLogoutOpen(true)}
-          className="flex h-10 w-full items-center gap-3 rounded-[12px] px-3 font-manrope text-[13px] font-medium leading-none text-[#e11d2e] hover:bg-[#fff3f4]"
-        >
-          <MenuIcon src="/images/dashboard/account-menu/logout.png" />
-          {t("Logout")}
-        </button>
-      </aside>
+      <button type="button" aria-label={label} onClick={() => setIsLogoutOpen(true)} className={className}>
+        {children}
+      </button>
       {isLogoutOpen ? (
         <div
           className="fixed inset-0 z-[100] flex items-center justify-center bg-[#071536]/35 px-4 backdrop-blur-[6px]"
@@ -192,6 +124,138 @@ export function AccountMenu({
           </section>
         </div>
       ) : null}
+    </>
+  );
+}
+
+/**
+ * `pills`: one row that scrolls sideways above the page (below lg).
+ * `sidebar`: the vertical list, rendered inside the dashboard sidebar (lg and up).
+ */
+export function AccountMenu({
+  active,
+  variant = "pills",
+  onNavigate,
+}: {
+  active: AccountKey;
+  variant?: "pills" | "sidebar";
+  onNavigate?: () => void;
+}) {
+  const { t } = useDashboardLanguage();
+  const asideRef = useRef<HTMLElement>(null);
+  const items = [
+    {
+      label: t("Profile"),
+      icon: "/images/dashboard/account-menu/profile.png",
+      href: routes.profile,
+      key: "profile" as const,
+    },
+    {
+      label: t("Change Password"),
+      icon: "/images/dashboard/account-menu/change-password.png",
+      href: routes.changePassword,
+      key: "password" as const,
+    },
+    {
+      label: t("My Purchases"),
+      icon: "/images/dashboard/account-menu/purchases.png",
+      href: routes.purchases,
+      key: "purchases" as const,
+    },
+    {
+      label: t("My Certificates"),
+      icon: "/images/dashboard/account-menu/certificates.png",
+      href: routes.certificates,
+      key: "certificates" as const,
+    },
+    {
+      label: t("Settings"),
+      icon: "/images/dashboard/account-menu/settings.png",
+      href: routes.settings,
+      key: "settings" as const,
+    },
+    {
+      label: t("Help & Support"),
+      icon: "/images/dashboard/account-menu/help-support.png",
+      href: routes.helpSupport,
+      key: "help" as const,
+    },
+    {
+      label: t("Term & Condition"),
+      icon: "/images/dashboard/account-menu/terms.png",
+      href: routes.dashboardTerms,
+      key: "terms" as const,
+    },
+    {
+      label: t("Privacy Policy"),
+      icon: "/images/dashboard/account-menu/privacy.png",
+      href: routes.dashboardPrivacy,
+      key: "privacy" as const,
+    },
+  ];
+
+  // Below lg the menu is a row that scrolls sideways: bring the current page's pill into view.
+  useEffect(() => {
+    if (variant !== "pills") return;
+    asideRef.current
+      ?.querySelector('[aria-current="page"]')
+      ?.scrollIntoView({ inline: "center", block: "nearest" });
+  }, [active, variant]);
+
+  return (
+    <>
+      {variant === "sidebar" ? (
+        <div className="flex min-h-0 flex-1 flex-col px-3 pb-4 pt-2">
+          <nav className="space-y-0.5">
+            {items.map((item) => {
+              const isActive = item.key === active;
+              return (
+                <Link
+                  key={item.label}
+                  href={item.href}
+                  onClick={onNavigate}
+                  aria-current={isActive ? "page" : undefined}
+                  className={`flex h-10 items-center gap-3 rounded-[12px] px-3 font-manrope text-[13px] font-medium leading-none ${isActive ? "bg-navy text-white" : "text-[#66717c] hover:bg-[#f4f7fa]"}`}
+                >
+                  <MenuIcon src={item.icon} active={isActive} />
+                  {item.label}
+                </Link>
+              );
+            })}
+          </nav>
+          <div className="mb-3 mt-auto border-t border-[#e8edf1]" />
+          <LogoutButton className="flex h-10 w-full cursor-pointer items-center gap-3 rounded-[12px] px-3 font-manrope text-[13px] font-medium leading-none text-[#e11d2e] hover:bg-[#fff3f4]">
+            <MenuIcon src="/images/dashboard/account-menu/logout.png" />
+            {t("Logout")}
+          </LogoutButton>
+        </div>
+      ) : (
+        // Below lg: one row of pills (scrolls sideways, edge to edge) above the content, so
+        // the page itself isn't pushed down. lg and up uses the sidebar instead.
+        <aside ref={asideRef} className="flex gap-2 overflow-x-auto px-5 pb-1 pt-5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:px-8 lg:hidden">
+          <nav className="contents">
+            {items.map((item) => {
+              const isActive = item.key === active;
+              const className = `flex h-10 shrink-0 items-center gap-2.5 whitespace-nowrap rounded-full border px-3.5 font-manrope text-[13px] font-medium leading-none ${isActive ? "border-navy bg-navy text-white" : "border-[#e6eaf3] bg-white text-[#66717c] hover:bg-[#f4f7fa]"}`;
+              return (
+                <Link
+                  key={item.label}
+                  href={item.href}
+                  aria-current={isActive ? "page" : undefined}
+                  className={className}
+                >
+                  <MenuIcon src={item.icon} active={isActive} />
+                  {item.label}
+                </Link>
+              );
+            })}
+          </nav>
+          <LogoutButton className="flex h-10 shrink-0 cursor-pointer items-center gap-2.5 whitespace-nowrap rounded-full border border-[#f6c9cd] bg-white px-3.5 font-manrope text-[13px] font-medium leading-none text-[#e11d2e] hover:bg-[#fff3f4]">
+            <MenuIcon src="/images/dashboard/account-menu/logout.png" />
+            {t("Logout")}
+          </LogoutButton>
+        </aside>
+      )}
     </>
   );
 }

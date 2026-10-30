@@ -4,8 +4,6 @@ import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { AccountMenu } from "./AccountMenu";
-import { DashboardNavbar } from "./DashboardNavbar";
 import { isAbortError } from "@/lib/api/browser-client";
 import { isApiError } from "@/lib/api/errors";
 import { isAllowedRemoteImage } from "@/lib/config/remote-images";
@@ -18,6 +16,7 @@ import type { LandOverview, LandPlot } from "./schemas/lands.schema";
 import type { OrderListEntry } from "./schemas/orders.schema";
 import { getLandOverview, getLandPlots, type LandPlotsQuery } from "./services/lands.client";
 import { getOrders } from "./services/orders.client";
+import { OwnedPlotCard } from "./OwnedPlotCard";
 
 type PurchaseSort =
   "recommended" | "price-low" | "price-high" | "area-small" | "area-large" | "newest";
@@ -94,7 +93,7 @@ function formatPurchaseAmount(amount: number, currency: string) {
 // Plot names in an order: "PH-0013, PH-0015 +1" past two.
 function orderPlotNames(order: OrderListEntry) {
   const names = order.items
-    .map((item) => item.name?.trim() || item.plotNumber?.trim() || "")
+    .map((item) => item.plotName?.trim() || item.name?.trim() || item.plotNumber?.trim() || "")
     .filter(Boolean);
   const shown = names.slice(0, 2).join(", ");
   return names.length > 2 ? `${shown} +${names.length - 2}` : shown;
@@ -228,7 +227,6 @@ const LAND_PAGE_SIZE = 12;
 // "View Map" opens the map here (the plot's dot and number with streets around),
 // then Explore zooms in to the plot's outline.
 const LAND_MAP_ZOOM = 12.5;
-const LAND_PLACEHOLDER_IMAGE = "/images/explore/place-placeholder.svg";
 // Sort panel option -> `GET /lands/plots` sortBy/sortOrder (none: plotNumber asc).
 const LAND_SORTS: Record<PurchaseSort, Pick<LandPlotsQuery, "sortBy" | "sortOrder">> = {
   recommended: {},
@@ -237,11 +235,6 @@ const LAND_SORTS: Record<PurchaseSort, Pick<LandPlotsQuery, "sortBy" | "sortOrde
   "area-small": { sortBy: "raiSize", sortOrder: "asc" },
   "area-large": { sortBy: "raiSize", sortOrder: "desc" },
   newest: { sortBy: "createdAt", sortOrder: "desc" },
-};
-const ZONE_BADGES: Record<string, string> = {
-  ICON: "bg-[#fff6d6] text-[#c4a035]",
-  POPULAR: "bg-[#e3f4f3] text-[#16807f]",
-  STANDARD: "bg-[#eef1f4] text-[#6b7785]",
 };
 const landNumber = new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 });
 
@@ -477,14 +470,13 @@ export function MyLandPage() {
   // Search runs over the loaded cards (the API has no search parameter).
   const visiblePlots = needle
     ? loadedPlots.filter((plot) =>
-        [plot.name, plot.plotNumber, plot.zoneName, plot.region, plot.city, plot.certificateNo, plot.orderNo]
+        [plot.plotName, plot.plotNumber, plot.zoneName, plot.region, plot.city, plot.certificateNo, plot.orderNo]
           .some((value) => value?.toLowerCase().includes(needle)),
       )
     : loadedPlots;
 
   return (
     <div className="min-h-[100svh] bg-[#f7f9fc] text-navy">
-      <DashboardNavbar active="my-land" />
       <main className="mx-auto w-full max-w-[1120px] px-5 pb-16 pt-8 sm:px-8">
         <section>
           <h1 className="font-manrope text-[28px] font-semibold leading-none tracking-[-0.03em] text-navy sm:text-[32px]">
@@ -556,7 +548,7 @@ export function MyLandPage() {
             <div
               aria-busy="true"
               aria-label={t("Loading land...")}
-              className="mt-5 grid gap-3 md:grid-cols-2 lg:grid-cols-3"
+              className="mt-5 grid gap-5 md:grid-cols-2 lg:grid-cols-3"
             >
               {Array.from({ length: 6 }, (_, index) => (
                 <LandCardSkeleton key={index} />
@@ -619,7 +611,7 @@ export function MyLandPage() {
               </button>
             </div>
           ) : (
-            <div className="mt-5 grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+            <div className="mt-5 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
               {visiblePlots.map((plot) => (
                 <LandCard key={`${plot.orderId}-${plot.plotId}`} plot={plot} />
               ))}
@@ -703,16 +695,15 @@ export function MyLandPage() {
 function LandCardSkeleton() {
   const bone = "animate-pulse rounded-[8px] bg-[#eef1f5] motion-reduce:animate-none";
   return (
-    <div className="overflow-hidden rounded-[16px] border border-[#eef1f4] bg-white">
-      <div className="h-[168px] w-full animate-pulse bg-[#eef1f5] motion-reduce:animate-none" />
-      <div className="space-y-3 px-4 pb-4 pt-3">
-        <div className={`h-3 w-1/2 ${bone}`} />
-        <div className={`h-4 w-2/3 ${bone}`} />
-        <div className={`h-3 w-3/4 ${bone}`} />
+    <div className="rounded-[20px] border border-[#eef1f4] bg-white p-3">
+      <div className="aspect-[1.55] w-full animate-pulse rounded-[14px] bg-[#eef1f5] motion-reduce:animate-none" />
+      <div className="space-y-3 px-1.5 pb-1 pt-4">
+        <div className={`h-5 w-2/3 ${bone}`} />
+        <div className={`h-3.5 w-3/4 ${bone}`} />
         <div className={`h-14 w-full ${bone}`} />
-        <div className="grid grid-cols-2 gap-2">
-          <div className={`h-11 ${bone}`} />
-          <div className={`h-11 ${bone}`} />
+        <div className="flex gap-2">
+          <div className={`h-10 w-28 rounded-full ${bone}`} />
+          <div className={`h-10 w-32 rounded-full ${bone}`} />
         </div>
       </div>
     </div>
@@ -721,108 +712,40 @@ function LandCardSkeleton() {
 
 function LandCard({ plot }: { plot: LandPlot }) {
   const { t } = useDashboardLanguage();
-  const zone = plot.zone.toUpperCase();
-  const zoneLabel = zone.charAt(0) + zone.slice(1).toLowerCase();
   const place = [plot.city, plot.region].filter(Boolean).join(", ");
-  // The API sends no plot name yet, so the zone name is the title until it does.
-  const name = plot.name?.trim();
-  const title = name || plot.zoneName || plot.plotNumber;
-  const image = plot.images?.[0] ?? plot.imageUrl;
-  const location = name && plot.zoneName ? `${place} · ${plot.zoneName}` : place;
+  // The zone name is the title for a plot without a name.
+  const name = plot.plotName?.trim();
+  const images = [...(plot.images ?? []), plot.imageUrl].filter(
+    (src, index, all): src is string => isAllowedRemoteImage(src) && all.indexOf(src) === index,
+  );
   const mapHref =
     plot.latitude != null && plot.longitude != null
       ? `${routes.dashboardExplore}?${new URLSearchParams({
           plotId: plot.plotId,
           // Drawn on the map right away, before Explore loads the plots in view.
-          plotNumber: plot.plotNumber,
+          plotNumber: name || plot.plotNumber,
           lat: String(plot.latitude),
           lng: String(plot.longitude),
           zoom: String(LAND_MAP_ZOOM),
         }).toString()}`
       : null;
-  const buttonBase =
-    "flex h-11 items-center justify-center rounded-[12px] font-manrope text-[13px] font-medium";
 
   return (
-    <article className="overflow-hidden rounded-[16px] border border-[#eef1f4] bg-white shadow-[0_8px_22px_rgba(11,31,77,0.05)]">
-      <div className="relative h-[168px] w-full bg-[#eef1f5]">
-        <Image
-          src={isAllowedRemoteImage(image) ? image : LAND_PLACEHOLDER_IMAGE}
-          alt={title}
-          fill
-          sizes="(min-width: 1024px) 360px, (min-width: 768px) 50vw, 100vw"
-          className="object-cover"
-        />
-      </div>
-      <div className="px-4 pb-4 pt-3">
-        <div className="flex items-center justify-between gap-2">
-          <span className="min-w-0 truncate font-manrope text-[11px] font-semibold uppercase tracking-[0.06em] text-[#8b939e]">
-            {plot.region} · {plot.plotNumber}
-          </span>
-          <span
-            className={`shrink-0 rounded-full px-2 py-0.5 font-manrope text-[10px] font-semibold uppercase tracking-[0.04em] ${
-              ZONE_BADGES[zone] ?? ZONE_BADGES.STANDARD
-            }`}
-          >
-            {t(zoneLabel)}
-          </span>
-        </div>
-        <h2 className="mt-2 truncate font-manrope text-[16px] font-semibold leading-5 text-[#1a1a1a]">
-          {title}
-        </h2>
-        <p className="mt-1 flex items-center gap-1 font-manrope text-[12px] leading-4 text-[#8b939e]">
-          <PinIcon className="h-3.5 w-3.5 shrink-0" />
-          <span className="truncate">{location}</span>
-        </p>
-        <div className="mt-3 grid grid-cols-3 divide-x divide-[#e8edf2] rounded-[12px] border border-[#e8edf2] py-2.5 text-center">
-          <LandValue label={t("Area")} value={`${landNumber.format(plot.rai)} ${t("Rai")}`} />
-          <LandValue label={t("Rate")} value={formatLandMoney(plot.pricePerRai, plot.currency)} />
-          <LandValue label={t("Amt Paid")} value={formatLandMoney(plot.amountPaid, plot.currency)} />
-        </div>
-        <div className="mt-3 grid grid-cols-2 gap-2">
-          {mapHref ? (
-            <Link href={mapHref} className={`${buttonBase} cursor-pointer bg-navy text-white`}>
-              {t("View Map")} →
-            </Link>
-          ) : (
-            <span aria-disabled="true" className={`${buttonBase} cursor-not-allowed bg-navy/40 text-white`}>
-              {t("View Map")} →
-            </span>
-          )}
-          {plot.certificateUrl ? (
-            <a
-              href={plot.certificateUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={`${buttonBase} cursor-pointer border border-[#e4e9ef] bg-white text-navy`}
-            >
-              {t("View Certificate")}
-            </a>
-          ) : (
-            <span
-              aria-disabled="true"
-              title={t("Certificate not ready yet")}
-              className={`${buttonBase} cursor-not-allowed border border-[#e4e9ef] bg-white text-[#b0b7c0]`}
-            >
-              {t("View Certificate")}
-            </span>
-          )}
-        </div>
-      </div>
-    </article>
-  );
-}
-
-function LandValue({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="min-w-0 px-1">
-      <p className="font-manrope text-[10px] font-semibold uppercase tracking-[0.06em] text-[#8b939e]">
-        {label}
-      </p>
-      <strong className="mt-1 block truncate font-manrope text-[13px] font-semibold text-[#1a1a1a]">
-        {value}
-      </strong>
-    </div>
+    <OwnedPlotCard
+      title={name || plot.zoneName || plot.plotNumber}
+      plotCode={plot.plotNumber}
+      tier={plot.zone}
+      location={name && plot.zoneName ? `${place} · ${plot.zoneName}` : place}
+      images={images}
+      stats={[
+        { label: t("Area"), value: `${landNumber.format(plot.rai)} ${t("Rai")}` },
+        { label: t("Rate"), value: formatLandMoney(plot.pricePerRai, plot.currency) },
+        { label: t("Amt Paid"), value: formatLandMoney(plot.amountPaid, plot.currency) },
+      ]}
+      mapHref={mapHref}
+      certificateUrl={plot.certificateUrl ?? null}
+      t={t}
+    />
   );
 }
 
@@ -905,9 +828,7 @@ export function MyPurchasesPage() {
 
   return (
     <div className="min-h-[100svh] bg-[#f7f9fc] text-navy">
-      <DashboardNavbar active="none" />
-      <main className="mx-auto grid w-full max-w-[1180px] gap-6 px-5 pb-14 pt-8 sm:px-8 lg:grid-cols-[240px_minmax(0,1fr)] lg:items-start lg:gap-7">
-        <AccountMenu active="purchases" />
+      <main className="w-full px-5 pb-14 pt-6 sm:px-8 lg:p-0 lg:[&>section]:mx-auto lg:[&>section]:w-full lg:[&>section]:max-w-[1120px] lg:[&>section]:px-10 lg:[&>section]:py-8">
         <section className="min-w-0">
           <h1 className="font-manrope text-[28px] font-semibold leading-none tracking-[-0.03em] text-navy sm:text-[32px]">
             {t("My Purchases")}

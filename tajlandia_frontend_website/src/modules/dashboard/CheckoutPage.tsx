@@ -21,7 +21,6 @@ import {
   WarningIcon,
 } from "./CartSummaryCard";
 import { readAppliedCoupon, saveAppliedCoupon } from "./cart-coupon";
-import { DashboardNavbar } from "./DashboardNavbar";
 import { PhoneNumberInput } from "./PhoneNumberInput";
 import { notifyCartChanged } from "@/lib/cart/cart-events";
 import { OrderConfirmedDialog } from "./OrderConfirmedDialog";
@@ -408,7 +407,6 @@ export function CheckoutPage() {
 
   return (
     <div className="min-h-[100svh] bg-[#f7f9fc] text-navy">
-      <DashboardNavbar active="none" />
       <main className="mx-auto w-full max-w-[1240px] px-4 pb-16 pt-6 sm:px-8 sm:pt-8">
         <BackLink href={routes.cart}>{t("Back to Cart")}</BackLink>
         <h1 className="mt-3 font-manrope text-[26px] font-semibold leading-tight tracking-[-0.02em] text-[#111111] sm:text-[30px]">

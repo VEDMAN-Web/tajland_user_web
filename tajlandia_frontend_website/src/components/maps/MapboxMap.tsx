@@ -109,6 +109,11 @@ export type MapPlot = {
   polygon?: number[][][];
   /** Shown in a pill above the plot, e.g. its plot number. */
   label?: string;
+  /**
+   * Which label wins when pills would overlap: lower shows first (0 = always
+   * wins). A hidden pill appears again once the map is zoomed in far enough.
+   */
+  priority?: number;
   /** The shape's fill; `color` at 40% when not set. */
   fill?: { color: string; opacity: number };
 };
@@ -260,7 +265,12 @@ function plotCollections(plots: MapPlot[]) {
     features: plots.map((plot) => ({
       type: "Feature",
       id: plot.id,
-      properties: { id: plot.id, color: plot.color, label: plot.label ?? "" },
+      properties: {
+        id: plot.id,
+        color: plot.color,
+        label: plot.label ?? "",
+        priority: plot.priority ?? 1,
+      },
       geometry: { type: "Point", coordinates: plot.center },
     })),
   };
@@ -320,9 +330,12 @@ function drawPlots(map: mapboxgl.Map, plots: MapPlot[]) {
       "text-font": ["DIN Pro Bold", "Arial Unicode MS Bold"],
       "text-size": 10,
       "text-line-height": 1,
-      // Every plot keeps its number, even when neighbours sit close together.
-      "text-allow-overlap": true,
-      "icon-allow-overlap": true,
+      // Pills never stack on each other. When neighbours collide the one with the
+      // lower `priority` is drawn and the other hides until the map zooms in; every
+      // plot still has its dot / shape, so it stays visible and clickable.
+      "text-allow-overlap": false,
+      "icon-allow-overlap": false,
+      "symbol-sort-key": ["get", "priority"],
       "text-anchor": "bottom",
       // Sit just above the plot's dot / shape.
       "text-offset": [0, -0.9],
@@ -493,8 +506,9 @@ export const MapboxMap = forwardRef<MapboxMapHandle, MapboxMapProps>(function Ma
     });
 
     mapRef.current = map;
-    // Keep the required Mapbox attribution compact and inside the map frame.
-    map.addControl(new mapboxgl.AttributionControl({ compact: true }), "bottom-right");
+    // Keep the required Mapbox attribution compact and inside the map frame, at the
+    // top right (the bottom right is for the page's own controls and legend).
+    map.addControl(new mapboxgl.AttributionControl({ compact: true }), "top-right");
     const resizeObserver = new ResizeObserver(() => map.resize());
     resizeObserver.observe(containerRef.current);
     map.once("load", () => {

@@ -13,8 +13,10 @@ export const ZONE_COLORS: Record<string, string> = {
   STANDARD: "#6b7785",
 };
 
+/** Cart / checkout amounts: two decimals, a third only when it isn't 0 ($0.045, $1.65, $5.00). */
 export function money(amount: number) {
-  return `$${amount.toFixed(2)}`;
+  const fixed = amount.toFixed(3);
+  return `$${fixed.endsWith("0") ? fixed.slice(0, -1) : fixed}`;
 }
 
 /** Puts values into a translated "{name}" template. */

@@ -10,7 +10,6 @@ import { isAllowedRemoteImage } from "@/lib/config/remote-images";
 import { leaderboardOwnerPath, routes } from "@/lib/constants/routes";
 import { useAuth } from "@/lib/hooks/useAuth";
 import { logError } from "@/lib/logging/logger";
-import { DashboardNavbar } from "./DashboardNavbar";
 import { useDashboardLanguage } from "./DashboardLanguageContext";
 import { PageLoader } from "@/components/ui/PageLoader";
 import type { LeaderboardEntry } from "./schemas/leaderboard.schema";
@@ -50,11 +49,33 @@ const isQuietError = (error: unknown) =>
 // Podium order left to right: 2nd, 1st, 3rd.
 const PODIUM_ORDER = [2, 1, 3] as const;
 
+// `size` is the trophy's width relative to the photo. The 2nd and 3rd trophies draw their
+// number on a small medallion, so they are shown larger. `medal` is the disc / ink colour of
+// the script place badge on the photo's rim.
 const TROPHIES = {
-  1: { src: "/images/leaderboard/trophy-1.webp", width: 173, height: 196 },
-  2: { src: "/images/leaderboard/trophy-2.webp", width: 238, height: 243 },
-  3: { src: "/images/leaderboard/trophy-3.webp", width: 221, height: 203 },
+  1: { src: "/images/leaderboard/trophy-1.webp", width: 173, height: 196, size: "w-[40%]", medal: null },
+  2: {
+    src: "/images/leaderboard/trophy-2.webp",
+    width: 238,
+    height: 243,
+    size: "w-[54%] sm:w-[56%]",
+    medal: {
+      disc: "radial-gradient(circle at 35% 30%, #ffffff, #d5dbe4 55%, #9aa5b4)",
+      ink: "#2c3a4d",
+    },
+  },
+  3: {
+    src: "/images/leaderboard/trophy-3.webp",
+    width: 221,
+    height: 203,
+    size: "w-[54%] sm:w-[56%]",
+    medal: {
+      disc: "radial-gradient(circle at 35% 30%, #ffe2a8, #e0a252 55%, #a8661e)",
+      ink: "#4a260a",
+    },
+  },
 } as const;
+
 
 // Confetti around the winner, as % of the photo size: [left, top, shape, color].
 const CONFETTI: [number, number, "dot" | "ring" | "square" | "plus", "navy" | "red"][] = [
@@ -197,14 +218,29 @@ function PodiumCard({ owner, t }: { owner: Owner; t: (key: string) => string }) 
             winner ? "text-[18px] sm:text-[34px]" : "text-[17px] sm:text-[34px]"
           }`}
         />
-        <Image
-          src={trophy.src}
-          alt=""
-          width={trophy.width}
-          height={trophy.height}
-          // Bottom-anchored on the pedestal (its gap below), since the trophies differ in height.
-          className="absolute -bottom-3 left-1/2 h-auto w-[38%] -translate-x-1/2 drop-shadow-[0_4px_6px_rgba(0,0,0,0.12)] sm:-bottom-7"
-        />
+        {trophy.medal ? (
+          // Place badge on the photo's top-left rim (the 225° point of the circle).
+          <span
+            aria-hidden="true"
+            className="absolute left-[14.6%] top-[14.6%] z-10 flex h-[26px] w-[26px] -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 border-white pb-px font-[family-name:var(--font-script)] text-[17px] font-bold leading-none shadow-[0_3px_8px_rgba(11,31,77,0.28)] sm:h-[44px] sm:w-[44px] sm:border-[3px] sm:pb-0.5 sm:text-[30px]"
+            style={{ background: trophy.medal.disc, color: trophy.medal.ink }}
+          >
+            {owner.rank}
+          </span>
+        ) : null}
+        {/* Bottom-anchored on the pedestal (its gap below), since the trophies differ in height. */}
+        <span
+          aria-hidden="true"
+          className={`absolute -bottom-3 left-1/2 block -translate-x-1/2 sm:-bottom-7 ${trophy.size}`}
+        >
+          <Image
+            src={trophy.src}
+            alt=""
+            width={trophy.width}
+            height={trophy.height}
+            className="block h-auto w-full drop-shadow-[0_4px_6px_rgba(0,0,0,0.12)]"
+          />
+        </span>
       </div>
 
       {/* Pedestal box: perspective top face (the trophy stands on it) over a fading front face. */}
@@ -249,7 +285,7 @@ function OpenSpotCard({ rank, t }: { rank: 2 | 3; t: (key: string) => string }) 
           alt=""
           width={trophy.width}
           height={trophy.height}
-          className="absolute -bottom-3 left-1/2 h-auto w-[38%] -translate-x-1/2 opacity-40 grayscale sm:-bottom-7"
+          className={`absolute -bottom-3 left-1/2 h-auto -translate-x-1/2 opacity-40 grayscale sm:-bottom-7 ${trophy.size}`}
         />
       </div>
 
@@ -403,11 +439,15 @@ export function LeaderboardPage() {
   // Each podium place with its owner, or none yet (shown as an open spot).
   const podium = PODIUM_ORDER.map((rank) => ({ rank, owner: owners.find((owner) => owner.rank === rank) }));
   const rest = owners.filter((owner) => owner.rank > 3);
+  // Nothing to rank (couldn't load / no owners yet): the heading and message sit in the
+  // vertical middle of the page instead of hugging the top.
+  const isMessage = state.status === "error" || (state.status === "ready" && owners.length === 0);
 
   return (
-    <div className="min-h-[100svh] overflow-x-clip bg-white text-navy">
-      <DashboardNavbar active="leaderboard" />
-      <main className="mx-auto w-full max-w-[1240px] px-4 pb-16 pt-8 sm:px-8 sm:pt-12">
+    <div className="flex min-h-[100svh] flex-col overflow-x-clip bg-white text-navy">
+      <main
+        className={`mx-auto w-full max-w-[1240px] px-4 pb-16 pt-8 sm:px-8 sm:pt-12 ${isMessage ? "flex flex-1 flex-col justify-center" : ""}`}
+      >
         <header className="text-center">
           <h1 className="font-[family-name:var(--font-playfair-display)] text-[36px] font-semibold leading-[1.1] tracking-[-0.02em] text-navy sm:text-[52px]">
             {t("Top")} <span className="italic text-brand-red">{t("Owner's")}</span>

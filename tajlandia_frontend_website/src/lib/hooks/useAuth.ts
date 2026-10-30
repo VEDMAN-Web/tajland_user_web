@@ -23,34 +23,38 @@ export interface AuthState {
   isLoading: boolean;
 }
 
+const LOADING_STATE: AuthState = {
+  isAuthenticated: false,
+  user: null,
+  token: null,
+  isLoading: true,
+};
+
+function readStoredAuth(): AuthState {
+  // Check if user is authenticated by checking for stored token
+  const token = getStoredToken();
+  const user = getStoredUser() as AuthUser | null;
+
+  if (token && user) {
+    return { isAuthenticated: true, user, token, isLoading: false };
+  }
+  return { isAuthenticated: false, user: null, token: null, isLoading: false };
+}
+
+// Flips to true in the browser once any `useAuth` has read the stored session. The
+// first render of a page load must still start as "loading" (it has to match the
+// server's HTML). After that, a page opened by clicking a link starts with the real
+// state instead of flashing a full-screen loader for one frame before its effect runs.
+let hasReadAuth = false;
+
 export function useAuth(): AuthState {
-  const [authState, setAuthState] = useState<AuthState>({
-    isAuthenticated: false,
-    user: null,
-    token: null,
-    isLoading: true,
-  });
+  const [authState, setAuthState] = useState<AuthState>(() =>
+    hasReadAuth ? readStoredAuth() : LOADING_STATE,
+  );
 
   const readAuthState = useCallback(() => {
-    // Check if user is authenticated by checking for stored token
-    const token = getStoredToken();
-    const user = getStoredUser() as AuthUser | null;
-
-    if (token && user) {
-      setAuthState({
-        isAuthenticated: true,
-        user,
-        token,
-        isLoading: false,
-      });
-    } else {
-      setAuthState({
-        isAuthenticated: false,
-        user: null,
-        token: null,
-        isLoading: false,
-      });
-    }
+    hasReadAuth = true;
+    setAuthState(readStoredAuth());
   }, []);
 
   useEffect(() => {
