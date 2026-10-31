@@ -78,35 +78,6 @@ export function cartProgressPercent(totalRai: number, minimumRai: number) {
   return Math.min(100, Math.max(0, (totalRai / minimumRai) * 100));
 }
 
-function ShareIcon() {
-  return (
-    <svg viewBox="0 0 16 16" aria-hidden="true" className="h-3.5 w-3.5">
-      <circle
-        cx="12"
-        cy="3.5"
-        r="1.8"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.3"
-      />
-      <circle cx="4" cy="8" r="1.8" fill="none" stroke="currentColor" strokeWidth="1.3" />
-      <circle
-        cx="12"
-        cy="12.5"
-        r="1.8"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.3"
-      />
-      <path
-        d="m5.6 7.1 4.8-2.7M5.6 8.9l4.8 2.7"
-        stroke="currentColor"
-        strokeWidth="1.3"
-      />
-    </svg>
-  );
-}
-
 function Chevron({ direction }: { direction: "left" | "right" }) {
   return (
     <svg viewBox="0 0 16 16" aria-hidden="true" className="h-3 w-3">
@@ -154,9 +125,6 @@ function DetailRow({ label, children }: { label: string; children: ReactNode }) 
     </div>
   );
 }
-
-// Actions (share, gallery) aren't wired up yet.
-const decorative = "cursor-pointer";
 
 /** Plot detail (Figma "Added to cart / rei calc") from `GET /explore/plots/{plotId}`. */
 export function PlotDetailPanel({
@@ -218,16 +186,6 @@ export function PlotDetailPanel({
               </span>
             ) : null}
           </div>
-          <button
-            type="button"
-            aria-label={t("Share")}
-            className={cn(
-              decorative,
-              "flex h-7 w-7 items-center justify-center rounded-full bg-[#f1f4f9] text-[#0b1f33]",
-            )}
-          >
-            <ShareIcon />
-          </button>
         </div>
         {/* The full name, wrapping over as many lines as it needs. */}
         <h2 className="mt-1.5 break-words text-[18px] font-semibold leading-[26px] text-[#0b1f33] text-pretty">

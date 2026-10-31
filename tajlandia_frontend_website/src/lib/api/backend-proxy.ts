@@ -18,6 +18,7 @@ const ALLOWED_PREFIXES = new Set([
   "lands",
   "leaderboard",
   "help-support",
+  "referral",
   "certificates",
   "notifications",
 ]);

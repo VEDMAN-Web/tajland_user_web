@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import React, { useState } from "react";
 import { routes } from "@/lib/constants/routes";
-import { ScrollAnimatedElement } from "@/components/animations/ScrollAnimatedElement";
 import { resetPasswordSchema, type ResetPasswordFormValues } from "./schemas/reset-password.schema";
 import { resetPasswordAction } from "./services/reset-password.service";
 import { BackLink } from "@/components/ui/BackLink";
@@ -117,21 +116,21 @@ export function ResetPasswordForm() {
   }
 
   function inputClass(hasError: boolean) {
-    return `h-12 w-full rounded-[12px] border bg-white px-3.5 pr-11 text-[14px] text-[#1c1c1c] outline-none transition placeholder:text-[#c5c9d1] focus:border-navy focus:ring-2 focus:ring-navy/10 ${hasError ? "border-[#d52b35]" : "border-[#e6e8ee]"}`;
+    return `h-12 lg:h-11 w-full rounded-[14px] border bg-white pl-11 pr-11 text-[14px] text-[#1c1c1c] shadow-[0_1px_2px_rgba(11,31,77,0.04)] outline-none transition placeholder:text-[#b4bbc8] focus:border-navy focus:ring-4 focus:ring-navy/10 ${hasError ? "border-[#d52b35] focus:ring-[#d52b35]/10" : "border-[#e3e7ef] hover:border-[#cfd6e4]"}`;
   }
 
   return (
-    <div className="flex min-h-[640px] flex-col px-1 py-2 sm:px-4">
-      <ScrollAnimatedElement animation="slide-in-right" duration={600} className="mx-auto flex w-full max-w-[420px] flex-1 flex-col">
+    <>
         <BackLink href={routes.login}>Back to Login</BackLink>
-        <h2 className="mt-8 text-[28px] font-semibold tracking-[-0.03em] text-navy sm:text-[30px]">Reset your password</h2>
-        <p className="mt-2 text-[14px] leading-6 text-[#8b939e]">Create a new password for your account.</p>
+        <h2 className="mt-6 lg:mt-4 text-[24px] font-semibold tracking-[-0.03em] text-navy sm:text-[26px]">Reset your password</h2>
+        <p className="mt-2 text-[14px] leading-6 text-[#64748b]">Create a new password for your account.</p>
 
-        <form className="mt-7" noValidate onSubmit={handleSubmit}>
+        <form className="mt-7 lg:mt-5" noValidate onSubmit={handleSubmit}>
           <div>
-            <label htmlFor="reset-new-password" className="text-[14px] font-medium text-[#1c1c1c]">New password</label>
+            <label htmlFor="reset-new-password" className="text-[13px] font-medium text-[#1c1c1c]">New password</label>
             <div className="relative mt-2">
-              <input id="reset-new-password" name="newPassword" type={showNewPassword ? "text" : "password"} autoComplete="new-password" placeholder="hello@example.com" value={values.newPassword} onChange={(event) => updateField("newPassword", event.target.value)} aria-invalid={Boolean(errors.newPassword)} aria-describedby={errors.newPassword ? "reset-new-password-error" : "reset-password-strength"} className={inputClass(Boolean(errors.newPassword))} />
+              <svg viewBox="0 0 24 24" aria-hidden="true" className="pointer-events-none absolute left-3.5 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-[#9aa5b8]"><rect x="4.5" y="10.5" width="15" height="9.5" rx="2.5" fill="none" stroke="currentColor" strokeWidth="1.5" /><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="1.5" /></svg>
+              <input id="reset-new-password" name="newPassword" type={showNewPassword ? "text" : "password"} autoComplete="new-password" placeholder="Create a password" value={values.newPassword} onChange={(event) => updateField("newPassword", event.target.value)} aria-invalid={Boolean(errors.newPassword)} aria-describedby={errors.newPassword ? "reset-new-password-error" : "reset-password-strength"} className={inputClass(Boolean(errors.newPassword))} />
               <button type="button" aria-label={showNewPassword ? "Hide new password" : "Show new password"} onMouseDown={(event) => event.preventDefault()} onClick={() => setShowNewPassword((current) => !current)} className="absolute right-3.5 top-1/2 -translate-y-1/2 cursor-pointer text-[#b7b8bb] focus-visible:rounded focus-visible:outline-2 focus-visible:outline-navy"><EyeIcon hidden={!showNewPassword} /></button>
             </div>
             <div id="reset-password-strength" className="mt-3 flex items-center gap-2" aria-live="polite" style={{ "--strength-width": strength.width, "--strength-color": strength.color } as React.CSSProperties}>
@@ -141,35 +140,34 @@ export function ResetPasswordForm() {
             {errors.newPassword ? <p id="reset-new-password-error" className="mt-1.5 text-[11px] text-[#d52b35]">{errors.newPassword}</p> : null}
           </div>
 
-          <div className="mt-5">
-            <label htmlFor="reset-confirm-password" className="text-[14px] font-medium text-[#1c1c1c]">Confirm password</label>
+          <div className="mt-4 lg:mt-3">
+            <label htmlFor="reset-confirm-password" className="text-[13px] font-medium text-[#1c1c1c]">Confirm password</label>
             <div className="relative mt-2">
-              <input id="reset-confirm-password" name="confirmPassword" type={showConfirmPassword ? "text" : "password"} autoComplete="new-password" placeholder="hello@example.com" value={values.confirmPassword} onChange={(event) => updateField("confirmPassword", event.target.value)} aria-invalid={Boolean(errors.confirmPassword)} aria-describedby={errors.confirmPassword ? "reset-confirm-password-error" : undefined} className={inputClass(Boolean(errors.confirmPassword))} />
+              <svg viewBox="0 0 24 24" aria-hidden="true" className="pointer-events-none absolute left-3.5 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-[#9aa5b8]"><rect x="4.5" y="10.5" width="15" height="9.5" rx="2.5" fill="none" stroke="currentColor" strokeWidth="1.5" /><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="1.5" /></svg>
+              <input id="reset-confirm-password" name="confirmPassword" type={showConfirmPassword ? "text" : "password"} autoComplete="new-password" placeholder="Re-enter your password" value={values.confirmPassword} onChange={(event) => updateField("confirmPassword", event.target.value)} aria-invalid={Boolean(errors.confirmPassword)} aria-describedby={errors.confirmPassword ? "reset-confirm-password-error" : undefined} className={inputClass(Boolean(errors.confirmPassword))} />
               <button type="button" aria-label={showConfirmPassword ? "Hide confirm password" : "Show confirm password"} onMouseDown={(event) => event.preventDefault()} onClick={() => setShowConfirmPassword((current) => !current)} className="absolute right-3.5 top-1/2 -translate-y-1/2 cursor-pointer text-[#b7b8bb] focus-visible:rounded focus-visible:outline-2 focus-visible:outline-navy"><EyeIcon hidden={!showConfirmPassword} /></button>
             </div>
             {errors.confirmPassword ? <p id="reset-confirm-password-error" className="mt-1.5 text-[11px] text-[#d52b35]">{errors.confirmPassword}</p> : null}
           </div>
 
-          {successMessage ? (
-            <p role="status" className="mt-4 text-center text-[13px] font-medium text-green-600">
-              {successMessage}
-            </p>
-          ) : null}
-          {apiError ? (
-            <p role="alert" className="mt-5 text-center text-[12px] text-[#d52b35]">
-              {apiError}
-            </p>
-          ) : null}
-          <button type="submit" disabled={isSubmitting} className="mt-6 h-12 w-full cursor-pointer rounded-[12px] bg-navy text-[15px] font-medium text-white transition hover:bg-navy-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy disabled:cursor-not-allowed disabled:opacity-60">
-            {isSubmitting ? "Resetting Password..." : "Reset Password"}
+          {successMessage ? <p role="status" className="mt-4 rounded-[12px] border border-[#c8ecd3] bg-[#f1fbf4] px-3.5 py-2.5 text-center text-[13px] font-medium text-green-700">{successMessage}</p> : null}
+          {apiError ? <p role="alert" className="mt-4 rounded-[12px] border border-[#f6c9cd] bg-[#fff4f5] px-3.5 py-2.5 text-center text-[13px] text-[#d52b35]">{apiError}</p> : null}
+          <button type="submit" disabled={isSubmitting} className="mt-5 lg:mt-4 inline-flex h-12 lg:h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-[14px] bg-linear-to-b from-[#12307a] to-navy text-[15px] font-medium text-white shadow-[0_10px_24px_-10px_rgba(11,31,77,0.7)] transition hover:-translate-y-px hover:shadow-[0_14px_28px_-10px_rgba(11,31,77,0.75)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0 motion-reduce:transition-none">
+            {isSubmitting ? (
+              <>
+                <span aria-hidden="true" className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white motion-reduce:animate-none" />
+                Resetting Password...
+              </>
+            ) : (
+              "Reset Password"
+            )}
           </button>
         </form>
 
-        <div className="mt-auto pt-16 text-center text-[12px] text-[#8e8e91]">
-          <div className="flex justify-center gap-4"><Link href={routes.privacy} className="font-medium text-[#e11d2e] hover:underline">Privacy Policy</Link><Link href={routes.terms} className="font-medium text-[#e11d2e] hover:underline">Terms of Service</Link><Link href={routes.contact} className="font-medium text-[#e11d2e] hover:underline">Contact Support</Link></div>
-          <p className="mt-4 text-[12px] text-[#1c1c1c]">© 2026 Tajlandia.pl. All rights reserved.</p>
-        </div>
-      </ScrollAnimatedElement>
-    </div>
+        <p className="mt-7 lg:mt-5 text-center text-[14px] text-[#64748b]">
+          Remembered your password?{" "}
+          <Link href={routes.login} className="font-semibold text-[#e11d2e] hover:underline">Log in</Link>
+        </p>
+    </>
   );
 }

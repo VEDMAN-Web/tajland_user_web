@@ -1,14 +1,10 @@
-import type { Metadata } from "next";
-import { createPageMetadata } from "@/lib/seo/metadata";
-import { LegalDocumentPage } from "@/modules/dashboard";
+import { notFound, redirect } from "next/navigation";
+import { legalPagePath } from "@/lib/constants/routes";
+import { fetchLegalLinks } from "@/modules/legal";
 
-export const metadata: Metadata = createPageMetadata({
-  title: "Terms & Condition",
-  description: "Tajlandia Terms and Conditions.",
-  path: "/terms",
-  index: false,
-});
-
-export default function TermsPage() {
-  return <LegalDocumentPage kind="terms" publicPage />;
+/** Old public link (sign-up, contact, ...): goes to the Terms & Conditions from the legal pages API. */
+export default async function TermsPage() {
+  const page = (await fetchLegalLinks()).find((item) => /terms/i.test(item.title));
+  if (!page) notFound();
+  redirect(legalPagePath(page.title));
 }

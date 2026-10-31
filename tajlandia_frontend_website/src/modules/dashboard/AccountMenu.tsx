@@ -3,14 +3,29 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { createPortal } from "react-dom";
 import { clearAuth } from "@/lib/api/auth.utils";
 import { routes } from "@/lib/constants/routes";
 import { useDashboardLanguage } from "./DashboardLanguageContext";
 import { logoutFromApi } from "./services/logout.client";
 
+// Icon for "Refer & Earn", drawn inline (it takes the link's text colour) instead of a PNG.
+const REFERRAL_ICON = "svg:referral";
+
 function MenuIcon({ src, active = false }: { src: string; active?: boolean }) {
+  if (src === REFERRAL_ICON) {
+    return (
+      <span aria-hidden="true" className="flex h-5 w-5 items-center justify-center">
+        <svg viewBox="0 0 24 24" className="h-5 w-5">
+          <rect x="3.5" y="9" width="17" height="11" rx="2" fill="currentColor" fillOpacity="0.9" />
+          <path d="M12 9v11M3.5 13.5h17" stroke={active ? "#0b1f4d" : "#f7f9fc"} strokeWidth="1.4" />
+          <path d="M12 9c-1.5-3.5-5-4-5-1.8C7 8.4 8.6 9 12 9Zm0 0c1.5-3.5 5-4 5-1.8C17 8.4 15.4 9 12 9Z" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" />
+        </svg>
+      </span>
+    );
+  }
+
   return (
     <span aria-hidden="true" className="flex h-5 w-5 items-center justify-center">
       <Image
@@ -31,6 +46,7 @@ export type AccountKey =
   | "certificates"
   | "settings"
   | "help"
+  | "referral"
   | "terms"
   | "privacy";
 
@@ -138,21 +154,15 @@ export function LogoutButton({
   );
 }
 
-/**
- * `pills`: one row that scrolls sideways above the page (below lg).
- * `sidebar`: the vertical list, rendered inside the dashboard sidebar (lg and up).
- */
+/** The vertical account list, rendered inside the dashboard sidebar and the mobile drawer. */
 export function AccountMenu({
   active,
-  variant = "pills",
   onNavigate,
 }: {
   active: AccountKey;
-  variant?: "pills" | "sidebar";
   onNavigate?: () => void;
 }) {
   const { t } = useDashboardLanguage();
-  const asideRef = useRef<HTMLElement>(null);
   const items = [
     {
       label: t("Profile"),
@@ -177,6 +187,12 @@ export function AccountMenu({
       icon: "/images/dashboard/account-menu/certificates.png",
       href: routes.certificates,
       key: "certificates" as const,
+    },
+    {
+      label: t("Refer & Earn"),
+      icon: REFERRAL_ICON,
+      href: routes.referral,
+      key: "referral" as const,
     },
     {
       label: t("Settings"),
@@ -204,71 +220,30 @@ export function AccountMenu({
     },
   ];
 
-  // Below lg the menu is a row that scrolls sideways: bring the current page's pill into view.
-  useEffect(() => {
-    if (variant !== "pills") return;
-    asideRef.current
-      ?.querySelector('[aria-current="page"]')
-      ?.scrollIntoView({ inline: "center", block: "nearest" });
-  }, [active, variant]);
-
   return (
-    <>
-      {variant === "sidebar" ? (
-        <div className="flex min-h-0 flex-1 flex-col px-3 pb-4 pt-2">
-          <nav className="space-y-0.5">
-            {items.map((item) => {
-              const isActive = item.key === active;
-              return (
-                <Link
-                  key={item.label}
-                  href={item.href}
-                  onClick={onNavigate}
-                  aria-current={isActive ? "page" : undefined}
-                  className={`flex h-10 items-center gap-3 rounded-[12px] px-3 font-manrope text-[13px] font-medium leading-none ${isActive ? "bg-navy text-white" : "text-[#66717c] hover:bg-[#f4f7fa]"}`}
-                >
-                  <MenuIcon src={item.icon} active={isActive} />
-                  {item.label}
-                </Link>
-              );
-            })}
-          </nav>
-          <div className="mb-3 mt-auto border-t border-[#e8edf1]" />
-          <LogoutButton className="flex h-10 w-full cursor-pointer items-center gap-3 rounded-[12px] px-3 font-manrope text-[13px] font-medium leading-none text-[#e11d2e] hover:bg-[#fff3f4]">
-            <MenuIcon src="/images/dashboard/account-menu/logout.png" />
-            {t("Logout")}
-          </LogoutButton>
-        </div>
-      ) : (
-        // Below lg: one row of pills (scrolls sideways, edge to edge) above the content, so
-        // the page itself isn't pushed down. lg and up uses the sidebar instead.
-        <aside
-          ref={asideRef}
-          className="flex gap-2 overflow-x-auto px-5 pb-1 pt-5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:px-8 lg:hidden"
-        >
-          <nav className="contents">
-            {items.map((item) => {
-              const isActive = item.key === active;
-              const className = `flex h-10 shrink-0 items-center gap-2.5 whitespace-nowrap rounded-full border px-3.5 font-manrope text-[13px] font-medium leading-none ${isActive ? "border-navy bg-navy text-white" : "border-[#e6eaf3] bg-white text-[#66717c] hover:bg-[#f4f7fa]"}`;
-              return (
-                <Link
-                  key={item.label}
-                  href={item.href}
-                  aria-current={isActive ? "page" : undefined}
-                  className={className}
-                >
-                  <MenuIcon src={item.icon} active={isActive} />
-                  {item.label}
-                </Link>
-              );
-            })}
-          </nav>
-          <LogoutButton className="flex h-10 shrink-0 cursor-pointer items-center gap-2.5 whitespace-nowrap rounded-full border border-[#f6c9cd] bg-white px-3.5 font-manrope text-[13px] font-medium leading-none text-[#e11d2e] hover:bg-[#fff3f4]">
-            <MenuIcon src="/images/dashboard/account-menu/logout.png" />
-            {t("Logout")}
-          </LogoutButton>
-        </aside>
-      )}
-    </>
+    <div className="flex min-h-0 flex-1 flex-col px-3 pb-4 pt-2">
+      <nav className="space-y-0.5">
+        {items.map((item) => {
+          const isActive = item.key === active;
+          return (
+            <Link
+              key={item.label}
+              href={item.href}
+              onClick={onNavigate}
+              aria-current={isActive ? "page" : undefined}
+              className={`flex h-10 items-center gap-3 rounded-[12px] px-3 font-manrope text-[13px] font-medium leading-none ${isActive ? "bg-navy text-white" : "text-[#66717c] hover:bg-[#f4f7fa]"}`}
+            >
+              <MenuIcon src={item.icon} active={isActive} />
+              {item.label}
+            </Link>
+          );
+        })}
+      </nav>
+      <div className="mb-3 mt-auto border-t border-[#e8edf1]" />
+      <LogoutButton className="flex h-10 w-full cursor-pointer items-center gap-3 rounded-[12px] px-3 font-manrope text-[13px] font-medium leading-none text-[#e11d2e] hover:bg-[#fff3f4]">
+        <MenuIcon src="/images/dashboard/account-menu/logout.png" />
+        {t("Logout")}
+      </LogoutButton>
+    </div>
   );
 }

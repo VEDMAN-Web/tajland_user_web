@@ -18,12 +18,12 @@ export async function requestSignupOtpAction(signupData: SignupFormValues): Prom
     return { ok: false, message: "Please check all required fields." };
   }
 
-  const { firstName, lastName, email, newPassword } = parsed.data;
+  const { firstName, lastName, email, newPassword, referralCode } = parsed.data;
 
   try {
     const response = await apiPost(
       "/auth/register",
-      { firstName, lastName, email, password: newPassword, role: "USER" },
+      { firstName, lastName, email, password: newPassword, role: "USER", ...(referralCode ? { referralCode } : {}) },
       registerResponseSchema,
       { timeoutMs: 20_000 },
     );

@@ -137,6 +137,8 @@ export function CertificateDetailsPage({ certificateId }: { certificateId: strin
   if (isLoading || !isAuthenticated) return <PageLoader label={t("Loading certificate...")} />;
 
   const certificate = state.status === "ready" ? state.certificate : null;
+  // The issued file (Cloudinary) from the API; the page URL only if the certificate has no file yet.
+  const shareUrl = certificate?.certificateUrl || pageUrl;
 
   async function download() {
     if (!certificate || downloading) return;
@@ -156,7 +158,7 @@ export function CertificateDetailsPage({ certificateId }: { certificateId: strin
 
   async function copyLink() {
     try {
-      await navigator.clipboard.writeText(pageUrl);
+      await navigator.clipboard.writeText(shareUrl);
       setCopied(true);
     } catch {
       // Clipboard blocked: the link stays visible to copy by hand.
@@ -166,7 +168,7 @@ export function CertificateDetailsPage({ certificateId }: { certificateId: strin
   async function shareLink() {
     try {
       if (navigator.share) {
-        await navigator.share({ title: t("Tajlandia Certificate"), url: pageUrl });
+        await navigator.share({ title: t("Tajlandia Certificate"), url: shareUrl });
         return;
       }
       await copyLink();
@@ -239,7 +241,7 @@ export function CertificateDetailsPage({ certificateId }: { certificateId: strin
               owner={state.owner}
               plotLocations={state.plotLocations}
               orderNo={state.orderNo}
-              pageUrl={pageUrl}
+              pageUrl={shareUrl}
               copied={copied}
               onCopy={copyLink}
             />
@@ -289,7 +291,7 @@ export function CertificateDetailsPage({ certificateId }: { certificateId: strin
       ) : null}
       {dialog === "share" ? (
         <ShareDialog
-          certificateUrl={pageUrl}
+          certificateUrl={shareUrl}
           copied={copied}
           onCopy={copyLink}
           onShare={shareLink}

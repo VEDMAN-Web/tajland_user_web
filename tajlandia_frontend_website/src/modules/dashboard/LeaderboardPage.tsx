@@ -10,7 +10,7 @@ import { isAllowedRemoteImage } from "@/lib/config/remote-images";
 import { leaderboardOwnerPath, routes } from "@/lib/constants/routes";
 import { useAuth } from "@/lib/hooks/useAuth";
 import { logError } from "@/lib/logging/logger";
-import { useDashboardLanguage } from "./DashboardLanguageContext";
+import { useDashboardLanguage, useOptionalDashboardLanguage } from "./DashboardLanguageContext";
 import { PageLoader } from "@/components/ui/PageLoader";
 import type { LeaderboardEntry } from "./schemas/leaderboard.schema";
 import { getLeaderboard } from "./services/leaderboard.client";
@@ -51,7 +51,7 @@ const PODIUM_ORDER = [2, 1, 3] as const;
 
 // `size` is the trophy's width relative to the photo. The 2nd and 3rd trophies draw their
 // number on a small medallion, so they are shown larger. `medal` is the disc / ink colour of
-// the script place badge on the photo's rim.
+// the place badge in front of the name.
 const TROPHIES = {
   1: { src: "/images/leaderboard/trophy-1.webp", width: 173, height: 196, size: "w-[40%]", medal: null },
   2: {
@@ -76,6 +76,12 @@ const TROPHIES = {
   },
 } as const;
 
+
+// The winner's place badge (2nd and 3rd use their trophy's `medal`).
+const GOLD_BADGE = {
+  disc: "radial-gradient(circle at 35% 30%, #fff1c2, #f2c75c 55%, #b98a1c)",
+  ink: "#4a3408",
+};
 
 // Confetti around the winner, as % of the photo size: [left, top, shape, color].
 const CONFETTI: [number, number, "dot" | "ring" | "square" | "plus", "navy" | "red"][] = [
@@ -171,22 +177,23 @@ function Confetti({ shape, color }: { shape: keyof typeof CONFETTI_CLASS; color:
   );
 }
 
-function PodiumCard({ owner, t }: { owner: Owner; t: (key: string) => string }) {
+function PodiumCard({ owner, href, t }: { owner: Owner; href: string; t: (key: string) => string }) {
   const winner = owner.rank === 1;
   const trophy = TROPHIES[owner.rank as keyof typeof TROPHIES] ?? TROPHIES[3];
+  const badge = trophy.medal ?? GOLD_BADGE;
 
   return (
     <Link
-      href={leaderboardOwnerPath(owner.userId)}
+      href={href}
       aria-label={`${t("View Profile")}: ${owner.name}`}
       className={`relative flex min-w-0 flex-1 cursor-pointer flex-col items-center ${
-        winner ? "max-w-[300px]" : "mt-12 max-w-[330px] sm:mt-[84px]"
+        winner ? "max-w-[300px]" : "mt-12 max-w-[330px] sm:mt-[56px]"
       }`}
     >
       {/* The photo box: wreath, rays, confetti and trophy are placed relative to it. */}
       <div
         className={`relative z-10 shrink-0 ${
-          winner ? "h-[64px] w-[64px] sm:h-[124px] sm:w-[124px]" : "h-[60px] w-[60px] sm:h-[124px] sm:w-[124px]"
+          winner ? "h-[64px] w-[64px] sm:h-[104px] sm:w-[104px]" : "h-[60px] w-[60px] sm:h-[104px] sm:w-[104px]"
         }`}
       >
         {winner ? (
@@ -225,25 +232,15 @@ function PodiumCard({ owner, t }: { owner: Owner; t: (key: string) => string }) 
         <Avatar
           name={owner.name}
           image={owner.image}
-          sizes="(min-width: 640px) 124px, 64px"
+          sizes="(min-width: 640px) 104px, 64px"
           className={`h-full w-full border-[3px] border-navy sm:border-[5px] ${
-            winner ? "text-[18px] sm:text-[34px]" : "text-[17px] sm:text-[34px]"
+            winner ? "text-[18px] sm:text-[30px]" : "text-[17px] sm:text-[30px]"
           }`}
         />
-        {trophy.medal ? (
-          // Place badge on the photo's top-left rim (the 225° point of the circle).
-          <span
-            aria-hidden="true"
-            className="absolute left-[14.6%] top-[14.6%] z-10 flex h-[26px] w-[26px] -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 border-white pb-px font-[family-name:var(--font-script)] text-[17px] font-bold leading-none shadow-[0_3px_8px_rgba(11,31,77,0.28)] sm:h-[44px] sm:w-[44px] sm:border-[3px] sm:pb-0.5 sm:text-[30px]"
-            style={{ background: trophy.medal.disc, color: trophy.medal.ink }}
-          >
-            {owner.rank}
-          </span>
-        ) : null}
         {/* Bottom-anchored on the pedestal (its gap below), since the trophies differ in height. */}
         <span
           aria-hidden="true"
-          className={`absolute -bottom-3 left-1/2 block -translate-x-1/2 sm:-bottom-7 ${trophy.size}`}
+          className={`absolute -bottom-3 left-1/2 block -translate-x-1/2 sm:-bottom-6 ${trophy.size}`}
         >
           <Image
             src={trophy.src}
@@ -256,16 +253,23 @@ function PodiumCard({ owner, t }: { owner: Owner; t: (key: string) => string }) 
       </div>
 
       {/* Pedestal box: perspective top face (the trophy stands on it) over a fading front face. */}
-      <div className="relative mt-3 w-full sm:mt-7">
+      <div className="relative mt-3 w-full sm:mt-6">
         <span
           aria-hidden="true"
           className="block h-2.5 w-full bg-gradient-to-b from-[#e2eaf7] to-[#ebf1fa] [clip-path:polygon(3.5%_0,96.5%_0,100%_100%,0_100%)] sm:h-[14px]"
         />
-        <div className="flex flex-col items-center border-t border-[#d9e3f2] bg-gradient-to-b from-[#f2f6fc] via-[#f6f9fd] to-white/0 px-2 pb-6 pt-3 text-center sm:pb-10 sm:pt-5">
-          <p className="relative z-20 w-full truncate font-manrope text-[13px] font-semibold text-navy sm:text-[24px]">
-            {owner.name}
+        <div className="flex flex-col items-center border-t border-[#d9e3f2] bg-gradient-to-b from-[#f2f6fc] via-[#f6f9fd] to-white/0 px-2 pb-6 pt-3 text-center sm:pb-5 sm:pt-4">
+          <p className="relative z-20 flex w-full items-center justify-center gap-1.5 font-manrope text-[13px] font-semibold text-navy sm:gap-2.5 sm:text-[24px]">
+            <span
+              aria-label={`#${owner.rank}`}
+              className="flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full border border-white pb-px font-manrope text-[10px] font-bold leading-none shadow-[0_2px_6px_rgba(11,31,77,0.25)] sm:h-[30px] sm:w-[30px] sm:border-2 sm:text-[15px]"
+              style={{ background: badge.disc, color: badge.ink }}
+            >
+              {owner.rank}
+            </span>
+            <span className="min-w-0 truncate">{owner.name}</span>
           </p>
-          <p className="relative z-20 mt-0.5 font-manrope text-[16px] font-bold text-brand-red sm:text-[32px]">
+          <p className="relative z-20 mt-0.5 font-manrope text-[16px] font-bold text-brand-red sm:text-[28px]">
             {formatMoney(owner.spent)}
           </p>
           <p className="relative z-20 mt-1 inline-flex items-center gap-1 font-manrope text-[10px] font-medium text-[#6b7785] sm:text-[14px]">
@@ -279,17 +283,17 @@ function PodiumCard({ owner, t }: { owner: Owner; t: (key: string) => string }) 
 }
 
 /** A podium place no one holds yet (fewer than 3 owners), so the winner stays centred. */
-function OpenSpotCard({ rank, t }: { rank: 2 | 3; t: (key: string) => string }) {
+function OpenSpotCard({ rank, href, t }: { rank: 2 | 3; href: string; t: (key: string) => string }) {
   const trophy = TROPHIES[rank];
 
   return (
     <Link
-      href={routes.dashboardExplore}
+      href={href}
       aria-label={`#${rank} ${t("Open spot")}: ${t("Explore Map")}`}
-      className="group relative mt-12 flex min-w-0 max-w-[330px] flex-1 cursor-pointer flex-col items-center sm:mt-[84px]"
+      className="group relative mt-12 flex min-w-0 max-w-[330px] flex-1 cursor-pointer flex-col items-center sm:mt-[56px]"
     >
-      <div className="relative z-10 h-[60px] w-[60px] shrink-0 sm:h-[124px] sm:w-[124px]">
-        <span className="flex h-full w-full items-center justify-center rounded-full border-2 border-dashed border-[#c5d3e8] bg-[#f6f9fd] font-manrope text-[17px] font-semibold text-[#9aaac0] transition-colors group-hover:border-navy/40 group-hover:text-navy sm:border-[3px] sm:text-[34px]">
+      <div className="relative z-10 h-[60px] w-[60px] shrink-0 sm:h-[104px] sm:w-[104px]">
+        <span className="flex h-full w-full items-center justify-center rounded-full border-2 border-dashed border-[#c5d3e8] bg-[#f6f9fd] font-manrope text-[17px] font-semibold text-[#9aaac0] transition-colors group-hover:border-navy/40 group-hover:text-navy sm:border-[3px] sm:text-[30px]">
           #{rank}
         </span>
         <Image
@@ -297,16 +301,16 @@ function OpenSpotCard({ rank, t }: { rank: 2 | 3; t: (key: string) => string }) 
           alt=""
           width={trophy.width}
           height={trophy.height}
-          className={`absolute -bottom-3 left-1/2 h-auto -translate-x-1/2 opacity-40 grayscale sm:-bottom-7 ${trophy.size}`}
+          className={`absolute -bottom-3 left-1/2 h-auto -translate-x-1/2 opacity-40 grayscale sm:-bottom-6 ${trophy.size}`}
         />
       </div>
 
-      <div className="relative mt-3 w-full sm:mt-7">
+      <div className="relative mt-3 w-full sm:mt-6">
         <span
           aria-hidden="true"
           className="block h-2.5 w-full bg-gradient-to-b from-[#e2eaf7] to-[#ebf1fa] [clip-path:polygon(3.5%_0,96.5%_0,100%_100%,0_100%)] sm:h-[14px]"
         />
-        <div className="flex flex-col items-center border-t border-[#d9e3f2] bg-gradient-to-b from-[#f2f6fc] via-[#f6f9fd] to-white/0 px-2 pb-6 pt-3 text-center sm:pb-10 sm:pt-5">
+        <div className="flex flex-col items-center border-t border-[#d9e3f2] bg-gradient-to-b from-[#f2f6fc] via-[#f6f9fd] to-white/0 px-2 pb-6 pt-3 text-center sm:pb-5 sm:pt-4">
           <p className="font-manrope text-[13px] font-semibold text-[#9aaac0] sm:text-[24px]">{t("Open spot")}</p>
           <p className="mt-0.5 font-manrope text-[10px] leading-4 text-[#8b939e] sm:mt-1 sm:text-[14px] sm:leading-5">
             {t("Buy land to claim this place.")}
@@ -329,7 +333,7 @@ function ArrowRight() {
   );
 }
 
-function OwnerRow({ owner, t }: { owner: Owner; t: (key: string) => string }) {
+function OwnerRow({ owner, href, t }: { owner: Owner; href: string; t: (key: string) => string }) {
   return (
     <li className="group relative">
       <span
@@ -337,7 +341,7 @@ function OwnerRow({ owner, t }: { owner: Owner; t: (key: string) => string }) {
         className="pointer-events-none absolute -inset-x-[8%] -inset-y-6 bg-[radial-gradient(50%_50%_at_50%_50%,rgba(242,215,165,0.55),transparent_70%)] opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-focus-within:opacity-100"
       />
       <Link
-        href={leaderboardOwnerPath(owner.userId)}
+        href={href}
         className={`relative flex h-[60px] cursor-pointer items-center gap-3 rounded-[14px] border-2 border-transparent px-3 font-manrope text-[13px] text-navy outline-none transition-[transform,box-shadow,color,background] duration-200 focus-visible:ring-2 focus-visible:ring-navy/40 sm:h-[72px] sm:px-4 sm:text-[15px] md:gap-4 lg:gap-5 ${
           owner.rank % 2 ? "bg-[#eef4fd]" : "bg-[#f7f9fc]"
         } hover:z-10 hover:scale-[1.03] hover:text-white hover:shadow-[0_10px_24px_-12px_rgba(0,31,84,0.7)] hover:[background:linear-gradient(90deg,#001f54,#003ba1_45%,#0045ba_70%,#003287)_padding-box,conic-gradient(#f2d7a5,#e0be82,#f2d7a5,#e0be82,#f2d7a5)_border-box] focus-visible:z-10 focus-visible:scale-[1.03] focus-visible:text-white focus-visible:shadow-[0_10px_24px_-12px_rgba(0,31,84,0.7)] focus-visible:[background:linear-gradient(90deg,#001f54,#003ba1_45%,#0045ba_70%,#003287)_padding-box,conic-gradient(#f2d7a5,#e0be82,#f2d7a5,#e0be82,#f2d7a5)_border-box]`}
@@ -374,10 +378,10 @@ function OwnerRow({ owner, t }: { owner: Owner; t: (key: string) => string }) {
 function LeaderboardSkeleton() {
   return (
     <div aria-hidden="true" className="motion-safe:animate-pulse">
-      <div className="mx-auto mt-8 flex max-w-[1060px] items-start justify-center gap-2 sm:mt-12 sm:gap-8">
+      <div className="mx-auto mt-8 flex max-w-[1060px] items-start justify-center gap-2 sm:mt-8 sm:gap-8">
         {PODIUM_ORDER.map((rank) => (
-          <div key={rank} className={`flex flex-1 flex-col items-center ${rank === 1 ? "" : "mt-12 sm:mt-[84px]"}`}>
-            <span className="h-[60px] w-[60px] rounded-full bg-[#e8eef7] sm:h-[124px] sm:w-[124px]" />
+          <div key={rank} className={`flex flex-1 flex-col items-center ${rank === 1 ? "" : "mt-12 sm:mt-[56px]"}`}>
+            <span className="h-[60px] w-[60px] rounded-full bg-[#e8eef7] sm:h-[104px] sm:w-[104px]" />
             <span className="mt-6 h-3 w-3/5 rounded-full bg-[#eef2f8] sm:h-5" />
             <span className="mt-3 h-4 w-2/5 rounded-full bg-[#eef2f8] sm:h-7" />
           </div>
@@ -418,6 +422,90 @@ function LeaderboardMessage({
   );
 }
 
+type LeaderboardBoardProps = {
+  state: LeaderboardState;
+  onRetry: () => void;
+  /** Where an owner's card or row goes. */
+  ownerHref: (userId: string) => string;
+  /** Where an empty podium place ("Open spot") goes. */
+  exploreHref: string;
+  t: (key: string) => string;
+};
+
+/** The heading, podium and list: shared by the dashboard page and the public page. */
+function LeaderboardBoard({ state, onRetry, ownerHref, exploreHref, t }: LeaderboardBoardProps) {
+  const owners =
+    state.status === "ready"
+      ? state.entries.map((entry) => toOwner(entry, t("Tajlandia owner"))).sort((a, b) => a.rank - b.rank)
+      : [];
+  // Each podium place with its owner, or none yet (shown as an open spot).
+  const podium = PODIUM_ORDER.map((rank) => ({ rank, owner: owners.find((owner) => owner.rank === rank) }));
+  const rest = owners.filter((owner) => owner.rank > 3);
+  // Nothing to rank (couldn't load / no owners yet): the heading and message sit in the
+  // vertical middle of the page instead of hugging the top.
+  const isMessage = state.status === "error" || (state.status === "ready" && owners.length === 0);
+
+  return (
+    <div className="flex min-h-[100svh] flex-col overflow-x-clip bg-white text-navy">
+      <main
+        className={`mx-auto w-full max-w-[1240px] px-4 pb-16 pt-8 sm:px-8 sm:pt-8 ${isMessage ? "flex flex-1 flex-col justify-center" : ""}`}
+      >
+        <header className="text-center">
+          <h1 className="font-[family-name:var(--font-playfair-display)] text-[36px] font-semibold leading-[1.1] tracking-[-0.02em] text-navy sm:text-[44px]">
+            {t("Top")} <span className="italic text-brand-red">{t("Owner's")}</span>
+          </h1>
+          <p className="mx-auto mt-2 max-w-[520px] font-manrope text-[14px] leading-6 text-[#718096] sm:mt-3 sm:text-[16px]">
+            {t("Discover the collectors who won the largest pieces of Thailand.")}
+          </p>
+        </header>
+
+        {state.status === "loading" ? (
+          <>
+            <span className="sr-only" role="status">
+              {t("Loading leaderboard...")}
+            </span>
+            <LeaderboardSkeleton />
+          </>
+        ) : state.status === "error" ? (
+          <LeaderboardMessage
+            title={t("We couldn't load the leaderboard.")}
+            body={t("Please check your connection and try again.")}
+            action={{ label: t("Try again"), onClick: onRetry }}
+          />
+        ) : owners.length === 0 ? (
+          <LeaderboardMessage
+            title={t("No owners yet")}
+            body={t("Rankings appear here once the first plots are purchased.")}
+          />
+        ) : (
+          <>
+            <section
+              aria-label={t("Top 3 owners")}
+              className="mx-auto mt-8 flex max-w-[1060px] items-start justify-center gap-2 sm:mt-8 sm:gap-8"
+            >
+              {podium.map(({ rank, owner }) =>
+                owner ? (
+                  <PodiumCard key={owner.userId} owner={owner} href={ownerHref(owner.userId)} t={t} />
+                ) : rank === 1 ? null : (
+                  <OpenSpotCard key={rank} rank={rank} href={exploreHref} t={t} />
+                ),
+              )}
+            </section>
+
+            {rest.length ? (
+              <ol aria-label={t("Leaderboard")} className="mx-auto mt-4 flex max-w-[1148px] flex-col gap-2.5 sm:mt-4 sm:gap-3">
+                {rest.map((owner) => (
+                  <OwnerRow key={owner.userId} owner={owner} href={ownerHref(owner.userId)} t={t} />
+                ))}
+              </ol>
+            ) : null}
+          </>
+        )}
+      </main>
+    </div>
+  );
+}
+
 export function LeaderboardPage() {
   const router = useRouter();
   const { isAuthenticated, isLoading } = useAuth();
@@ -444,80 +532,44 @@ export function LeaderboardPage() {
 
   if (isLoading || !isAuthenticated) return <PageLoader label={t("Loading leaderboard...")} />;
 
-  const owners =
-    state.status === "ready"
-      ? state.entries.map((entry) => toOwner(entry, t("Tajlandia owner"))).sort((a, b) => a.rank - b.rank)
-      : [];
-  // Each podium place with its owner, or none yet (shown as an open spot).
-  const podium = PODIUM_ORDER.map((rank) => ({ rank, owner: owners.find((owner) => owner.rank === rank) }));
-  const rest = owners.filter((owner) => owner.rank > 3);
-  // Nothing to rank (couldn't load / no owners yet): the heading and message sit in the
-  // vertical middle of the page instead of hugging the top.
-  const isMessage = state.status === "error" || (state.status === "ready" && owners.length === 0);
+  return (
+    <LeaderboardBoard
+      state={state}
+      onRetry={() => {
+        setState({ status: "loading" });
+        setReloadKey((key) => key + 1);
+      }}
+      ownerHref={leaderboardOwnerPath}
+      exploreHref={routes.dashboardExplore}
+      t={t}
+    />
+  );
+}
+
+/**
+ * The same leaderboard on the public site (`/leaderboard`), from the public endpoint. Anyone
+ * can see the ranking; opening an owner (or the map) asks a visitor to log in first.
+ * `entries` is null when the server couldn't load it.
+ */
+export function PublicLeaderboardPage({ entries }: { entries: LeaderboardEntry[] | null }) {
+  const router = useRouter();
+  const { isAuthenticated } = useAuth();
+  const { t } = useOptionalDashboardLanguage();
+  const state: LeaderboardState = entries ? { status: "ready", entries } : { status: "error" };
+
+  // A signed-in visitor goes straight to the owner; others log in and land there.
+  const ownerHref = (userId: string) => {
+    const path = leaderboardOwnerPath(userId);
+    return isAuthenticated ? path : `${routes.login}?next=${encodeURIComponent(path)}`;
+  };
 
   return (
-    <div className="flex min-h-[100svh] flex-col overflow-x-clip bg-white text-navy">
-      <main
-        className={`mx-auto w-full max-w-[1240px] px-4 pb-16 pt-8 sm:px-8 sm:pt-12 ${isMessage ? "flex flex-1 flex-col justify-center" : ""}`}
-      >
-        <header className="text-center">
-          <h1 className="font-[family-name:var(--font-playfair-display)] text-[36px] font-semibold leading-[1.1] tracking-[-0.02em] text-navy sm:text-[52px]">
-            {t("Top")} <span className="italic text-brand-red">{t("Owner's")}</span>
-          </h1>
-          <p className="mx-auto mt-2 max-w-[520px] font-manrope text-[14px] leading-6 text-[#718096] sm:mt-3 sm:text-[16px]">
-            {t("Discover the collectors who won the largest pieces of Thailand.")}
-          </p>
-        </header>
-
-        {state.status === "loading" ? (
-          <>
-            <span className="sr-only" role="status">
-              {t("Loading leaderboard...")}
-            </span>
-            <LeaderboardSkeleton />
-          </>
-        ) : state.status === "error" ? (
-          <LeaderboardMessage
-            title={t("We couldn't load the leaderboard.")}
-            body={t("Please check your connection and try again.")}
-            action={{
-              label: t("Try again"),
-              onClick: () => {
-                setState({ status: "loading" });
-                setReloadKey((key) => key + 1);
-              },
-            }}
-          />
-        ) : owners.length === 0 ? (
-          <LeaderboardMessage
-            title={t("No owners yet")}
-            body={t("Rankings appear here once the first plots are purchased.")}
-          />
-        ) : (
-          <>
-            <section
-              aria-label={t("Top 3 owners")}
-              className="mx-auto mt-8 flex max-w-[1060px] items-start justify-center gap-2 sm:mt-12 sm:gap-8"
-            >
-              {podium.map(({ rank, owner }) =>
-                owner ? (
-                  <PodiumCard key={owner.userId} owner={owner} t={t} />
-                ) : rank === 1 ? null : (
-                  <OpenSpotCard key={rank} rank={rank} t={t} />
-                ),
-              )}
-            </section>
-
-            {rest.length ? (
-              <ol aria-label={t("Leaderboard")} className="mx-auto mt-4 flex max-w-[1148px] flex-col gap-2.5 sm:mt-6 sm:gap-3">
-                {rest.map((owner) => (
-                  <OwnerRow key={owner.userId} owner={owner} t={t} />
-                ))}
-              </ol>
-            ) : null}
-          </>
-        )}
-      </main>
-    </div>
+    <LeaderboardBoard
+      state={state}
+      onRetry={() => router.refresh()}
+      ownerHref={ownerHref}
+      exploreHref={routes.explore}
+      t={t}
+    />
   );
 }

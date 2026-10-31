@@ -28,8 +28,8 @@ export type PlotFilters = {
   // UI only: the plots API has no params for these yet.
   myPlots: boolean;
   giftedPlots: boolean;
-  /** Zone ids from `/explore/filters`. Empty means "All Zones". */
-  zones: string[];
+  /** Zone category id from `/explore/filters` (the API takes one). Empty means "All Zones". */
+  zoneCategoryId: string;
   minRai: string;
   maxRai: string;
   minPrice: string;
@@ -38,8 +38,8 @@ export type PlotFilters = {
 
 /** `GET /explore/plots` filter params. */
 export type PlotFilterQuery = {
-  /** JSON array string of zone ids, e.g. `["id1","id2"]` (the API rejects `id1,id2`). */
-  zoneId?: string;
+  /** One zone category id (the API rejects a list). */
+  zoneCategoryId?: string;
   minRai?: number;
   maxRai?: number;
   minPrice?: number;

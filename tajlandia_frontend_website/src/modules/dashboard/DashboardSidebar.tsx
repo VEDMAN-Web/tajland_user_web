@@ -2,8 +2,10 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { BrandLogo } from "@/components/ui/BrandLogo";
+import { useCartSnapshot } from "@/lib/cart/cart-snapshot";
 import { brand } from "@/lib/constants/brand";
 import { routes } from "@/lib/constants/routes";
 import { AccountMenu, LogoutButton, type AccountKey } from "./AccountMenu";
@@ -130,6 +132,76 @@ export function LanguageDropdown() {
   );
 }
 
+/** The language choice for the sidebar and drawer: one full-width row that opens a short list. */
+function SidebarLanguageDropdown({ openUp = false }: { openUp?: boolean }) {
+  const { language, setLanguage, t } = useDashboardLanguage();
+  const [isOpen, setIsOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const current = LANGUAGE_OPTIONS.find((option) => option.code === language) ?? LANGUAGE_OPTIONS[0];
+
+  // Open: a click elsewhere or Escape closes it.
+  useEffect(() => {
+    if (!isOpen) return;
+    function handlePointer(event: MouseEvent) {
+      if (!rootRef.current?.contains(event.target as Node)) setIsOpen(false);
+    }
+    function handleKey(event: KeyboardEvent) {
+      if (event.key === "Escape") setIsOpen(false);
+    }
+    document.addEventListener("mousedown", handlePointer);
+    document.addEventListener("keydown", handleKey);
+    return () => {
+      document.removeEventListener("mousedown", handlePointer);
+      document.removeEventListener("keydown", handleKey);
+    };
+  }, [isOpen]);
+
+  return (
+    <div ref={rootRef} className="relative mt-3">
+      <p className="px-1 font-manrope text-[10px] font-semibold uppercase tracking-[0.08em] text-[#8b949e]">{t("Language")}</p>
+      <button
+        type="button"
+        aria-label={t("Language")}
+        aria-expanded={isOpen}
+        aria-haspopup="listbox"
+        onClick={() => setIsOpen((open) => !open)}
+        className="mt-2 flex h-10 w-full cursor-pointer items-center gap-2.5 rounded-[10px] border border-[#e3e8ed] bg-white px-3 font-manrope text-[13px] font-medium text-navy outline-none transition-colors hover:bg-[#f5f7fa] focus-visible:ring-2 focus-visible:ring-navy/40 motion-reduce:transition-none"
+      >
+        <Image src={current.flag} alt="" width={20} height={14} className="h-3.5 w-5 rounded-[2px] object-cover" />
+        <span className="truncate">{current.label}</span>
+        <svg viewBox="0 0 12 12" aria-hidden="true" className={`ml-auto h-2.5 w-2.5 shrink-0 transition-transform ${isOpen ? "rotate-180" : ""}`}>
+          <path d="M2.5 4.25 6 7.75l3.5-3.5" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </button>
+      {isOpen ? (
+        <div
+          role="listbox"
+          aria-label={t("Language")}
+          className={`absolute left-0 right-0 z-30 rounded-xl border border-[#e3e8ed] bg-white p-1 text-[13px] shadow-[0_8px_24px_rgba(11,31,77,0.14)] ${openUp ? "bottom-full mb-1.5" : "top-full mt-1.5"}`}
+        >
+          {LANGUAGE_OPTIONS.map((option) => (
+            <button
+              key={option.code}
+              type="button"
+              role="option"
+              aria-selected={language === option.code}
+              onClick={() => {
+                setLanguage(option.code);
+                setIsOpen(false);
+              }}
+              className={`flex w-full cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2 text-left font-manrope outline-none hover:bg-[#f5f7fa] focus-visible:bg-[#f5f7fa] ${language === option.code ? "bg-[#f5f7fa] font-semibold text-navy" : "text-[#4b5563]"}`}
+            >
+              <Image src={option.flag} alt="" width={20} height={14} className="h-3.5 w-5 rounded-[2px] object-cover" />
+              {option.label}
+              <span className="ml-auto text-[11px] text-[#8b949e]">{option.code}</span>
+            </button>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 type SidebarContentProps = {
   /** `main`: the dashboard links. `account`: Back + the account menu. */
   mode: "main" | "account";
@@ -172,6 +244,8 @@ export function SidebarContent({
   onToggleRail,
 }: SidebarContentProps) {
   const { language, setLanguage, t } = useDashboardLanguage();
+  const pathname = usePathname();
+  const cartCount = useCartSnapshot()?.count ?? 0;
 
   const links = [
     { href: routes.dashboard, label: t("Home"), isActive: active === "home", icon: <HomeIcon /> },
@@ -209,6 +283,12 @@ export function SidebarContent({
     </button>
   ) : null;
 
+  // The drawer ends with it. The desktop sidebar shows it under the links (below), and also
+  // has the language button at the top right.
+  const languagePicker = showLanguage ? <SidebarLanguageDropdown openUp /> : null;
+  // The desktop sidebar is the one with the logo row; the drawer draws its own.
+  const inSidebar = showLogo;
+
   return (
     <>
       {showLogo ? (
@@ -242,7 +322,8 @@ export function SidebarContent({
               {t("Back")}
             </Link>
           </div>
-          <AccountMenu variant="sidebar" active={account} onNavigate={onNavigate} />
+          <AccountMenu active={account} onNavigate={onNavigate} />
+          {languagePicker ? <div className="mt-auto px-3 pb-4">{languagePicker}</div> : null}
         </div>
       ) : (
         <>
@@ -262,6 +343,35 @@ export function SidebarContent({
               </Link>
             ))}
           </nav>
+
+          {/* Desktop sidebar: Cart and Language, so they are in reach in the empty space too. */}
+          {inSidebar ? (
+            <div className="mx-3 mt-3 border-t border-[#edf0f3] pt-3">
+              <Link
+                href={routes.cart}
+                aria-current={pathname === routes.cart ? "page" : undefined}
+                aria-label={rail ? t("My Cart") : undefined}
+                className={`${itemBase} ${itemShape} ${pathname === routes.cart ? "bg-navy text-white" : "text-[#4b5563] hover:bg-[#f4f7fa] hover:text-navy"}`}
+              >
+                <img
+                  src="/images/dashboard/navbar/cart-default.png"
+                  alt=""
+                  className={`h-5 w-5 shrink-0 object-contain ${pathname === routes.cart ? "brightness-0 invert" : ""}`}
+                />
+                {text(t("My Cart"))}
+                {cartCount > 0 ? (
+                  <span
+                    aria-label={`${cartCount}`}
+                    className={`flex items-center justify-center rounded-full bg-[#e11d2e] font-manrope font-semibold text-white ${rail ? "absolute right-2 top-1.5 h-4 min-w-4 px-1 text-[10px]" : "ml-auto h-5 min-w-5 px-1.5 text-[11px]"}`}
+                  >
+                    {cartCount}
+                  </span>
+                ) : null}
+                {tooltip(t("My Cart"))}
+              </Link>
+              {rail ? null : <SidebarLanguageDropdown />}
+            </div>
+          ) : null}
 
           <div className="relative mt-auto border-t border-[#edf0f3] px-3 pb-4 pt-3">
             <Link
@@ -285,28 +395,7 @@ export function SidebarContent({
               {tooltip(t("Logout"))}
             </LogoutButton>
 
-            {showLanguage ? (
-              <div className="mt-3">
-                <p className="px-1 font-manrope text-[10px] font-semibold uppercase tracking-[0.08em] text-[#8b949e]">
-                  {t("Language")}
-                </p>
-                <div className="mt-2 grid grid-cols-3 gap-1.5">
-                  {LANGUAGE_OPTIONS.map((option) => (
-                    <button
-                      key={option.code}
-                      type="button"
-                      aria-pressed={language === option.code}
-                      aria-label={option.label}
-                      onClick={() => setLanguage(option.code)}
-                      className={`flex h-9 cursor-pointer items-center justify-center gap-1.5 rounded-[10px] border font-manrope text-[12px] font-medium ${language === option.code ? "border-navy bg-navy text-white" : "border-[#e3e8ed] text-navy hover:bg-[#f5f7fa]"}`}
-                    >
-                      <Image src={option.flag} alt="" width={20} height={14} className="h-3 w-[18px] rounded-[2px] object-cover" />
-                      {option.code}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ) : null}
+            {languagePicker}
           </div>
         </>
       )}

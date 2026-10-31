@@ -1,11 +1,9 @@
 "use client";
 
-import Image from "next/image";
-import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import React, { Suspense, useEffect, useRef, useState, type ClipboardEvent, type KeyboardEvent } from "react";
 import { routes } from "@/lib/constants/routes";
-import { ScrollAnimatedElement } from "@/components/animations/ScrollAnimatedElement";
+import { AuthShell } from "@/components/auth/AuthShell";
 import { setAuthToken, setAuthUser } from "@/lib/api/auth.utils";
 import { otpSchema } from "./schemas/otp.schema";
 import type { SignupFormValues } from "@/modules/signup/schemas/signup.schema";
@@ -214,93 +212,73 @@ function OtpPageContent() {
   }
 
   return (
-    <section className="flex flex-1 items-center bg-white px-4 py-8 sm:px-8 lg:px-12 lg:py-10">
-      <div className="mx-auto grid w-full max-w-[1080px] items-stretch gap-8 lg:grid-cols-[1.05fr_0.95fr] lg:gap-14">
-        <div className="relative min-h-[420px] overflow-hidden rounded-[28px] bg-[#0b1f4d] text-white sm:min-h-[560px] lg:min-h-[680px]">
-          <Image
-            src="/images/auth/img_otp.png"
-            alt=""
-            fill
-            priority
-            sizes="(max-width: 1024px) 100vw, 540px"
-            className="object-cover object-center"
-          />
-          <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-transparent" />
-          <div className="relative z-10 px-7 py-8 [text-shadow:0_1px_10px_rgba(0,0,0,0.35)] sm:px-8 sm:py-9">
-            <h1 className="text-[26px] font-semibold leading-[1.15] tracking-[-0.03em] text-white sm:text-[30px]">
-              <span className="block">Your little piece of</span>
-              <span className="mt-1 block">
-                <span className="font-display text-[1.08em] font-medium italic">Thailand</span>
-                {" "}
-                <span>awaits.</span>
-              </span>
-            </h1>
-            <p className="mt-3 text-[13px] font-normal leading-5 text-white sm:text-[14px]">
-              Explore. Choose. Claim. Make a memory yours.
-            </p>
-          </div>
+    <AuthShell
+      image="/images/auth/img_otp.png"
+      title={
+        <>
+          <span className="block">Your little piece of</span>
+          <span className="block">
+            <span className="font-display text-[1.1em] font-medium italic">Thailand</span>{" "}
+            <span>awaits.</span>
+          </span>
+        </>
+      }
+      blurb="Explore. Choose. Claim. Make a memory yours."
+    >
+      <BackLink href={mode === "signup" ? routes.signup : routes.login}>Back to {mode === "signup" ? "Sign Up" : "Login"}</BackLink>
+      <h2 className="mt-6 lg:mt-4 text-[24px] font-semibold tracking-[-0.03em] text-navy sm:text-[26px]">
+        {mode === "signup" ? "Verify your email" : "Verify your identity"}
+      </h2>
+      <p className="mt-2 text-[14px] leading-6 text-[#64748b]">
+        We&apos;ve sent a 6 digit code to <span className="font-medium text-[#1c1c1c] break-all">{email}</span>. Enter it below to {mode === "signup" ? "complete your account creation" : "continue"}.
+      </p>
+
+      <form className="mt-7 lg:mt-5" onSubmit={handleSubmit} noValidate>
+        <div className="flex justify-between gap-2" onPaste={handlePaste}>
+          {digits.map((digit, index) => (
+            <input
+              key={index}
+              ref={(element) => {
+                inputRefs.current[index] = element;
+              }}
+              aria-label={`Verification digit ${index + 1}`}
+              inputMode="numeric"
+              autoComplete={index === 0 ? "one-time-code" : "off"}
+              maxLength={1}
+              type="text"
+              value={digit}
+              onChange={(event) => updateDigit(index, event.target.value)}
+              onKeyDown={(event) => handleKeyDown(index, event)}
+              className={`h-12 lg:h-11 min-w-0 flex-1 rounded-[14px] border bg-white text-center text-[18px] font-semibold text-navy shadow-[0_1px_2px_rgba(11,31,77,0.04)] outline-none transition focus:border-navy focus:ring-4 focus:ring-navy/10 ${error ? "border-[#d52b35] focus:ring-[#d52b35]/10" : "border-[#e3e7ef] hover:border-[#cfd6e4]"}`}
+            />
+          ))}
         </div>
 
-        <div className="flex min-h-[640px] flex-col px-1 py-2 sm:px-4">
-          <ScrollAnimatedElement animation="slide-in-right" duration={600} className="mx-auto flex w-full max-w-[420px] flex-1 flex-col">
-            <BackLink href={mode === "signup" ? routes.signup : routes.login}>Back to {mode === "signup" ? "Sign Up" : "Login"}</BackLink>
-            <h2 className="mt-8 text-[28px] font-semibold tracking-[-0.03em] text-navy sm:text-[30px]">
-              {mode === "signup" ? "Verify your email" : "Verify your identity"}
-            </h2>
-            <p className="mt-2 text-[14px] leading-6 text-[#8b939e]">
-              We&apos;ve sent a 6 digit code to {email}. Enter it below to {mode === "signup" ? "complete your account creation" : "continue"}.
-            </p>
+        {error ? <p role="alert" className="mt-4 rounded-[12px] border border-[#f6c9cd] bg-[#fff4f5] px-3.5 py-2.5 text-center text-[13px] text-[#d52b35]">{error}</p> : null}
+        {message ? <p role="status" className="mt-4 rounded-[12px] border border-[#c8ecd3] bg-[#f1fbf4] px-3.5 py-2.5 text-center text-[13px] font-medium text-green-700">{message}</p> : null}
 
-            <form className="mt-7" onSubmit={handleSubmit} noValidate>
-              <div className="flex justify-between gap-2" onPaste={handlePaste}>
-                {digits.map((digit, index) => (
-                  <input
-                    key={index}
-                    ref={(element) => {
-                      inputRefs.current[index] = element;
-                    }}
-                    aria-label={`Verification digit ${index + 1}`}
-                    inputMode="numeric"
-                    maxLength={1}
-                    type="text"
-                    value={digit}
-                    onChange={(event) => updateDigit(index, event.target.value)}
-                    onKeyDown={(event) => handleKeyDown(index, event)}
-                    className={`h-12 w-12 rounded-[12px] border text-center text-[18px] font-medium text-navy outline-none transition ${error ? "border-[#d52b35]" : "border-[#d7dce3] focus:border-navy focus:ring-2 focus:ring-navy/10"}`}
-                  />
-                ))}
-              </div>
+        <button type="submit" disabled={isSubmitting} className="mt-5 lg:mt-4 inline-flex h-12 lg:h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-[14px] bg-linear-to-b from-[#12307a] to-navy text-[15px] font-medium text-white shadow-[0_10px_24px_-10px_rgba(11,31,77,0.7)] transition hover:-translate-y-px hover:shadow-[0_14px_28px_-10px_rgba(11,31,77,0.75)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0 motion-reduce:transition-none">
+          {isSubmitting ? (
+            <>
+              <span aria-hidden="true" className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white motion-reduce:animate-none" />
+              Verifying...
+            </>
+          ) : (
+            "Verify Code"
+          )}
+        </button>
+      </form>
 
-              {error ? <p role="alert" className="mt-3 text-center text-[11px] text-[#d52b35]">{error}</p> : null}
-              {message ? <p role="status" className="mt-3 text-center text-[11px] text-green-600">{message}</p> : null}
-
-              <button type="submit" disabled={isSubmitting} className="mt-5 h-12 w-full cursor-pointer rounded-[12px] bg-navy text-[15px] font-medium text-white transition hover:bg-navy-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy disabled:cursor-not-allowed disabled:opacity-60">
-                {isSubmitting ? "Verifying..." : "Verify Code"}
-              </button>
-            </form>
-
-            <p className="mt-6 text-center text-[14px] text-[#1c1c1c]">
-              Didn&apos;t receive the code? {secondsRemaining > 0 ? (
-                <span className="font-medium text-[#e11d2e]">Resend in {String(Math.floor(secondsRemaining / 60)).padStart(2, "0")}:{String(secondsRemaining % 60).padStart(2, "0")}</span>
-              ) : (
-                <button type="button" onClick={resendCode} disabled={isResending} className="cursor-pointer font-medium text-[#e11d2e] hover:underline disabled:cursor-not-allowed disabled:opacity-60">
-                  {isResending ? "Sending..." : "Resend code"}
-                </button>
-              )}
-            </p>
-
-            <div className="mt-auto pt-16 text-center text-[12px] text-[#8e8e91]">
-              <div className="flex justify-center gap-4">
-                <Link href={routes.privacy} className="font-medium text-[#e11d2e] hover:underline">Privacy Policy</Link>
-                <Link href={routes.terms} className="font-medium text-[#e11d2e] hover:underline">Terms of Service</Link>
-                <Link href={routes.contact} className="font-medium text-[#e11d2e] hover:underline">Contact Support</Link>
-              </div>
-              <p className="mt-4 text-[12px] text-[#1c1c1c]">© 2026 Tajlandia.pl. All rights reserved.</p>
-            </div>
-          </ScrollAnimatedElement>
-        </div>
-      </div>
-    </section>
+      <p className="mt-7 lg:mt-5 text-center text-[14px] text-[#64748b]">
+        Didn&apos;t receive the code? {secondsRemaining > 0 ? (
+          <span className="font-semibold text-[#e11d2e]">Resend in {String(Math.floor(secondsRemaining / 60)).padStart(2, "0")}:{String(secondsRemaining % 60).padStart(2, "0")}</span>
+        ) : (
+          <button type="button" onClick={resendCode} disabled={isResending} className="cursor-pointer font-semibold text-[#e11d2e] hover:underline disabled:cursor-not-allowed disabled:opacity-60">
+            {isResending ? "Sending..." : "Resend code"}
+          </button>
+        )}
+      </p>
+    </AuthShell>
   );
 }
 

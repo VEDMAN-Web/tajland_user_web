@@ -19,7 +19,7 @@ export const SORT_QUERY_BY_NAME: Readonly<Record<string, PlotSortQuery>> = {
 export const DEFAULT_PLOT_FILTERS: PlotFilters = {
   myPlots: false,
   giftedPlots: false,
-  zones: [],
+  zoneCategoryId: "",
   minRai: "",
   maxRai: "",
   minPrice: "",
@@ -44,7 +44,7 @@ export function isInvalidRange(min: string, max: string) {
 /** Applied filters as `/explore/plots` params ("My Plots" / "Gifted" aren't sent yet). */
 export function toPlotFilterQuery(filters: PlotFilters): PlotFilterQuery {
   return {
-    zoneId: filters.zones.length ? JSON.stringify(filters.zones) : undefined,
+    zoneCategoryId: filters.zoneCategoryId || undefined,
     minRai: parseFilterNumber(filters.minRai),
     maxRai: parseFilterNumber(filters.maxRai),
     minPrice: parseFilterNumber(filters.minPrice),
