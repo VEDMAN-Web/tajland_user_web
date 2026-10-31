@@ -29,10 +29,20 @@ export const fetchLegalPages = cache(async (): Promise<LegalPageListItem[]> => {
   return response.data;
 });
 
-/** The footer's links: an API failure leaves it without them instead of breaking every page. */
+// The footer is on every public page, so it only waits briefly for the list.
+const LEGAL_LINKS_TIMEOUT_MS = 3_000;
+
+/**
+ * The footer's links: an API failure (or a slow API) leaves it without them instead of
+ * holding up or breaking every page. Cached like the list.
+ */
 export async function fetchLegalLinks(): Promise<LegalPageListItem[]> {
   try {
-    return await fetchLegalPages();
+    const response = await apiGet("/page/legal-pages", apiEnvelope(legalPageListSchema), {
+      revalidate: LEGAL_REVALIDATE_SECONDS,
+      timeoutMs: LEGAL_LINKS_TIMEOUT_MS,
+    });
+    return response.data;
   } catch {
     return [];
   }
