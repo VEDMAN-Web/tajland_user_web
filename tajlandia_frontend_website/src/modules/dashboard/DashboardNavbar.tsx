@@ -6,12 +6,15 @@ import { usePathname } from "next/navigation";
 import { BrandLogo } from "@/components/ui/BrandLogo";
 import { useCartSnapshot } from "@/lib/cart/cart-snapshot";
 import { routes } from "@/lib/constants/routes";
+import type { AccountKey } from "./AccountMenu";
 import { useDashboardLanguage } from "./DashboardLanguageContext";
 import { LanguageDropdown, SidebarContent, type NavbarActive } from "./DashboardSidebar";
 import { NotificationBell } from "./NotificationBell";
 
 type DashboardNavbarProps = {
   active: NavbarActive;
+  /** The current account page; the drawer then shows the account menu, like the sidebar. */
+  account?: AccountKey | null;
   overlay?: boolean;
 };
 
@@ -84,7 +87,7 @@ function CartLink({ count, isActive, label }: { count: number; isActive: boolean
  * - below lg: a fixed top bar (logo, cart, profile, menu button) and the drawer that slides
  *   in from the right with the same links and the language choice.
  */
-export function DashboardNavbar({ active, overlay = false }: DashboardNavbarProps) {
+export function DashboardNavbar({ active, account = null, overlay = false }: DashboardNavbarProps) {
   const pathname = usePathname();
   const { t } = useDashboardLanguage();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -98,6 +101,7 @@ export function DashboardNavbar({ active, overlay = false }: DashboardNavbarProp
     routes.certificates,
     routes.settings,
     routes.helpSupport,
+    routes.referral,
     routes.dashboardTerms,
     routes.dashboardPrivacy,
   ];
@@ -206,7 +210,14 @@ export function DashboardNavbar({ active, overlay = false }: DashboardNavbarProp
               </svg>
             </button>
           </div>
-          <SidebarContent mode="main" active={active} account={null} showLogo={false} showLanguage onNavigate={closeMobileMenu} />
+          <SidebarContent
+            mode={account ? "account" : "main"}
+            active={active}
+            account={account}
+            showLogo={false}
+            showLanguage
+            onNavigate={closeMobileMenu}
+          />
         </aside>
       </div>
     </>

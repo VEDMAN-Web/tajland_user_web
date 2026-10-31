@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { BrandLogo } from "@/components/ui/BrandLogo";
 import { Container } from "@/components/ui/Container";
-import { routes } from "@/lib/constants/routes";
+import { legalPagePath } from "@/lib/constants/routes";
 import { useInViewReplay } from "@/lib/hooks/useInViewReplay";
 
 function generateStarField(
@@ -68,16 +68,10 @@ function FooterLink({ href, children }: { href: string; children: React.ReactNod
   );
 }
 
-function FooterText({ children }: { children: React.ReactNode }) {
-  return (
-    <span className="group relative inline-block cursor-pointer pb-[3px] text-left text-[15px] font-medium text-[#636363] transition-colors duration-200 hover:text-navy">
-      {children}
-      <span className="absolute bottom-0 left-0 h-[2px] w-0 bg-[#c81e1e] transition-all duration-300 group-hover:w-full" />
-    </span>
-  );
-}
+/** A published legal page from `GET /page/legal-pages`. */
+export type FooterLegalLink = { _id: string; title: string };
 
-export function SiteFooter() {
+export function SiteFooter({ legalLinks = [] }: { legalLinks?: FooterLegalLink[] }) {
   const { ref, inView } = useInViewReplay<HTMLElement>(0.2);
 
   return (
@@ -192,18 +186,11 @@ export function SiteFooter() {
             Legal
           </p>
           <ul className="space-y-3 text-left text-[15px] text-[#636363]">
-            <li className="site-footer-flip" style={flip(3)}>
-              <FooterLink href={routes.privacy}>Privacy Policy</FooterLink>
-            </li>
-            <li className="site-footer-flip" style={flip(4)}>
-              <FooterLink href={routes.terms}>Terms and Conditions</FooterLink>
-            </li>
-            <li className="site-footer-flip" style={flip(5)}>
-              <FooterText>Risk Disclosure</FooterText>
-            </li>
-            <li className="site-footer-flip" style={flip(6)}>
-              <FooterText>Cookie Policy</FooterText>
-            </li>
+            {legalLinks.map((page, index) => (
+              <li key={page._id} className="site-footer-flip" style={flip(3 + index)}>
+                <FooterLink href={legalPagePath(page.title)}>{page.title}</FooterLink>
+              </li>
+            ))}
           </ul>
         </div>
 

@@ -132,7 +132,7 @@ export function SettingsPage() {
 
   return (
     <div className="min-h-[100svh] bg-[#f7f9fc] text-navy">
-      <main className="w-full px-5 pb-14 pt-6 sm:px-8 lg:p-0 lg:[&>section]:mx-auto lg:[&>section]:w-full lg:[&>section]:px-10 lg:[&>section]:py-8">
+      <main className="w-full px-5 pb-14 pt-6 sm:px-8 lg:p-0 lg:[&>section]:mx-0 lg:[&>section]:w-full lg:[&>section]:max-w-[1035px] lg:[&>section]:px-10 lg:[&>section]:py-8">
         <section className="min-w-0">
           {/* Header */}
           <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
@@ -278,38 +278,6 @@ export function SettingsPage() {
               </p>
             </div>
 
-            {/* Email Notifications Toggle Box */}
-            <div className="mt-6 flex flex-col gap-4 rounded-[14px] border border-[#eef1f4] bg-[#f8fafc] p-4.5 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-center gap-3.5 min-w-0">
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] bg-white text-navy shadow-xs border border-[#e4e9ef]">
-                  <MailIcon />
-                </span>
-                <div className="min-w-0">
-                  <h3 className="font-manrope text-[14px] font-semibold leading-5 text-navy">
-                    {t("Email notifications")}
-                  </h3>
-                  <p className="font-manrope mt-0.5 text-[12px] leading-4 text-[#8b939e]">
-                    {t("You'll receive important account and purchase updates by email.")}
-                  </p>
-                </div>
-              </div>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={settings.emailNotifications}
-                aria-label={t("Email notifications")}
-                onClick={() => updateSettings({ emailNotifications: !settings.emailNotifications })}
-                className={`relative h-6 w-11 shrink-0 cursor-pointer overflow-hidden rounded-full p-0.5 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-navy/40 ${
-                  settings.emailNotifications ? "bg-navy" : "bg-[#cbd5e1]"
-                }`}
-              >
-                <span
-                  className={`block h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-200 ${
-                    settings.emailNotifications ? "translate-x-5" : "translate-x-0"
-                  }`}
-                />
-              </button>
-            </div>
           </div>
 
           {/* Footer Controls */}
@@ -366,15 +334,6 @@ function GlobeIcon() {
       <circle cx="12" cy="12" r="10" />
       <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20z" />
       <path d="M2 12h20" />
-    </svg>
-  );
-}
-
-function MailIcon() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-4.5 w-4.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="2" y="4" width="20" height="16" rx="2" />
-      <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
     </svg>
   );
 }

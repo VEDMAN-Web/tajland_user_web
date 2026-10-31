@@ -5,6 +5,7 @@ export const mainNavigation = [
   { href: routes.explore, label: "Explore Map" },
   { href: routes.blog, label: "Blog" },
   { href: routes.contact, label: "Get in Touch" },
+  { href: routes.publicLeaderboard, label: "Leaderboard" },
 ] as const;
 
 export const footerNavigation = {

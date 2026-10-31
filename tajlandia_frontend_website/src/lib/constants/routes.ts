@@ -6,8 +6,10 @@ export const routes = {
   changePassword: "/dashboard/change-password",
   settings: "/dashboard/settings",
   helpSupport: "/dashboard/help-support",
+  referral: "/dashboard/referral",
   land: "/dashboard/my-land",
   leaderboard: "/dashboard/leaderboard",
+  publicLeaderboard: "/leaderboard",
   dashboardExplore: "/dashboard/explore",
   purchases: "/dashboard/purchases",
   certificates: "/dashboard/certificates",
@@ -23,6 +25,20 @@ export const routes = {
   dashboardPrivacy: "/dashboard/privacy",
   dashboardTerms: "/dashboard/terms",
 } as const;
+
+/** URL slug of a legal page's title: "Terms & Conditions" → "terms-and-conditions". */
+export function legalSlug(title: string) {
+  return title
+    .toLowerCase()
+    .replace(/&/g, " and ")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+/** A legal page from `GET /page/legal-pages`, shown at `/legal/{slug}` (no id in the URL). */
+export function legalPagePath(title: string) {
+  return `/legal/${legalSlug(title)}`;
+}
 
 export type AppRoute = (typeof routes)[keyof typeof routes];
 

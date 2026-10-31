@@ -98,7 +98,7 @@ export function OrderConfirmedDialog({
         className="fixed inset-0 z-[100] flex items-center justify-center bg-[#0b1f33]/40 px-4 py-6 backdrop-blur-[2px]"
         onClick={() => setStage("details")}
       >
-        {/* Figma "Confirmation Modal": red top edge, 500 wide, radius 24, padding 64. */}
+        {/* Figma "Confirmation Modal" (500 wide, radius 24, padding 64), with a green top edge and check for the success. */}
         <div
           ref={panelRef}
           role="dialog"
@@ -111,10 +111,10 @@ export function OrderConfirmedDialog({
         >
           <span
             aria-hidden="true"
-            className="absolute inset-x-0 top-0 h-2 bg-[#e11d2e]"
+            className="absolute inset-x-0 top-0 h-2 bg-[#16a34a]"
           />
-          <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[#fdecee]">
-            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#e11d2e] text-white">
+          <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[#dcfce7]">
+            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#16a34a] text-white">
               <svg viewBox="0 0 16 16" aria-hidden="true" className="h-3.5 w-3.5">
                 <path
                   d="m4 8.4 2.6 2.6L12 5.4"

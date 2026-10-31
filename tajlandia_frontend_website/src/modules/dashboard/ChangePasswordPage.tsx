@@ -138,7 +138,7 @@ export function ChangePasswordPage() {
 
   return (
     <div className="min-h-[100svh] bg-[#f7f9fc] text-navy">
-      <main className="w-full px-5 pb-14 pt-6 sm:px-8 lg:p-0 lg:[&>section]:mx-auto lg:[&>section]:w-full lg:[&>section]:px-10 lg:[&>section]:py-8">
+      <main className="w-full px-5 pb-14 pt-6 sm:px-8 lg:p-0 lg:[&>section]:mx-0 lg:[&>section]:w-full lg:[&>section]:max-w-[1035px] lg:[&>section]:px-10 lg:[&>section]:py-8">
 
         <section className="min-w-0">
           <h1 className="font-manrope text-[28px] font-semibold leading-none tracking-[-0.03em] text-navy sm:text-[32px]">

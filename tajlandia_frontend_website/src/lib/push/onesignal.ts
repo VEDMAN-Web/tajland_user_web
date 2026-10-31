@@ -117,7 +117,16 @@ export function startPush(
     await sdk.login(userId);
     // Ask only the first time; a granted or blocked choice is left alone.
     if (sdk.Notifications.permissionNative === "default") await sdk.Notifications.requestPermission();
-    if (sdk.User.PushSubscription.optedIn) registerToken(sdk.User.PushSubscription.id);
+    // The subscription id appears a moment after login or permission, and a "change" fired
+    // while the SDK was still starting is missed, so look for it for up to 20 seconds.
+    for (let attempt = 0; attempt < 20 && loggedInUser === userId; attempt += 1) {
+      const subscription = sdk.User.PushSubscription;
+      if (subscription.optedIn && subscription.id) {
+        registerToken(subscription.id);
+        return;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    }
   }, "Failed to link push notifications");
 }
 

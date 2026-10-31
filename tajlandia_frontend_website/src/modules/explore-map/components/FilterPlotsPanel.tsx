@@ -38,15 +38,6 @@ type FilterPlotsPanelProps = {
 const numberFormat = new Intl.NumberFormat("en-US");
 const bone = "animate-pulse rounded-[8px] bg-[#eef1f5] motion-reduce:animate-none";
 
-const titleCase = (value: string) => value.charAt(0) + value.slice(1).toLowerCase();
-
-/** Checkbox labels: the tier ("Icon"), or the zone name if two zones share a tier. */
-function zoneLabels(zoneTypes: FilterOptions["zoneTypes"]) {
-  return zoneTypes.map((zone) => {
-    const shared = zoneTypes.filter((other) => other.tier === zone.tier).length > 1;
-    return { id: zone.id, label: shared ? zone.name : titleCase(zone.tier) };
-  });
-}
 
 function RangeError({ show, t }: { show: boolean; t: Translate }) {
   if (!show) return null;
@@ -216,13 +207,9 @@ export function FilterPlotsPanel({
     setDraft((current) => ({ ...current, [key]: next }));
   }
 
-  function toggleZone(zone: string, checked: boolean) {
-    setDraft((current) => ({
-      ...current,
-      zones: checked
-        ? [...current.zones, zone]
-        : current.zones.filter((item) => item !== zone),
-    }));
+  // The plots API filters by one zone category, so ticking one replaces the last.
+  function toggleZoneCategory(id: string, checked: boolean) {
+    update("zoneCategoryId", checked ? id : "");
   }
 
   return (
@@ -283,18 +270,18 @@ export function FilterPlotsPanel({
           <div className="grid grid-cols-2 gap-2.5">
             <CheckboxCard
               label={t("All Zones")}
-              checked={draft.zones.length === 0}
+              checked={draft.zoneCategoryId === ""}
               onChange={(checked) => {
-                if (checked) update("zones", []);
+                if (checked) update("zoneCategoryId", "");
               }}
             />
             {options
-              ? zoneLabels(options.zoneTypes).map((zone) => (
+              ? options.zoneCategories.map((category) => (
                   <CheckboxCard
-                    key={zone.id}
-                    label={t(zone.label)}
-                    checked={draft.zones.includes(zone.id)}
-                    onChange={(checked) => toggleZone(zone.id, checked)}
+                    key={category.id}
+                    label={t(category.name)}
+                    checked={draft.zoneCategoryId === category.id}
+                    onChange={(checked) => toggleZoneCategory(category.id, checked)}
                   />
                 ))
               : status === "loading"

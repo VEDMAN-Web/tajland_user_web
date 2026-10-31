@@ -2,12 +2,14 @@ import { headers } from "next/headers";
 import { connection } from "next/server";
 import { SiteFooter } from "@/components/layout/SiteFooter";
 import { SiteHeader } from "@/components/layout/SiteHeader";
+import { fetchLegalLinks } from "@/modules/legal";
 
 export default async function MarketingLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   await connection();
   const nonce = (await headers()).get("x-nonce") ?? undefined;
+  const legalLinks = await fetchLegalLinks();
 
   return (
     <>
@@ -31,7 +33,7 @@ export default async function MarketingLayout({
       >
         {children}
       </main>
-      <SiteFooter />
+      <SiteFooter legalLinks={legalLinks} />
     </>
   );
 }

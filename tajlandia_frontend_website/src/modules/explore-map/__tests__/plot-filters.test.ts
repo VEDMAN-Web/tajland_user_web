@@ -9,10 +9,10 @@ import { filterOptionsSchema } from "../schemas/explore-filters.schema";
 
 // Real `GET /explore/filters` `data`.
 const data = {
-  zoneTypes: [
-    { id: "6abb6223c8e9d44533f7aa49", name: "Icon 01", tier: "ICON" },
-    { id: "6abb6223c8e9d44533f7aa4a", name: "Popular 02", tier: "POPULAR" },
-    { id: "6abb6223c8e9d44533f7aa4b", name: "Standard 03", tier: "STANDARD" },
+  zoneCategories: [
+    { id: "6ae584d3144cea5ae996fb51", name: "Icon", type: "ICON" },
+    { id: "6ae584d3144cea5ae996fb52", name: "Popular", type: "POPULAR" },
+    { id: "6ae584d3144cea5ae996fb53", name: "Standard", type: "STANDARD" },
   ],
   raiRange: { min: 2, max: 6 },
   priceRange: { min: 0, max: 1 },
@@ -20,18 +20,18 @@ const data = {
 
 describe("filterOptionsSchema", () => {
   it("accepts the backend response", () => {
-    expect(filterOptionsSchema.parse(data).zoneTypes).toHaveLength(3);
+    expect(filterOptionsSchema.parse(data).zoneCategories).toHaveLength(3);
   });
 
   it("rejects a response without ranges", () => {
-    expect(() => filterOptionsSchema.parse({ zoneTypes: [] })).toThrow();
+    expect(() => filterOptionsSchema.parse({ zoneCategories: [] })).toThrow();
   });
 });
 
 describe("toPlotFilterQuery", () => {
   it("sends nothing for the default filters", () => {
     expect(toPlotFilterQuery(DEFAULT_PLOT_FILTERS)).toEqual({
-      zoneId: undefined,
+      zoneCategoryId: undefined,
       minRai: undefined,
       maxRai: undefined,
       minPrice: undefined,
@@ -39,20 +39,20 @@ describe("toPlotFilterQuery", () => {
     });
   });
 
-  it("sends zones as a JSON array string and ranges as numbers", () => {
+  it("sends the zone category id and ranges as numbers", () => {
     expect(
       toPlotFilterQuery({
         ...DEFAULT_PLOT_FILTERS,
         // UI only, never sent.
         myPlots: true,
-        zones: ["6abb6223c8e9d44533f7aa49", "6abb6223c8e9d44533f7aa4b"],
+        zoneCategoryId: "6ae584d3144cea5ae996fb51",
         minRai: "3",
         maxRai: "4.5",
         minPrice: ".",
         maxPrice: "0.45",
       }),
     ).toEqual({
-      zoneId: '["6abb6223c8e9d44533f7aa49","6abb6223c8e9d44533f7aa4b"]',
+      zoneCategoryId: "6ae584d3144cea5ae996fb51",
       minRai: 3,
       maxRai: 4.5,
       minPrice: undefined,

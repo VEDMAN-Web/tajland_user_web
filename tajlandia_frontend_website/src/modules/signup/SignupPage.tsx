@@ -66,18 +66,35 @@ function LockIcon({ className }: { className?: string }) {
   );
 }
 
+function GiftIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className={className}>
+      <rect x="3.5" y="9" width="17" height="11" rx="2" fill="none" stroke="currentColor" strokeWidth="1.5" />
+      <path d="M12 9v11M3.5 13h17M12 9c-1.5-3.5-5-4-5-1.8C7 8.4 8.6 9 12 9Zm0 0c1.5-3.5 5-4 5-1.8C17 8.4 15.4 9 12 9Z" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" />
+    </svg>
+  );
+}
+
 const initialValues: SignupFormValues = {
   firstName: "",
   lastName: "",
   email: "",
   newPassword: "",
   confirmPassword: "",
+  referralCode: "",
   termsAccepted: false,
 };
 
-export function SignupPage() {
+type SignupPageProps = {
+  /** `?ref=` from a shared referral link; filled into the optional code field. */
+  referralCode?: string;
+  /** First name of the person who owns that code, when the backend recognised it. */
+  referrerName?: string | null;
+};
+
+export function SignupPage({ referralCode = "", referrerName = null }: SignupPageProps) {
   const router = useRouter();
-  const [values, setValues] = useState<SignupFormValues>(initialValues);
+  const [values, setValues] = useState<SignupFormValues>({ ...initialValues, referralCode });
   const [errors, setErrors] = useState<SignupErrors>({});
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -327,6 +344,34 @@ export function SignupPage() {
                   </button>
                 </div>
                 {errors.confirmPassword ? <p id="signup-confirm-password-error" className="mt-1.5 text-[12px] text-[#d52b35]">{errors.confirmPassword}</p> : null}
+              </div>
+
+              <div className="mt-4 lg:mt-3">
+                <label htmlFor="signup-referral-code" className={labelClass}>
+                  Referral code <span className="font-normal text-[#9aa5b8]">(optional)</span>
+                </label>
+                <div className="relative mt-2">
+                  <GiftIcon className={iconClass} />
+                  <input
+                    id="signup-referral-code"
+                    name="referralCode"
+                    type="text"
+                    autoComplete="off"
+                    autoCapitalize="characters"
+                    spellCheck={false}
+                    maxLength={32}
+                    placeholder="Enter a friend's code"
+                    value={values.referralCode ?? ""}
+                    onChange={(event) => updateField("referralCode", event.target.value.toUpperCase())}
+                    className={`${fieldClass(false)} font-medium tracking-[0.04em]`}
+                  />
+                </div>
+                {referrerName && values.referralCode === referralCode ? (
+                  <p className="mt-1.5 flex items-center gap-1.5 text-[12px] font-medium text-[#168a56]">
+                    <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-[#168a56]" />
+                    You were invited by {referrerName}
+                  </p>
+                ) : null}
               </div>
 
               <div className="mt-5 lg:mt-4">

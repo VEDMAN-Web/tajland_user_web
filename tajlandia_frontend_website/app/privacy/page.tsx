@@ -1,14 +1,10 @@
-import type { Metadata } from "next";
-import { createPageMetadata } from "@/lib/seo/metadata";
-import { LegalDocumentPage } from "@/modules/dashboard";
+import { notFound, redirect } from "next/navigation";
+import { legalPagePath } from "@/lib/constants/routes";
+import { fetchLegalLinks } from "@/modules/legal";
 
-export const metadata: Metadata = createPageMetadata({
-  title: "Privacy Policy",
-  description: "Tajlandia Privacy Policy.",
-  path: "/privacy",
-  index: false,
-});
-
-export default function PrivacyPage() {
-  return <LegalDocumentPage kind="privacy" publicPage />;
+/** Old public link (sign-up, contact, ...): goes to the Privacy Policy from the legal pages API. */
+export default async function PrivacyPage() {
+  const page = (await fetchLegalLinks()).find((item) => /privacy/i.test(item.title));
+  if (!page) notFound();
+  redirect(legalPagePath(page.title));
 }

@@ -316,13 +316,13 @@ export function NotificationBell() {
                 </p>
               </div>
             ) : (
-              <ul className="p-1.5">
+              <ul className="space-y-1.5 p-2">
                 {state.items.map((item) => (
                   <li key={item.id} className="group relative">
                     <button
                       type="button"
                       onClick={() => openItem(item)}
-                      className={`flex w-full cursor-pointer items-start gap-3 rounded-[12px] py-3 pl-3 pr-10 text-left transition-colors hover:bg-[#f5f8fd] ${item.isRead ? "" : "bg-[#f3f7ff]"}`}
+                      className={`flex w-full cursor-pointer items-start gap-3 rounded-[12px] py-2.5 pl-3 pr-10 text-left transition-colors hover:bg-[#f5f8fd] ${item.isRead ? "" : "bg-[#f3f7ff]"}`}
                     >
                       <span
                         className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${item.isRead ? "bg-[#f1f4f9] text-[#8b939e]" : "bg-[#e2ecff] text-navy"}`}
@@ -349,7 +349,7 @@ export function NotificationBell() {
                       onClick={() => removeItem(item)}
                       aria-label={`${t("Delete notification")}: ${item.title}`}
                       title={t("Delete notification")}
-                      className="absolute right-2 top-2.5 flex h-7 w-7 cursor-pointer items-center justify-center rounded-full text-[#9aa3ad] opacity-0 transition hover:bg-[#fdeeee] hover:text-[#d64242] focus-visible:opacity-100 group-hover:opacity-100 [@media(hover:none)]:opacity-100"
+                      className="absolute right-2 top-2.5 flex h-7 w-7 cursor-pointer items-center justify-center rounded-full text-[#9aa3ad] transition hover:bg-[#fdeeee] hover:text-[#d64242]"
                     >
                       <svg viewBox="0 0 16 16" aria-hidden="true" className="h-3.5 w-3.5">
                         <path d="m4 4 8 8m0-8-8 8" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />

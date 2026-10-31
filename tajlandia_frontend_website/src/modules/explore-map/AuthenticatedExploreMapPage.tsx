@@ -416,8 +416,8 @@ export function AuthenticatedExploreMapPage() {
   const { sortBy, sortOrder } =
     sortOptions.find((option) => option.key === plotSortKey)?.query ?? {};
   // Primitives, so the plots request reruns only when a param really changes.
-  const { zoneId, minRai, maxRai, minPrice, maxPrice } = toPlotFilterQuery(plotFilters);
-  const hasActiveFilters = [zoneId, minRai, maxRai, minPrice, maxPrice].some(
+  const { zoneCategoryId, minRai, maxRai, minPrice, maxPrice } = toPlotFilterQuery(plotFilters);
+  const hasActiveFilters = [zoneCategoryId, minRai, maxRai, minPrice, maxPrice].some(
     (param) => param !== undefined,
   );
   const plotScopeKey = plotScope ? `${plotScope.param}:${plotScope.id}` : null;
@@ -518,7 +518,7 @@ export function AuthenticatedExploreMapPage() {
       plotScope,
       {
         sort: { sortBy, sortOrder },
-        filters: { zoneId, minRai, maxRai, minPrice, maxPrice },
+        filters: { zoneCategoryId, minRai, maxRai, minPrice, maxPrice },
       },
       controller.signal,
     )
@@ -553,14 +553,14 @@ export function AuthenticatedExploreMapPage() {
     plotsReloadKey,
     sortBy,
     sortOrder,
-    zoneId,
+    zoneCategoryId,
     minRai,
     maxRai,
     minPrice,
     maxPrice,
   ]);
 
-  // Region whose zones the Filter panel offers: the picked region, or (city / zone)
+  // Region whose ranges the Filter panel offers: the picked region, or (city / zone)
   // the region its plots belong to.
   const filtersRegionId =
     plotScope?.param === "regionId"
@@ -764,8 +764,6 @@ export function AuthenticatedExploreMapPage() {
     } else {
       setPlots([]);
       setPlotScope(scope);
-      // Zone ids belong to the old area's region.
-      setPlotFilters((filters) => (filters.zones.length ? { ...filters, zones: [] } : filters));
     }
   }
 

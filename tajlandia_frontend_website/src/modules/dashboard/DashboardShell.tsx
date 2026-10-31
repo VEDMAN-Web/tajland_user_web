@@ -3,7 +3,8 @@
 import { usePathname } from "next/navigation";
 import { useState, useSyncExternalStore } from "react";
 import { routes } from "@/lib/constants/routes";
-import { AccountMenu, type AccountKey } from "./AccountMenu";
+import type { AccountKey } from "./AccountMenu";
+import { AccountBreadcrumb } from "./AccountBreadcrumb";
 import { DashboardNavbar } from "./DashboardNavbar";
 import { DashboardSidebar, type NavbarActive } from "./DashboardSidebar";
 
@@ -64,6 +65,7 @@ function accountKey(pathname: string): AccountKey | null {
   if (pathname === routes.certificates || pathname === `${routes.certificates}/`) return "certificates";
   if (isPath(pathname, routes.settings)) return "settings";
   if (isPath(pathname, routes.helpSupport)) return "help";
+  if (isPath(pathname, routes.referral)) return "referral";
   if (isPath(pathname, routes.dashboardTerms)) return "terms";
   if (isPath(pathname, routes.dashboardPrivacy)) return "privacy";
   return null;
@@ -76,7 +78,7 @@ function accountKey(pathname: string): AccountKey | null {
  * lg and up: a fixed sidebar on the left (an icon rail on Explore Map) and the cart button
  * floating at the top right; the content is shifted right by the sidebar's width. On an
  * account page the sidebar shows the account menu (Back returns to the normal links).
- * Below lg: a fixed top bar (65px) with a drawer; account pages keep the row of pills.
+ * Below lg: a fixed top bar (65px) with a drawer; on account pages the drawer holds the account menu.
  */
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname() ?? "";
@@ -118,13 +120,13 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         rail={rail}
         onToggleRail={account ? undefined : toggleRail}
       />
-      <DashboardNavbar active={active} overlay={overlay} />
+      <DashboardNavbar active={active} account={account} overlay={overlay} />
       <div
         className={`lg:transition-[padding-left] lg:duration-300 motion-reduce:lg:transition-none ${rail ? "lg:pl-[76px]" : "lg:pl-[220px]"}`}
       >
         {account ? (
-          <div className="bg-[#f7f9fc] pt-[65px] lg:pt-0">
-            <AccountMenu active={account} />
+          <div className="relative bg-[#f7f9fc] pt-[65px] lg:pt-0">
+            <AccountBreadcrumb account={account} pathname={pathname} />
             <div className={`min-w-0 ${fillViewport}`}>{children}</div>
           </div>
         ) : (
