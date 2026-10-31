@@ -21,6 +21,15 @@ describe("buildContentSecurityPolicy", () => {
     expect(policy).toMatch(/connect-src [^;]*https:\/\/accounts\.google\.com\/gsi\//);
   });
 
+  it("allows OneSignal Web Push (SDK script, API and prompt frame)", () => {
+    const policy = buildContentSecurityPolicy({ nonce: "abc123", isDev: false });
+
+    expect(policy).toMatch(/script-src [^;]*https:\/\/cdn\.onesignal\.com/);
+    expect(policy).toMatch(/script-src [^;]*https:\/\/api\.onesignal\.com/);
+    expect(policy).toMatch(/connect-src [^;]*https:\/\/onesignal\.com https:\/\/\*\.onesignal\.com/);
+    expect(policy).toMatch(/frame-src [^;]*https:\/\/\*\.onesignal\.com/);
+  });
+
   it("allows unsafe-eval only in development", () => {
     const policy = buildContentSecurityPolicy({ nonce: "devnonce", isDev: true });
 

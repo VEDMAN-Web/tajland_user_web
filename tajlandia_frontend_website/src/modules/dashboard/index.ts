@@ -15,3 +15,4 @@ export { CheckoutPage } from "./CheckoutPage";
 export { LeaderboardPage } from "./LeaderboardPage";
 export { LeaderboardOwnerPage } from "./LeaderboardOwnerPage";
 export { DashboardShell } from "./DashboardShell";
+export { PushNotifications } from "./PushNotifications";

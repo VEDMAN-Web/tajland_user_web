@@ -3,11 +3,13 @@ import { z } from "zod";
 // One plot in an order (`OrderItemResponseDto`).
 const orderListItemSchema = z.object({
   plotId: z.string(),
-  zone: z
+  // Pricing category: name "Icon", type "ICON", "POPULAR" or "STANDARD".
+  zoneCategory: z
     .object({
+      id: z.string().nullish(),
       name: z.string().nullish(),
-      // "ICON", "POPULAR" or "STANDARD".
       type: z.string().nullish(),
+      pricePerRai: z.number().nullish(),
     })
     .nullish(),
   rai: z.number().nonnegative(),

@@ -9,6 +9,7 @@ import {
 } from "next/font/google";
 import { getPublicEnv } from "@/lib/config/public-env";
 import { brand } from "@/lib/constants/brand";
+import { PushNotifications } from "@/modules/dashboard";
 import "./globals.css";
 
 const plusJakarta = Plus_Jakarta_Sans({
@@ -72,7 +73,10 @@ export default function RootLayout({
       lang="en"
       className={`${plusJakarta.variable} ${cormorant.variable} ${playfairDisplay.variable} ${manrope.variable} ${inter.variable} ${dancingScript.variable} h-full antialiased`}
     >
-      <body className="flex min-h-full flex-col font-sans">{children}</body>
+      <body className="flex min-h-full flex-col font-sans">
+        <PushNotifications />
+        {children}
+      </body>
     </html>
   );
 }

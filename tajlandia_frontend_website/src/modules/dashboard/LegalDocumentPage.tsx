@@ -343,7 +343,7 @@ export function LegalDocumentPage({
         className={
           publicPage
             ? "mx-auto w-full max-w-[1180px] px-5 pb-16 pt-10 sm:px-8 lg:pt-8"
-            : "w-full px-5 pb-14 pt-6 sm:px-8 lg:p-0 lg:[&>section]:mx-auto lg:[&>section]:w-full lg:[&>section]:max-w-[1120px] lg:[&>section]:px-10 lg:[&>section]:py-8"
+            : "w-full px-5 pb-14 pt-6 sm:px-8 lg:p-0 lg:[&>section]:mx-auto lg:[&>section]:w-full lg:[&>section]:px-10 lg:[&>section]:py-8"
         }
       >
         <section className="min-w-0">

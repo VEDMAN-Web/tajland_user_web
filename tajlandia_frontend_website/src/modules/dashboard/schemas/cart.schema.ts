@@ -13,8 +13,8 @@ const cartItemSchema = z.object({
   subtotal: z.number(),
   region: z.object({ id: z.string(), name: z.string() }).nullish(),
   city: z.string().nullish(),
-  // e.g. { name: "Icon 01", tier: "ICON" }; the tier also groups the Order Summary.
-  zone: z.object({ id: z.string(), name: z.string(), tier: z.string() }).nullish(),
+  // Pricing category, e.g. { name: "Icon", type: "ICON" }.
+  zoneCategory: z.object({ id: z.string(), name: z.string(), type: z.string() }).nullish(),
 });
 
 /** Real `GET /cart` `data`: the items only (totals come from `GET /cart/order-summary`). */
@@ -122,12 +122,8 @@ export const orderSchema = z.object({
   items: z.array(
     z.object({
       plotId: z.string(),
-      // Zone tier, e.g. "ICON". The API sends `{ id, name, slug, type }`; an
-      // older shape sent the tier alone, so both become the tier text.
-      zone: z.union([
-        z.string(),
-        z.object({ type: z.string().nullish() }).transform((zone) => zone.type ?? ""),
-      ]),
+      // Pricing category, e.g. { name: "Icon", type: "ICON" }.
+      zoneCategory: z.object({ id: z.string(), name: z.string(), type: z.string() }).nullish(),
       rai: z.number(),
       price: z.number(),
       plotNumber: z.string().nullish(),

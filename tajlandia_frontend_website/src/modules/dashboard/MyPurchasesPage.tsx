@@ -114,7 +114,7 @@ function filterOrders(orders: OrderListEntry[], filters: LandFilters) {
   return orders.filter(
     (order) =>
       (order.purchaseType === "gift" ? filters.gifted : filters.myPlots) &&
-      (!zones.length || order.items.some((item) => zones.includes(item.zone?.type?.toUpperCase() ?? ""))) &&
+      (!zones.length || order.items.some((item) => zones.includes(item.zoneCategory?.type?.toUpperCase() ?? ""))) &&
       (minRai === undefined || order.totalRai >= minRai) &&
       (maxRai === undefined || order.totalRai <= maxRai) &&
       (minPrice === undefined || order.total >= minPrice) &&
@@ -470,7 +470,7 @@ export function MyLandPage() {
   // Search runs over the loaded cards (the API has no search parameter).
   const visiblePlots = needle
     ? loadedPlots.filter((plot) =>
-        [plot.plotName, plot.plotNumber, plot.zoneName, plot.region, plot.city, plot.certificateNo, plot.orderNo]
+        [plot.plotName, plot.plotNumber, plot.zoneCategory, plot.region, plot.city, plot.certificateNo, plot.orderNo]
           .some((value) => value?.toLowerCase().includes(needle)),
       )
     : loadedPlots;
@@ -713,7 +713,7 @@ function LandCardSkeleton() {
 function LandCard({ plot }: { plot: LandPlot }) {
   const { t } = useDashboardLanguage();
   const place = [plot.city, plot.region].filter(Boolean).join(", ");
-  // The zone name is the title for a plot without a name.
+  // The zone category name is the title for a plot without a name.
   const name = plot.plotName?.trim();
   const images = [...(plot.images ?? []), plot.imageUrl].filter(
     (src, index, all): src is string => isAllowedRemoteImage(src) && all.indexOf(src) === index,
@@ -732,10 +732,10 @@ function LandCard({ plot }: { plot: LandPlot }) {
 
   return (
     <OwnedPlotCard
-      title={name || plot.zoneName || plot.plotNumber}
+      title={name || plot.zoneCategory || plot.plotNumber}
       plotCode={plot.plotNumber}
-      tier={plot.zone}
-      location={name && plot.zoneName ? `${place} · ${plot.zoneName}` : place}
+      tier={plot.zoneCategory ?? ""}
+      location={name && plot.zoneCategory ? `${place} · ${plot.zoneCategory}` : place}
       images={images}
       stats={[
         { label: t("Area"), value: `${landNumber.format(plot.rai)} ${t("Rai")}` },
@@ -806,6 +806,14 @@ export function MyPurchasesPage() {
     ordersState.status === "ready" ? ordersState.orders.filter((order) => order.status === "paid") : [];
   const visibleOrders = sortOrders(filterOrders(paidOrders, filters), sort);
   const filtersActive = JSON.stringify(filters) !== JSON.stringify(NO_LAND_FILTERS);
+  const chips = filterChips(filters, t);
+  const sortActive = sort !== "recommended";
+  // How many filters are applied, for the Filter button's badge.
+  const filterCount = Math.max(chips.length, filtersActive ? 1 : 0);
+  function clearAll() {
+    setFilters(NO_LAND_FILTERS);
+    setSort("recommended");
+  }
   const draftErrors = landFilterErrors(draftFilters);
   const draftValid = !draftErrors.rai && !draftErrors.price;
   const totals = overview.status === "ready" ? overview.data : null;
@@ -828,7 +836,7 @@ export function MyPurchasesPage() {
 
   return (
     <div className="min-h-[100svh] bg-[#f7f9fc] text-navy">
-      <main className="w-full px-5 pb-14 pt-6 sm:px-8 lg:p-0 lg:[&>section]:mx-auto lg:[&>section]:w-full lg:[&>section]:max-w-[1120px] lg:[&>section]:px-10 lg:[&>section]:py-8">
+      <main className="w-full px-5 pb-14 pt-6 sm:px-8 lg:p-0 lg:[&>section]:mx-auto lg:[&>section]:w-full lg:[&>section]:px-10 lg:[&>section]:py-8">
         <section className="min-w-0">
           <h1 className="font-manrope text-[28px] font-semibold leading-none tracking-[-0.03em] text-navy sm:text-[32px]">
             {t("My Purchases")}
@@ -855,8 +863,26 @@ export function MyPurchasesPage() {
             />
           </div>
           <div className="mt-7 flex flex-wrap items-center justify-between gap-3">
-            <h2 className="font-manrope text-[16px] font-semibold text-navy">{t("All Purchases")}</h2>
-            <div className="flex gap-2">
+            <div className="flex items-baseline gap-2.5">
+              <h2 className="font-manrope text-[16px] font-semibold text-navy">{t("All Purchases")}</h2>
+              {ordersState.status === "ready" && paidOrders.length ? (
+                <span aria-live="polite" className="font-manrope text-[12px] text-[#8b939e]">
+                  {filtersActive
+                    ? `${t("Showing")} ${visibleOrders.length} ${t("of")} ${paidOrders.length}`
+                    : paidOrders.length}
+                </span>
+              ) : null}
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              {filtersActive || sortActive ? (
+                <button
+                  type="button"
+                  onClick={clearAll}
+                  className="inline-flex h-9 cursor-pointer items-center rounded-[10px] border border-[#f1c7c7] bg-white px-3 font-manrope text-[12px] font-medium text-[#d64242] hover:bg-[#fdeeee]"
+                >
+                  {t("Clear All")}
+                </button>
+              ) : null}
               <button
                 type="button"
                 onClick={openFilter}
@@ -867,6 +893,11 @@ export function MyPurchasesPage() {
               >
                 <FilterIcon />
                 {t("Filter")}
+                {filterCount ? (
+                  <span className="flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-navy px-1 text-[10px] font-semibold leading-none text-white">
+                    {filterCount}
+                  </span>
+                ) : null}
               </button>
               <button
                 type="button"
@@ -881,6 +912,23 @@ export function MyPurchasesPage() {
               </button>
             </div>
           </div>
+          {chips.length ? (
+            <ul className="mt-3 flex flex-wrap items-center gap-2" aria-label={t("Filter")}>
+              {chips.map((chip) => (
+                <li key={chip.key}>
+                  <button
+                    type="button"
+                    onClick={() => setFilters(chip.remove(filters))}
+                    aria-label={`${t("Remove filter")}: ${chip.label}`}
+                    className="inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-full border border-[#d6e2fb] bg-[#edf3ff] pl-3 pr-2.5 font-manrope text-[12px] font-medium text-navy hover:border-navy/40 hover:bg-[#e2ecff]"
+                  >
+                    {chip.label}
+                    <CloseIcon />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : null}
           {ordersState.status === "loading" ? (
             <div aria-busy="true" className="mt-3 space-y-3">
               <span className="sr-only" role="status">
@@ -926,12 +974,17 @@ export function MyPurchasesPage() {
               ))}
             </div>
           ) : (
-            <div className="mt-3 rounded-[16px] bg-white p-8 text-center font-manrope text-[13px] text-[#8b939e]">
-              {t("No purchases match the selected filters.")}
+            <div className="mt-3 flex flex-col items-center rounded-[16px] border border-[#e8edf2] bg-white px-6 py-10 text-center">
+              <span className="flex h-11 w-11 items-center justify-center rounded-full bg-[#edf3ff] text-navy">
+                <FilterIcon />
+              </span>
+              <p className="mt-3 font-manrope text-[15px] font-semibold text-[#1a1a1a]">
+                {t("No purchases match the selected filters.")}
+              </p>
               <button
                 type="button"
-                onClick={() => setFilters(NO_LAND_FILTERS)}
-                className="mt-3 block w-full cursor-pointer font-manrope text-[13px] font-medium text-navy underline underline-offset-4"
+                onClick={clearAll}
+                className="mt-4 inline-flex h-10 cursor-pointer items-center rounded-[10px] bg-navy px-5 font-manrope text-[13px] font-medium text-white"
               >
                 {t("Clear filters")}
               </button>
@@ -995,6 +1048,48 @@ export function MyPurchasesPage() {
   );
 }
 
+type FilterChip = { key: string; label: string; remove: (filters: LandFilters) => LandFilters };
+
+const compactNumber = new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 });
+
+// "10 – 50 Rai" / "≥ 10 Rai" / "≤ 50 Rai" from the two text bounds; null when both are empty.
+function rangeLabel(min: string, max: string, format: (value: number) => string) {
+  const low = toBound(min);
+  const high = toBound(max);
+  if (low !== undefined && high !== undefined) return `${format(low)} – ${format(high)}`;
+  if (low !== undefined) return `≥ ${format(low)}`;
+  if (high !== undefined) return `≤ ${format(high)}`;
+  return null;
+}
+
+/** One removable chip per applied filter, so each can be cleared on its own. */
+function filterChips(filters: LandFilters, t: (key: string) => string): FilterChip[] {
+  const chips: FilterChip[] = [];
+  if (filters.myPlots !== filters.gifted) {
+    chips.push(
+      filters.myPlots
+        ? { key: "my", label: t("My Plots"), remove: (f) => ({ ...f, gifted: true }) }
+        : { key: "gift", label: t("Gifted Plots"), remove: (f) => ({ ...f, myPlots: true }) },
+    );
+  }
+  for (const zone of filters.zones) {
+    chips.push({ key: `zone-${zone}`, label: t(zone), remove: (f) => ({ ...f, zones: f.zones.filter((item) => item !== zone) }) });
+  }
+  const rai = rangeLabel(filters.minRai, filters.maxRai, (value) => `${compactNumber.format(value)} ${t("Rai")}`);
+  if (rai) chips.push({ key: "rai", label: rai, remove: (f) => ({ ...f, minRai: "", maxRai: "" }) });
+  const price = rangeLabel(filters.minPrice, filters.maxPrice, (value) => `${compactNumber.format(value)}`);
+  if (price) chips.push({ key: "price", label: price, remove: (f) => ({ ...f, minPrice: "", maxPrice: "" }) });
+  return chips;
+}
+
+function CloseIcon() {
+  return (
+    <svg viewBox="0 0 16 16" aria-hidden="true" className="h-3 w-3">
+      <path d="m4 4 8 8m0-8-8 8" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 /** `value` null: still loading (a skeleton bar). `badge`: a small pill beside the value. */
 function PurchaseStat({
   icon,
@@ -1040,45 +1135,71 @@ function PurchaseRow({ order }: { order: OrderListEntry }) {
   const plots = orderPlotNames(order);
 
   return (
-    <article className="flex flex-col gap-4 rounded-[16px] border border-[#e8edf2] bg-white px-4 py-4 shadow-[0_8px_22px_rgba(11,31,77,0.05)] sm:flex-row sm:items-center">
-      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[12px] bg-[#edf3ff] text-navy">
-        {gifted ? <GiftIcon /> : <PersonIcon />}
-      </span>
-      <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-          <p className="font-manrope text-[14px] font-semibold uppercase leading-5 text-[#1a1a1a]">
-            {order.orderNo ? `${t("Order")} #${order.orderNo}` : t("Order")}
-          </p>
-          <span className="rounded-full bg-[#e7f8ee] px-2 py-0.5 font-manrope text-[11px] font-semibold leading-4 text-[#16a34a]">
-            {t("Completed")}
-          </span>
-          {purchasedOn ? (
-            <span className="font-manrope text-[12px] leading-4 text-[#9aa3ad]">
-              • {t("Purchased")} {purchasedOn}
+    <article
+      className={`group relative grid cursor-pointer gap-4 rounded-[16px] border px-4 py-4 transition-[border-color,box-shadow] duration-200 sm:grid-cols-[minmax(0,1fr)_auto] sm:gap-x-6 sm:px-5 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1.7fr)_auto] lg:items-center lg:gap-8 ${
+        gifted
+          ? "border-[#f2e2b0] bg-linear-to-r from-[#fff7dc] via-[#fffdf5] to-white shadow-[0_8px_22px_rgba(200,148,26,0.10)] hover:border-[#e8cf86] hover:shadow-[0_10px_26px_rgba(200,148,26,0.18)]"
+          : "border-[#e8edf2] bg-white shadow-[0_8px_22px_rgba(11,31,77,0.05)] hover:border-[#d3ddeb] hover:shadow-[0_10px_26px_rgba(11,31,77,0.09)]"
+      }`}
+    >
+      {/* Order: icon, number, status and date. */}
+      <div className="flex min-w-0 items-center gap-3.5">
+        <span
+          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-[12px] ${
+            gifted
+              ? "bg-linear-to-br from-[#ffe9a3] to-[#f7c948] text-[#7a4b00] shadow-[inset_0_1px_0_rgba(255,255,255,0.7),0_4px_10px_rgba(200,148,26,0.28)]"
+              : "bg-[#edf3ff] text-navy"
+          }`}
+        >
+          {gifted ? <GiftIcon /> : <PersonIcon />}
+        </span>
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <p className="font-manrope text-[14px] font-semibold uppercase leading-5 text-[#1a1a1a]">
+              {order.orderNo ? `${t("Order")} #${order.orderNo}` : t("Order")}
+            </p>
+            <span className="rounded-full bg-[#e7f8ee] px-2 py-0.5 font-manrope text-[11px] font-semibold leading-4 text-[#16a34a]">
+              {t("Completed")}
             </span>
+            {gifted ? (
+              <span className="rounded-full bg-[#fde68a] px-2 py-0.5 font-manrope text-[11px] font-semibold leading-4 text-[#8a5a00]">
+                {t("Gifted")}
+              </span>
+            ) : null}
+          </div>
+          {purchasedOn ? (
+            <p className="mt-1 font-manrope text-[12px] leading-4 text-[#9aa3ad]">
+              {t("Purchased")} {purchasedOn}
+            </p>
           ) : null}
         </div>
-        <p className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 font-manrope text-[12px] leading-4 text-[#8b939e]">
-          <span className="inline-flex items-center gap-1.5">
-            <PlotIcon />
-            {t("LAND SIZE:")}{" "}
-            <strong className="font-semibold text-[#1a1a1a]">
-              {landNumber.format(order.totalRai)} {t("Rai")}
-            </strong>
-          </span>
-          {plots ? (
-            <>
-              <span aria-hidden="true">•</span>
-              <span className="inline-flex min-w-0 items-center gap-1.5">
-                <PinIcon className="h-3.5 w-3.5 shrink-0" />
-                {t("LOCATION:")} <strong className="truncate font-semibold text-[#1a1a1a]">{plots}</strong>
-              </span>
-            </>
-          ) : null}
-        </p>
       </div>
-      <div className="flex items-center justify-between gap-4 sm:justify-end">
-        <div className="text-right">
+      {/* Land size and where the plots are, as labelled columns. */}
+      <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-8 font-manrope sm:col-start-1 sm:row-start-2 lg:col-auto lg:row-auto">
+        <div>
+          <dt className="inline-flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#9aa3ad]">
+            <PlotIcon />
+            {t("LAND SIZE:").replace(/:$/, "")}
+          </dt>
+          <dd className="mt-1 text-[14px] font-semibold leading-5 text-[#1a1a1a]">
+            {landNumber.format(order.totalRai)} {t("Rai")}
+          </dd>
+        </div>
+        {plots ? (
+          <div className="min-w-0">
+            <dt className="inline-flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#9aa3ad]">
+              <PinIcon className="h-3.5 w-3.5 shrink-0" />
+              {t("LOCATION:").replace(/:$/, "")}
+            </dt>
+            <dd title={plots} className="mt-1 line-clamp-2 break-words text-[14px] font-semibold leading-5 text-[#1a1a1a]">
+              {plots}
+            </dd>
+          </div>
+        ) : null}
+      </dl>
+      {/* Amount and the details link. */}
+      <div className="flex items-center justify-between gap-5 border-t border-[#eef1f5] pt-3 sm:col-start-2 sm:row-span-2 sm:row-start-1 sm:flex-col sm:items-end sm:justify-center sm:gap-3 sm:border-l sm:border-t-0 sm:pl-6 sm:pt-0 lg:col-auto lg:row-auto lg:flex-row lg:items-center lg:justify-end lg:gap-5 lg:pl-8">
+        <div className="sm:text-right">
           <p className="font-manrope text-[10px] font-semibold uppercase tracking-[0.08em] text-[#9aa3ad]">{t("Amount")}</p>
           <strong className="mt-0.5 block font-manrope text-[18px] font-semibold leading-6 text-[#1a1a1a]">
             {formatPurchaseAmount(order.total, order.currency)}
@@ -1086,7 +1207,8 @@ function PurchaseRow({ order }: { order: OrderListEntry }) {
         </div>
         <Link
           href={`/dashboard/purchases/${encodeURIComponent(order.id)}`}
-          className="inline-flex h-10 cursor-pointer items-center rounded-[10px] bg-navy px-4 font-manrope text-[13px] font-medium text-white"
+          // The link's ::after covers the whole row, so clicking anywhere on it opens the order.
+          className="inline-flex h-10 shrink-0 cursor-pointer items-center rounded-[10px] bg-navy px-4 font-manrope text-[13px] font-medium text-white after:absolute after:inset-0 after:rounded-[16px] after:content-[''] group-hover:bg-[#0b2d6b] focus-visible:after:outline-2 focus-visible:after:outline-offset-2 focus-visible:after:outline-navy"
         >
           {t("View Details")} →
         </Link>

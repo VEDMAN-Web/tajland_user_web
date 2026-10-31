@@ -24,7 +24,7 @@ type CertificateState =
   | { status: "loading" }
   | { status: "error" }
   | { status: "not-found" }
-  | { status: "ready"; certificate: CertificateDetail; owner: string; plotLocations: PlotLocation[] };
+  | { status: "ready"; certificate: CertificateDetail; owner: string; plotLocations: PlotLocation[]; orderNo: string | null };
 type PlotLocation = { key: string; label: string; rai: number | null };
 
 const isQuietError = (error: unknown) =>
@@ -78,7 +78,8 @@ function certificateFacts(certificate: CertificateDetail, order: OrderDetail | n
         };
       })
     : [{ key: "location", label: certificate.location || "Thailand", rai: null }];
-  return { owner, plotLocations };
+  const orderNo = order?.orderNo ?? null;
+  return { owner, plotLocations, orderNo };
 }
 
 /**
@@ -237,6 +238,7 @@ export function CertificateDetailsPage({ certificateId }: { certificateId: strin
               certificate={state.certificate}
               owner={state.owner}
               plotLocations={state.plotLocations}
+              orderNo={state.orderNo}
               pageUrl={pageUrl}
               copied={copied}
               onCopy={copyLink}
@@ -302,6 +304,7 @@ function CertificateFacts({
   certificate,
   owner,
   plotLocations,
+  orderNo,
   pageUrl,
   copied,
   onCopy,
@@ -309,6 +312,7 @@ function CertificateFacts({
   certificate: CertificateDetail;
   owner: string;
   plotLocations: PlotLocation[];
+  orderNo: string | null;
   pageUrl: string;
   copied: boolean;
   onCopy: () => void;
@@ -365,6 +369,7 @@ function CertificateFacts({
         <div className="grid grid-cols-2 gap-x-6 gap-y-5 font-manrope text-[13px]">
           <Detail label={t("Certificate ID")} value={certificate.certificateNo} />
           <Detail label={t("Registered Owner")} value={owner || "—"} />
+          {orderNo ? <Detail label={t("Order No")} value={orderNo} /> : null}
           <Detail label={t("Total Area")} value={`${certificate.totalSizeRai.toLocaleString("en-US", { maximumFractionDigits: 2 })} ${t("Rai")}`} tone="red" />
           <Detail label={t("Plots Count")} value={plots} />
           <Detail label={t("Issuing Authority")} value={certificate.issuingAuthority} />

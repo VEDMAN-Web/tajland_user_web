@@ -7,6 +7,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { isAbortError } from "@/lib/api/browser-client";
 import { isApiError } from "@/lib/api/errors";
 import { notifyCartChanged } from "@/lib/cart/cart-events";
+import { applyCartChange, clearCartSnapshot } from "@/lib/cart/cart-snapshot";
 import { isAllowedRemoteImage } from "@/lib/config/remote-images";
 import { routes } from "@/lib/constants/routes";
 import { useAuth } from "@/lib/hooks/useAuth";
@@ -241,6 +242,9 @@ export function CartPage() {
     setRemovingIds((ids) => [...ids, plotId]);
     try {
       await removeCartItem(plotId);
+      // The badge (and the Explore Map's cart progress) drop at once; the reload confirms.
+      const removed = cart.status === "ready" ? cart.data.items.find((item) => item.plotId === plotId) : undefined;
+      if (removed) applyCartChange(-1, { rai: removed.sizeRai, total: removed.subtotal });
       cartChanged();
     } catch (error) {
       handleActionError(error, "Failed to remove cart item");
@@ -256,6 +260,7 @@ export function CartPage() {
     setIsClearing(true);
     try {
       await clearCart();
+      clearCartSnapshot();
       cartChanged();
     } catch (error) {
       handleActionError(error, "Failed to clear cart");
@@ -741,6 +746,25 @@ function CartItemImage({ src }: { src: string | null | undefined }) {
   );
 }
 
+function CartModalItemImage({ src }: { src: string | null | undefined }) {
+  const [failedSrc, setFailedSrc] = useState<string | null>(null);
+  const usable = isAllowedRemoteImage(src) && failedSrc !== src;
+
+  return (
+    <Image
+      src={usable ? src : PLACEHOLDER_IMAGE}
+      alt=""
+      width={56}
+      height={56}
+      unoptimized={!usable}
+      onError={() => {
+        if (usable) setFailedSrc(src);
+      }}
+      className="h-12 w-12 shrink-0 rounded-[10px] bg-[#edf3f8] object-cover sm:h-14 sm:w-14"
+    />
+  );
+}
+
 /** One cart row (Figma "Selected Plots" card); optional fields hide when not sent. */
 function CartItemCard({
   item,
@@ -759,8 +783,8 @@ function CartItemCard({
   t: Translate;
 }) {
   const location = item.city ?? item.region?.name;
-  const title = item.plotName?.trim() || item.name || item.plotNumber || item.zone?.name;
-  const tier = item.zone?.tier;
+  const title = item.plotName?.trim() || item.name || item.plotNumber || item.zoneCategory?.name;
+  const tier = item.zoneCategory?.type;
 
   return (
     <article
@@ -939,10 +963,10 @@ function RemovePlotDialog({
   t: Translate;
 }) {
   const titleId = "remove-plot-title";
-  const title = item.plotName?.trim() || item.name || item.plotNumber || item.zone?.name || t("this plot");
+  const title = item.plotName?.trim() || item.name || item.plotNumber || item.zoneCategory?.name || t("this plot");
   const image = item.images?.[0] ?? item.imageUrl;
   const location = item.city ?? item.region?.name;
-  const tier = item.zone?.tier;
+  const tier = item.zoneCategory?.type;
 
   return (
     <DialogShell
@@ -974,14 +998,7 @@ function RemovePlotDialog({
       </p>
 
       <div className="mt-5 flex items-center gap-3 rounded-[12px] border border-[#eef1f4] bg-white p-3 shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
-        <Image
-          src={isAllowedRemoteImage(image) ? image : PLACEHOLDER_IMAGE}
-          alt=""
-          width={56}
-          height={56}
-          unoptimized={!isAllowedRemoteImage(image)}
-          className="h-12 w-12 shrink-0 rounded-[10px] bg-[#edf3f8] object-cover sm:h-14 sm:w-14"
-        />
+        <CartModalItemImage src={image} />
         <div className="min-w-0 flex-1">
           <p className="truncate font-manrope text-[14px] font-semibold leading-5 text-navy sm:text-[15px]">
             {title}

@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useEffect, useState, type FormEvent } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { routes } from "@/lib/constants/routes";
 import { useAuth } from "@/lib/hooks/useAuth";
 import { logError } from "@/lib/logging/logger";
@@ -60,7 +60,15 @@ export function HelpSupportPage() {
   // `GET /help-support`: the user's tickets, most recent activity first.
   const [tickets, setTickets] = useState<TicketsState>({ status: "loading" });
   const [reloadKey, setReloadKey] = useState(0);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  // `?ticket=ID` (from a notification) opens that ticket.
+  const ticketParam = useSearchParams().get("ticket");
+  const [selectedId, setSelectedId] = useState<string | null>(ticketParam);
+  const [seenParam, setSeenParam] = useState(ticketParam);
+  if (ticketParam !== seenParam) {
+    // Another notification was opened while this page was already showing.
+    setSeenParam(ticketParam);
+    if (ticketParam) setSelectedId(ticketParam);
+  }
   const [filter, setFilter] = useState<StatusFilter>("ALL");
   const [search, setSearch] = useState("");
   const [showForm, setShowForm] = useState(false);
@@ -170,7 +178,7 @@ export function HelpSupportPage() {
 
   return (
     <div className="min-h-[100svh] bg-[#f7f9fc] text-navy">
-      <main className="w-full px-5 pb-14 pt-6 sm:px-8 lg:p-0 lg:[&>section]:mx-auto lg:[&>section]:w-full lg:[&>section]:max-w-[1120px] lg:[&>section]:px-10 lg:[&>section]:py-8">
+      <main className="w-full px-5 pb-14 pt-6 sm:px-8 lg:p-0 lg:[&>section]:mx-auto lg:[&>section]:w-full lg:[&>section]:px-10 lg:[&>section]:py-8">
         <section className="min-w-0">
           {selectedId ? (
             <SupportTicketDetail
@@ -197,7 +205,7 @@ export function HelpSupportPage() {
                     setShowForm((open) => !open);
                     setSent(false);
                   }}
-                  className="inline-flex h-11 shrink-0 cursor-pointer items-center justify-center gap-2 rounded-full bg-navy px-5 font-manrope text-[14px] font-medium leading-none text-white transition hover:bg-navy-deep"
+                  className="inline-flex h-11 shrink-0 cursor-pointer items-center justify-center gap-2 rounded-full bg-navy px-5 font-manrope text-[14px] lg:mt-[52px] font-medium leading-none text-white transition hover:bg-navy-deep"
                 >
                   <svg viewBox="0 0 16 16" aria-hidden="true" className={`h-3.5 w-3.5 transition-transform ${showForm ? "rotate-45" : ""}`}>
                     <path d="M8 3v10M3 8h10" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />

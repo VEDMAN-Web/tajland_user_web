@@ -13,11 +13,11 @@ const detail = {
     name: "Bangkok City",
     slug: "bangkok-city",
   },
-  zone: {
-    id: "6abb6223c8e9d44533f7aa4b",
+  zoneCategory: {
+    id: "6ae584d3144cea5ae996fb53",
     name: "Standard",
-    slug: "standard",
-    tier: "STANDARD",
+    type: "STANDARD",
+    pricePerRai: 0.02,
   },
   imageUrl: "https://i.postimg.cc/m2NHjt97/Cape-Yamu-Phuket-aerial-landscape.png",
   description: "BKK-02 dummy plot in bangkok",
@@ -54,19 +54,19 @@ describe("explorePlotDetailSchema", () => {
   it("accepts the backend response", () => {
     const parsed = explorePlotDetailSchema.parse(detail);
     expect(parsed.location?.name).toBe("Bangkok City");
-    expect(parsed.zone?.tier).toBe("STANDARD");
+    expect(parsed.zoneCategory?.type).toBe("STANDARD");
   });
 
-  it("accepts a plot without city, zone, size in feet or geometry", () => {
+  it("accepts a plot without city, zone category, size in feet or geometry", () => {
     const parsed = explorePlotDetailSchema.parse({
       ...detail,
       location: null,
-      zone: null,
+      zoneCategory: null,
       sizeSquareFeet: undefined,
       geometry: null,
       purchase: undefined,
     });
-    expect(parsed.zone).toBeNull();
+    expect(parsed.zoneCategory).toBeNull();
   });
 
   it("rejects a plot without a region", () => {

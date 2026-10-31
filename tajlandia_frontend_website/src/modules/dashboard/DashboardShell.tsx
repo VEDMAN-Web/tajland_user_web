@@ -1,12 +1,50 @@
 "use client";
 
 import { usePathname } from "next/navigation";
+import { useState, useSyncExternalStore } from "react";
 import { routes } from "@/lib/constants/routes";
 import { AccountMenu, type AccountKey } from "./AccountMenu";
 import { DashboardNavbar } from "./DashboardNavbar";
 import { DashboardSidebar, type NavbarActive } from "./DashboardSidebar";
 
-const isPath = (pathname: string, base: string) => pathname === base || pathname.startsWith(`${base}/`);
+const RAIL_STORAGE_KEY = "tajlandia_sidebar";
+const RAIL_CHANGED_EVENT = "tajlandia:sidebar-changed";
+// Storage can be blocked (private windows): the choice then lasts until reload.
+let memoryRailChoice: boolean | null = null;
+
+/** The saved sidebar choice: true = rail, false = full, null = none yet (page default). */
+function readRailChoice(): boolean | null {
+  try {
+    const saved = localStorage.getItem(RAIL_STORAGE_KEY);
+    if (saved === "rail" || saved === "full") return saved === "rail";
+  } catch {
+    return memoryRailChoice;
+  }
+  return memoryRailChoice;
+}
+
+function writeRailChoice(rail: boolean) {
+  memoryRailChoice = rail;
+  try {
+    localStorage.setItem(RAIL_STORAGE_KEY, rail ? "rail" : "full");
+  } catch {
+    // Not saved; it resets on reload.
+  }
+  window.dispatchEvent(new Event(RAIL_CHANGED_EVENT));
+}
+
+// Re-reads on a toggle here and on one in another tab. The server render has no choice
+// (null), so the first client render matches it and the saved choice follows.
+function subscribeRailChoice(onChange: () => void) {
+  window.addEventListener(RAIL_CHANGED_EVENT, onChange);
+  window.addEventListener("storage", onChange);
+  return () => {
+    window.removeEventListener(RAIL_CHANGED_EVENT, onChange);
+    window.removeEventListener("storage", onChange);
+  };
+}
+
+const isPath =(pathname: string, base: string) => pathname === base || pathname.startsWith(`${base}/`);
 
 /** Which sidebar link is current. Account / cart pages highlight none of them. */
 function navbarActive(pathname: string): NavbarActive {
@@ -45,6 +83,24 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   const active = navbarActive(pathname);
   const account = accountKey(pathname);
   const overlay = active === "explore";
+  // The user's saved choice from the sidebar's toggle applies to the normal pages (full
+  // sidebar until they pick the rail). Explore Map ignores it: the map needs the room, so
+  // every time it is opened the sidebar starts as a rail, and the toggle there only lasts
+  // for that visit. The account menu has no rail form, so account pages always show the
+  // full sidebar.
+  const railChoice = useSyncExternalStore(subscribeRailChoice, readRailChoice, () => null);
+  const [exploreExpanded, setExploreExpanded] = useState(false);
+  const [wasOverlay, setWasOverlay] = useState(overlay);
+  if (overlay !== wasOverlay) {
+    // Arriving on (or leaving) Explore Map: back to the rail there.
+    setWasOverlay(overlay);
+    setExploreExpanded(false);
+  }
+  const rail = !account && (overlay ? !exploreExpanded : (railChoice ?? false));
+  function toggleRail() {
+    if (overlay) setExploreExpanded(rail);
+    else writeRailChoice(!rail);
+  }
   // Pages size themselves to the full viewport; below the top bar (h-16 + 1px border) that is
   // 65px less, at lg and up there is no bar. Written out in full so Tailwind sees the class.
   // At lg and up each page also starts 32px down. Pages add their own 24-32px on top, so a
@@ -55,10 +111,16 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="relative">
-      <DashboardSidebar mode={account ? "account" : "main"} active={active} account={account} rail={overlay} />
+      <DashboardSidebar
+        mode={account ? "account" : "main"}
+        active={active}
+        account={account}
+        rail={rail}
+        onToggleRail={account ? undefined : toggleRail}
+      />
       <DashboardNavbar active={active} overlay={overlay} />
       <div
-        className={`lg:transition-[padding-left] lg:duration-300 motion-reduce:lg:transition-none ${overlay ? "lg:pl-[76px]" : "lg:pl-[220px]"}`}
+        className={`lg:transition-[padding-left] lg:duration-300 motion-reduce:lg:transition-none ${rail ? "lg:pl-[76px]" : "lg:pl-[220px]"}`}
       >
         {account ? (
           <div className="bg-[#f7f9fc] pt-[65px] lg:pt-0">

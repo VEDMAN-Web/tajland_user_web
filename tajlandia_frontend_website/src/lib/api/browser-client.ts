@@ -61,7 +61,7 @@ function endSession(redirect: boolean) {
 }
 
 async function request<T>(
-  method: "GET" | "POST" | "PUT" | "DELETE",
+  method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE",
   path: string,
   body: unknown,
   schema: ZodType<T>,
@@ -191,6 +191,15 @@ export function authedPut<T>(
   options?: AuthedRequestOptions,
 ) {
   return request("PUT", path, body ?? {}, schema, options);
+}
+
+export function authedPatch<T>(
+  path: string,
+  body: unknown,
+  schema: ZodType<T>,
+  options?: AuthedRequestOptions,
+) {
+  return request("PATCH", path, body ?? {}, schema, options);
 }
 
 export function authedDelete<T>(

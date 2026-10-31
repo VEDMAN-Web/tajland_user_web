@@ -19,6 +19,7 @@ const ALLOWED_PREFIXES = new Set([
   "leaderboard",
   "help-support",
   "certificates",
+  "notifications",
 ]);
 // Single endpoints whose area is otherwise off-limits (e.g. `dashboard/admin/*`).
 const ALLOWED_EXACT_PATHS = new Set(["dashboard", "coupons", "auth/me"]);

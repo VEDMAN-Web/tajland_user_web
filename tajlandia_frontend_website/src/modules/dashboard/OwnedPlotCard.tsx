@@ -218,6 +218,24 @@ function PlotGallery({
     // Frosted glass: translucent white, light blur, thin bright rim and an inner highlight.
     "absolute top-1/2 z-10 flex h-9 w-9 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full border border-white/45 bg-white/20 text-white opacity-0 shadow-[0_4px_14px_rgba(7,21,54,0.28),inset_0_1px_0_rgba(255,255,255,0.55)] backdrop-blur-md outline-none transition duration-300 hover:scale-105 hover:bg-white/35 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-white/80 active:scale-95 group-hover:opacity-100 [@media(hover:none)]:opacity-100 motion-reduce:transition-none motion-reduce:hover:scale-100";
 
+function GallerySlideImage({ src, alt }: { src: string; alt: string }) {
+  const [failed, setFailed] = useState(false);
+  const isPlaceholder = src === PLOT_PLACEHOLDER_IMAGE || failed;
+  const targetSrc = isPlaceholder ? PLOT_PLACEHOLDER_IMAGE : src;
+
+  return (
+    <Image
+      src={targetSrc}
+      alt={alt}
+      fill
+      sizes="(min-width: 1280px) 360px, (min-width: 768px) 50vw, 100vw"
+      unoptimized={isPlaceholder}
+      onError={() => setFailed(true)}
+      className="object-cover"
+    />
+  );
+}
+
   return (
     <div
       ref={frameRef}
@@ -236,12 +254,9 @@ function PlotGallery({
             aria-hidden={loop && (position === 0 || position === count + 1) ? true : undefined}
             className="relative h-full w-full shrink-0"
           >
-            <Image
+            <GallerySlideImage
               src={src}
               alt={position === firstPos ? alt : ""}
-              fill
-              sizes="(min-width: 1280px) 360px, (min-width: 768px) 50vw, 100vw"
-              className="object-cover"
             />
           </div>
         ))}

@@ -1,3 +1,5 @@
+import { stopPush } from "@/lib/push/onesignal";
+
 const TOKEN_KEY = "tajlandia_auth_token";
 const USER_KEY = "tajlandia_user";
 
@@ -5,6 +7,9 @@ const USER_KEY = "tajlandia_user";
 // these keys without duplicating the literal strings.
 export const AUTH_TOKEN_KEY = TOKEN_KEY;
 export const AUTH_USER_KEY = USER_KEY;
+
+/** Fired on `window` when a session is saved in this tab (login, OTP, Google). */
+export const AUTH_SIGNED_IN_EVENT = "tajlandia:signed-in";
 
 export function getStoredToken(): string | null {
   try {
@@ -43,6 +48,7 @@ export function setAuthUser(user: Record<string, unknown>, rememberMe = true): v
   } catch {
     // Fail silently if localStorage is unavailable
   }
+  if (typeof window !== "undefined") window.dispatchEvent(new Event(AUTH_SIGNED_IN_EVENT));
 }
 
 /** True when the session was saved with "remember me" (localStorage). */
@@ -55,6 +61,8 @@ export function isRememberedSession(): boolean {
 }
 
 export function clearAuth(): void {
+  // Signed out: this browser stops getting the user's push notifications.
+  stopPush();
   try {
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(USER_KEY);

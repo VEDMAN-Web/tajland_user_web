@@ -4,14 +4,11 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { BrandLogo } from "@/components/ui/BrandLogo";
-import { getStoredToken } from "@/lib/api/auth.utils";
-import { isAbortError } from "@/lib/api/browser-client";
-import { CART_CHANGED_EVENT } from "@/lib/cart/cart-events";
+import { useCartSnapshot } from "@/lib/cart/cart-snapshot";
 import { routes } from "@/lib/constants/routes";
-import { logError } from "@/lib/logging/logger";
 import { useDashboardLanguage } from "./DashboardLanguageContext";
 import { LanguageDropdown, SidebarContent, type NavbarActive } from "./DashboardSidebar";
-import { getCart } from "./services/cart.client";
+import { NotificationBell } from "./NotificationBell";
 
 type DashboardNavbarProps = {
   active: NavbarActive;
@@ -48,7 +45,8 @@ function Icon({
         </span>
       ) : null}
       {badge && badge > 0 ? (
-        <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#e11d2e] px-1 font-manrope text-[10px] font-semibold leading-none text-white">
+        // Keyed by the count, so each change replays the pop.
+        <span key={badge} className="badge-pop absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#e11d2e] px-1 font-manrope text-[10px] font-semibold leading-none text-white">
           {badge}
         </span>
       ) : null}
@@ -56,37 +54,10 @@ function Icon({
   );
 }
 
-// Items in the cart (`GET /cart`), reloaded whenever the cart changes elsewhere and
-// when the tab comes back into focus (reservations may have expired meanwhile).
+// Items in the cart: the shared snapshot, which updates the moment a plot is added or
+// removed, reloads when the cart changes elsewhere and when the tab regains focus.
 function useCartCount() {
-  const [count, setCount] = useState(0);
-
-  useEffect(() => {
-    let controller: AbortController | null = null;
-
-    function load() {
-      if (!getStoredToken()) return;
-      controller?.abort();
-      controller = new AbortController();
-      // The badge is secondary: a failure keeps the last count and never logs out.
-      getCart({ signal: controller.signal, redirectOnUnauthorized: false })
-        .then((cart) => setCount(cart.items.length))
-        .catch((error: unknown) => {
-          if (!isAbortError(error)) logError(error, "Failed to load cart count");
-        });
-    }
-
-    load();
-    window.addEventListener(CART_CHANGED_EVENT, load);
-    window.addEventListener("focus", load);
-    return () => {
-      controller?.abort();
-      window.removeEventListener(CART_CHANGED_EVENT, load);
-      window.removeEventListener("focus", load);
-    };
-  }, []);
-
-  return count;
+  return useCartSnapshot()?.count ?? 0;
 }
 
 function CartLink({ count, isActive, label }: { count: number; isActive: boolean; label: string }) {
@@ -161,6 +132,7 @@ export function DashboardNavbar({ active, overlay = false }: DashboardNavbarProp
       {/* lg and up: language + cart, top right (above the Explore Map's own controls, which start lower). */}
       <div className="fixed right-6 top-4 z-40 hidden items-center gap-2 lg:flex">
         <LanguageDropdown />
+        <NotificationBell />
         <CartLink count={cartCount} isActive={isCartActive} label={t("Cart")} />
       </div>
 
@@ -168,6 +140,7 @@ export function DashboardNavbar({ active, overlay = false }: DashboardNavbarProp
         <div className="relative mx-auto flex h-16 w-full items-center justify-between px-5 sm:px-8">
           <BrandLogo compact href={routes.dashboard} />
           <div className="flex items-center gap-2">
+            <NotificationBell />
             <CartLink count={cartCount} isActive={isCartActive} label={t("Cart")} />
             <Link
               href={routes.profile}
