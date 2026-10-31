@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { connection } from "next/server";
 import { notFound } from "next/navigation";
 import { createPageMetadata } from "@/lib/seo/metadata";
 import { DashboardLegalPage } from "@/modules/dashboard";
@@ -12,6 +13,8 @@ export const metadata: Metadata = createPageMetadata({
 });
 
 export default async function DashboardTermsPage() {
+  // Read at request time, not during the build (the legal pages API is live content).
+  await connection();
   const page = await fetchLegalPageByKind("terms");
   if (!page) notFound();
 
