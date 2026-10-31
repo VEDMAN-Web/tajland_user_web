@@ -14,7 +14,6 @@ const SQM_PER_SQFT = 0.09290304;
 const CARD_HEIGHT = 106;
 const GIFT_CARD_HEIGHT = 124;
 const CARD_GAP = 12;
-const titleCase = (value: string) => value.charAt(0) + value.slice(1).toLowerCase();
 type OrderItem = Order["items"][number];
 
 type Translate = (source: string) => string;
@@ -297,7 +296,8 @@ function PurchasedPlotCard({
     item.sizeSquareFeet != null ? Math.round(item.sizeSquareFeet * SQM_PER_SQFT) : null;
   const rate = item.pricePerRai ?? (item.rai > 0 ? item.price / item.rai : 0);
   const image = item.images?.[0] ?? item.imageUrl;
-  const usable = isAllowedRemoteImage(image);
+  const [failedSrc, setFailedSrc] = useState<string | null>(null);
+  const usable = isAllowedRemoteImage(image) && failedSrc !== image;
   const raiLine = `${item.rai} ${t("Rai")}`;
   const rateLine = `${money(rate)} / ${t("Rai")}`;
 
@@ -313,13 +313,16 @@ function PurchasedPlotCard({
         width={80}
         height={80}
         unoptimized={!usable}
+        onError={() => {
+          if (usable && image) setFailedSrc(image);
+        }}
         className="h-[72px] w-[72px] shrink-0 rounded-[10px] bg-[#edf3f8] object-cover sm:h-20 sm:w-20"
       />
       <div className="min-w-0 flex-1 font-manrope">
         <div className="flex items-center gap-2">
-          {item.zone ? (
+          {item.zoneCategory ? (
             <span className="rounded-[4px] bg-[#eef1f4] px-1.5 py-px text-[9px] font-semibold uppercase leading-4 tracking-[0.04em] text-[#6b7280]">
-              {t(titleCase(item.zone))}
+              {t(item.zoneCategory.name)}
             </span>
           ) : null}
           {item.plotNumber ? (

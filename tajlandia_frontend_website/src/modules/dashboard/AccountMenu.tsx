@@ -4,6 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { clearAuth } from "@/lib/api/auth.utils";
 import { routes } from "@/lib/constants/routes";
 import { useDashboardLanguage } from "./DashboardLanguageContext";
@@ -61,69 +62,78 @@ export function LogoutButton({
 
   return (
     <>
-      <button type="button" aria-label={label} onClick={() => setIsLogoutOpen(true)} className={className}>
+      <button
+        type="button"
+        aria-label={label}
+        onClick={() => setIsLogoutOpen(true)}
+        className={className}
+      >
         {children}
       </button>
-      {isLogoutOpen ? (
-        <div
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-[#071536]/35 px-4 backdrop-blur-[6px]"
-          role="presentation"
-        >
-          <section
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="logout-title"
-            className="relative w-full max-w-[370px] rounded-[14px] bg-white px-7 py-7 text-center shadow-[0_20px_60px_rgba(11,31,77,0.2)]"
-          >
-            <button
-              type="button"
-              aria-label="Close logout confirmation"
-              onClick={() => setIsLogoutOpen(false)}
-              className="absolute right-5 top-4 flex h-6 w-6 items-center justify-center rounded-full text-[20px] leading-none text-[#c5c9ce] hover:text-navy"
+      {/* In <body> so no parent's stacking context (sidebar, top-right buttons) can sit over it. */}
+      {isLogoutOpen
+        ? createPortal(
+            <div
+              className="fixed inset-0 z-[100] flex items-center justify-center bg-[#071536]/35 px-4 backdrop-blur-[6px]"
+              role="presentation"
             >
-              ×
-            </button>
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[#fff1f1] text-brand-red">
-              <svg viewBox="0 0 32 32" aria-hidden="true" className="h-9 w-9">
-                <path
-                  d="M14 6H8.5A2.5 2.5 0 0 0 6 8.5v15A2.5 2.5 0 0 0 8.5 26H14M19 10l6 6-6 6M11 16h14"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2.5"
-                />
-              </svg>
-            </div>
-            <h2
-              id="logout-title"
-              className="mt-6 text-[19px] font-semibold text-[#242b32]"
-            >
-              Log Out of Tajlandia?
-            </h2>
-            <p className="mt-1.5 text-[11px] text-[#8b949e]">
-              Are you sure you want to logout of your account?
-            </p>
-            <div className="mt-6 grid grid-cols-2 gap-2.5">
-              <button
-                type="button"
-                onClick={() => setIsLogoutOpen(false)}
-                className="h-10 rounded-[9px] border border-[#e3e8ed] bg-white text-[12px] text-[#9aa3ad] hover:bg-[#f7f9fb]"
+              <section
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="logout-title"
+                className="relative w-full max-w-[370px] rounded-[14px] bg-white px-7 py-7 text-center shadow-[0_20px_60px_rgba(11,31,77,0.2)]"
               >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={confirmLogout}
-                disabled={isLoggingOut}
-                className="h-10 rounded-[9px] bg-[#e51d2a] text-[12px] font-medium text-white shadow-[0_4px_10px_rgba(229,29,42,0.2)] hover:bg-[#cc1520]"
-              >
-                {isLoggingOut ? "Logging out..." : "Log Out"}
-              </button>
-            </div>
-          </section>
-        </div>
-      ) : null}
+                <button
+                  type="button"
+                  aria-label="Close logout confirmation"
+                  onClick={() => setIsLogoutOpen(false)}
+                  className="absolute right-5 top-4 flex h-6 w-6 items-center justify-center rounded-full text-[20px] leading-none text-[#c5c9ce] hover:text-navy"
+                >
+                  ×
+                </button>
+                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[#fff1f1] text-brand-red">
+                  <svg viewBox="0 0 32 32" aria-hidden="true" className="h-9 w-9">
+                    <path
+                      d="M14 6H8.5A2.5 2.5 0 0 0 6 8.5v15A2.5 2.5 0 0 0 8.5 26H14M19 10l6 6-6 6M11 16h14"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2.5"
+                    />
+                  </svg>
+                </div>
+                <h2
+                  id="logout-title"
+                  className="mt-6 text-[19px] font-semibold text-[#242b32]"
+                >
+                  Log Out of Tajlandia?
+                </h2>
+                <p className="mt-1.5 text-[11px] text-[#8b949e]">
+                  Are you sure you want to logout of your account?
+                </p>
+                <div className="mt-6 grid grid-cols-2 gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => setIsLogoutOpen(false)}
+                    className="h-10 rounded-[9px] border border-[#e3e8ed] bg-white text-[12px] text-[#9aa3ad] hover:bg-[#f7f9fb]"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={confirmLogout}
+                    disabled={isLoggingOut}
+                    className="h-10 rounded-[9px] bg-[#e51d2a] text-[12px] font-medium text-white shadow-[0_4px_10px_rgba(229,29,42,0.2)] hover:bg-[#cc1520]"
+                  >
+                    {isLoggingOut ? "Logging out..." : "Log Out"}
+                  </button>
+                </div>
+              </section>
+            </div>,
+            document.body,
+          )
+        : null}
     </>
   );
 }
@@ -232,7 +242,10 @@ export function AccountMenu({
       ) : (
         // Below lg: one row of pills (scrolls sideways, edge to edge) above the content, so
         // the page itself isn't pushed down. lg and up uses the sidebar instead.
-        <aside ref={asideRef} className="flex gap-2 overflow-x-auto px-5 pb-1 pt-5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:px-8 lg:hidden">
+        <aside
+          ref={asideRef}
+          className="flex gap-2 overflow-x-auto px-5 pb-1 pt-5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:px-8 lg:hidden"
+        >
           <nav className="contents">
             {items.map((item) => {
               const isActive = item.key === active;

@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { isAbortError } from "@/lib/api/browser-client";
 import { isApiError } from "@/lib/api/errors";
@@ -69,7 +69,7 @@ function formatOrderDate(value?: string | null) {
   return new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric" }).format(date);
 }
 
-const zoneOf = (item: OrderDetailItem) => item.zone?.type?.toUpperCase() ?? "";
+const zoneOf = (item: OrderDetailItem) => item.zoneCategory?.type?.toUpperCase() ?? "";
 
 export function OrderDetailsPage({ orderId }: { orderId: string }) {
   const router = useRouter();
@@ -77,7 +77,6 @@ export function OrderDetailsPage({ orderId }: { orderId: string }) {
   const { t } = useDashboardLanguage();
   const [state, setState] = useState<OrderState>({ status: "loading" });
   const [reloadKey, setReloadKey] = useState(0);
-  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) router.replace(routes.login);
@@ -101,34 +100,14 @@ export function OrderDetailsPage({ orderId }: { orderId: string }) {
     return () => controller.abort();
   }, [isAuthenticated, orderId, reloadKey]);
 
-  useEffect(() => {
-    if (!copied) return;
-    const timer = window.setTimeout(() => setCopied(false), 2200);
-    return () => window.clearTimeout(timer);
-  }, [copied]);
-
   if (isLoading || !isAuthenticated) return <PageLoader label={t("Loading order...")} />;
 
   const order = state.status === "ready" ? state.order : null;
   const title = order?.orderNo ? `${t("Order")} #${order.orderNo}` : t("Order");
 
-  async function share() {
-    const url = window.location.href;
-    try {
-      if (navigator.share) {
-        await navigator.share({ title, url });
-        return;
-      }
-      await navigator.clipboard.writeText(url);
-      setCopied(true);
-    } catch {
-      // Share sheet dismissed or clipboard blocked: nothing to undo.
-    }
-  }
-
   return (
     <div className="min-h-[100svh] bg-[#f7f9fc] text-navy">
-      <main className="w-full px-5 pb-14 pt-6 sm:px-8 lg:p-0 lg:[&>section]:mx-auto lg:[&>section]:w-full lg:[&>section]:max-w-[1120px] lg:[&>section]:px-10 lg:[&>section]:py-8">
+      <main className="w-full px-5 pb-14 pt-6 sm:px-8 lg:p-0 lg:[&>section]:mx-auto lg:[&>section]:w-full lg:[&>section]:px-10 lg:[&>section]:py-8">
         <section className="min-w-0">
           <BackLink href={routes.purchases}>{t("Back to Purchases")}</BackLink>
           <div className="mt-4 flex items-start justify-between gap-4">
@@ -145,21 +124,13 @@ export function OrderDetailsPage({ orderId }: { orderId: string }) {
               </p>
             </div>
             {order ? (
-              <div className="relative shrink-0">
-                <button
-                  type="button"
-                  onClick={share}
-                  aria-label={t("Share")}
-                  className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-[12px] border border-[#e8edf2] bg-white text-navy shadow-[0_4px_14px_rgba(11,31,77,0.05)]"
-                >
-                  <ShareIcon />
-                </button>
-                {copied ? (
-                  <span role="status" className="absolute right-0 top-[calc(100%+6px)] whitespace-nowrap rounded-[8px] bg-navy px-2.5 py-1 font-manrope text-[11px] font-medium text-white">
-                    {t("Link copied")}
-                  </span>
-                ) : null}
-              </div>
+              <Link
+                href={`${routes.certificates}/${encodeURIComponent(order.id)}`}
+                className="inline-flex h-10 shrink-0 cursor-pointer items-center gap-2 rounded-[12px] bg-navy px-4 font-manrope text-[13px] font-medium text-white shadow-[0_4px_14px_rgba(11,31,77,0.12)] hover:bg-[#0b2d6b]"
+              >
+                <CertificateIcon />
+                {t("View Certificate")}
+              </Link>
             ) : null}
           </div>
 
@@ -242,14 +213,110 @@ function OrderBody({ order }: { order: OrderDetail }) {
         <OrderStat icon={<LayersIcon />} label={t("Cumulative Surface")} value={`${number.format(order.totalRai)} ${t("Rai")}`} />
       </div>
       <div className="mt-6 grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_300px]">
-        <div className="space-y-3">
-          {order.items.map((item, index) => (
-            <PlotRow key={`${item.plotId}-${index}`} item={item} currency={order.currency} />
-          ))}
-        </div>
+        <PlotList items={order.items} currency={order.currency} />
         <OrderSummary order={order} />
       </div>
     </>
+  );
+}
+
+const PLOTS_PER_PAGE = 5;
+
+// Page buttons to show: first, last, and the current page with one neighbour each side; "…" for gaps.
+function pageButtons(page: number, pages: number): Array<number | "gap-left" | "gap-right"> {
+  const shown = new Set([1, pages, page - 1, page, page + 1].filter((value) => value >= 1 && value <= pages));
+  const sorted = [...shown].sort((a, b) => a - b);
+  const result: Array<number | "gap-left" | "gap-right"> = [];
+  sorted.forEach((value, index) => {
+    const previous = sorted[index - 1];
+    if (previous !== undefined && value - previous > 1) result.push(index < sorted.length / 2 ? "gap-left" : "gap-right");
+    result.push(value);
+  });
+  return result;
+}
+
+/** The order's plots, five to a page (the order already holds them all, so paging is done here). */
+function PlotList({ items, currency }: { items: OrderDetailItem[]; currency: string }) {
+  const { t } = useDashboardLanguage();
+  const [page, setPage] = useState(1);
+  const listRef = useRef<HTMLDivElement>(null);
+  const pages = Math.max(1, Math.ceil(items.length / PLOTS_PER_PAGE));
+  const current = Math.min(page, pages);
+  const start = (current - 1) * PLOTS_PER_PAGE;
+  const visible = items.slice(start, start + PLOTS_PER_PAGE);
+
+  function goTo(next: number) {
+    setPage(next);
+    // A new page starts at its first plot, not wherever the old one was scrolled to.
+    listRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  const pageButton =
+    "inline-flex h-10 min-w-10 cursor-pointer items-center justify-center rounded-[10px] border px-3 font-manrope text-[13px] font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-40";
+  const stepButton = `${pageButton} gap-1.5 border-navy/25 bg-white px-4 text-navy hover:border-navy hover:bg-navy hover:text-white disabled:hover:border-navy/25 disabled:hover:bg-white disabled:hover:text-navy`;
+  const arrow = (direction: "left" | "right") => (
+    <svg viewBox="0 0 16 16" aria-hidden="true" className="h-3.5 w-3.5">
+      <path d={direction === "left" ? "M10 3 5 8l5 5" : "m6 3 5 5-5 5"} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+
+  return (
+    <div ref={listRef} className="min-w-0 scroll-mt-6">
+      <div className="space-y-3">
+        {visible.map((item, index) => (
+          <PlotRow key={`${item.plotId}-${start + index}`} item={item} currency={currency} />
+        ))}
+      </div>
+      {pages > 1 ? (
+        <nav aria-label={t("Pagination")} className="mt-5 flex flex-wrap items-center justify-between gap-3">
+          <p aria-live="polite" className="font-manrope text-[12px] text-[#8b939e]">
+            {`${t("Showing")} ${start + 1}–${start + visible.length} ${t("of")} ${items.length}`}
+          </p>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => goTo(current - 1)}
+              disabled={current === 1}
+              className={stepButton}
+            >
+              {arrow("left")}
+              {t("Previous")}
+            </button>
+            {pageButtons(current, pages).map((entry) =>
+              typeof entry === "number" ? (
+                <button
+                  key={entry}
+                  type="button"
+                  onClick={() => goTo(entry)}
+                  aria-label={`${t("Page")} ${entry}`}
+                  aria-current={entry === current ? "page" : undefined}
+                  className={`${pageButton} ${
+                    entry === current
+                      ? "border-navy bg-navy text-white"
+                      : "border-transparent bg-transparent text-[#8b939e] hover:bg-white hover:text-navy"
+                  }`}
+                >
+                  {entry}
+                </button>
+              ) : (
+                <span key={entry} aria-hidden="true" className="px-1 font-manrope text-[13px] text-[#9aa3ad]">
+                  …
+                </span>
+              ),
+            )}
+            <button
+              type="button"
+              onClick={() => goTo(current + 1)}
+              disabled={current === pages}
+              className={stepButton}
+            >
+              {t("Next")}
+              {arrow("right")}
+            </button>
+          </div>
+        </nav>
+      ) : null}
+    </div>
   );
 }
 
@@ -267,7 +334,27 @@ function OrderStat({ icon, label, value }: { icon: ReactNode; label: string; val
   );
 }
 
+function PlotThumbnail({ src, alt }: { src: string | null | undefined; alt: string }) {
+  const [failed, setFailed] = useState(false);
+  const usable = isAllowedRemoteImage(src) && !failed;
+
+  return (
+    <div className="relative h-[72px] w-[88px] shrink-0 overflow-hidden rounded-[12px] bg-[#eef1f5]">
+      <Image
+        src={usable ? src : PLOT_PLACEHOLDER_IMAGE}
+        alt={alt}
+        fill
+        sizes="88px"
+        unoptimized={!usable}
+        onError={() => setFailed(true)}
+        className="object-cover"
+      />
+    </div>
+  );
+}
+
 function PlotRow({ item, currency }: { item: OrderDetailItem; currency: string }) {
+  const router = useRouter();
   const { t } = useDashboardLanguage();
   const zone = ZONES.find((entry) => entry.type === zoneOf(item));
   const code = item.plotNumber?.trim() ?? "";
@@ -293,17 +380,18 @@ function PlotRow({ item, currency }: { item: OrderDetailItem; currency: string }
     .join(" · ");
 
   return (
-    <article className="flex flex-col gap-3 rounded-[16px] border border-[#eef1f4] bg-white p-3 shadow-[0_8px_22px_rgba(11,31,77,0.05)] sm:flex-row sm:items-center">
+    <article
+      onClick={() => {
+        if (mapHref) router.push(mapHref);
+      }}
+      className={`group flex flex-col gap-3 rounded-[16px] border border-[#eef1f4] bg-white p-3 shadow-[0_8px_22px_rgba(11,31,77,0.05)] transition-all duration-200 sm:flex-row sm:items-center ${
+        mapHref
+          ? "cursor-pointer hover:border-navy/40 hover:shadow-[0_10px_28px_rgba(11,31,77,0.08)]"
+          : ""
+      }`}
+    >
       <div className="flex min-w-0 flex-1 items-center gap-3">
-        <div className="relative h-[72px] w-[88px] shrink-0 overflow-hidden rounded-[12px] bg-[#eef1f5]">
-          <Image
-            src={isAllowedRemoteImage(image) ? image : PLOT_PLACEHOLDER_IMAGE}
-            alt={name}
-            fill
-            sizes="88px"
-            className="object-cover"
-          />
-        </div>
+        <PlotThumbnail src={image} alt={name} />
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             {zone ? (
@@ -313,7 +401,9 @@ function PlotRow({ item, currency }: { item: OrderDetailItem; currency: string }
             ) : null}
             {code && code !== name ? <span className="font-manrope text-[11px] text-[#b0b7c0]">{code}</span> : null}
           </div>
-          <h2 className="mt-0.5 truncate font-manrope text-[14px] font-semibold leading-5 text-navy">{name}</h2>
+          <h2 className="mt-0.5 truncate font-manrope text-[14px] font-semibold leading-5 text-navy group-hover:text-navy-deep">
+            {name}
+          </h2>
           {location ? (
             <p className="mt-0.5 flex min-w-0 items-center gap-1 font-manrope text-[12px] text-[#8b939e]">
               <PinIcon className="h-3.5 w-3.5 shrink-0" />
@@ -326,8 +416,21 @@ function PlotRow({ item, currency }: { item: OrderDetailItem; currency: string }
       <div className="flex shrink-0 items-center justify-between gap-3 border-t border-[#eef1f4] pt-2 sm:block sm:border-0 sm:pt-0 sm:text-right">
         <strong className="block font-manrope text-[20px] font-semibold leading-6 text-navy">{formatMoney(item.price, currency)}</strong>
         {mapHref ? (
-          <Link href={mapHref} className="mt-1 inline-block cursor-pointer font-manrope text-[12px] font-medium text-navy hover:underline">
-            {t("Explore on Map →")}
+          <Link
+            href={mapHref}
+            onClick={(e) => {
+              e.stopPropagation();
+            }}
+            className="mt-1.5 inline-flex items-center gap-1.5 rounded-[10px] border border-navy/20 bg-[#f0f4ff] px-3 py-1.5 font-manrope text-[12px] font-semibold text-navy shadow-xs transition-all hover:border-navy hover:bg-navy hover:text-white"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true" className="h-3.5 w-3.5 shrink-0">
+              <path d="M12 21s6.2-5.2 6.2-10a6.2 6.2 0 1 0-12.4 0c0 4.8 6.2 10 6.2 10Z" fill="none" stroke="currentColor" strokeWidth="1.8" />
+              <circle cx="12" cy="11" r="2" fill="none" stroke="currentColor" strokeWidth="1.8" />
+            </svg>
+            {t("Explore on Map")}
+            <svg viewBox="0 0 16 16" aria-hidden="true" className="h-3 w-3 shrink-0">
+              <path d="m6 3 5 5-5 5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
           </Link>
         ) : null}
       </div>
@@ -439,13 +542,11 @@ function LayersIcon() {
   );
 }
 
-function ShareIcon() {
+function CertificateIcon() {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true" className="h-4 w-4">
-      <circle cx="7" cy="12" r="2.2" fill="none" stroke="currentColor" strokeWidth="1.6" />
-      <circle cx="16.5" cy="7" r="2.2" fill="none" stroke="currentColor" strokeWidth="1.6" />
-      <circle cx="16.5" cy="17" r="2.2" fill="none" stroke="currentColor" strokeWidth="1.6" />
-      <path d="m9 11 5.2-3.2M9 13l5.2 3.2" fill="none" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M6 3h9l4 4v14H6z" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
+      <path d="M15 3v4h4M9 12h6M9 16h4" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }

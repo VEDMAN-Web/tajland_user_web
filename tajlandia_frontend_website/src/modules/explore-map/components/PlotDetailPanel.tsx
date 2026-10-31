@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { useCartSnapshot } from "@/lib/cart/cart-snapshot";
 import { routes } from "@/lib/constants/routes";
 import { cn } from "@/lib/utils/cn";
 import { plotCardStatus } from "../constants/plot-status";
@@ -24,9 +25,6 @@ type PlotDetailPanelProps = {
 };
 
 const SQM_PER_SQFT = 0.09290304;
-
-// Cart progress is static until the cart flow is wired up.
-const CART_DEMO = { cartRai: 25, minimumRai: 100, total: 2.5 };
 
 const STATUS_STYLE = {
   available: { label: "Available", text: "text-[#18a957]", dot: "bg-[#18a957]" },
@@ -69,6 +67,16 @@ export function plotSizeSqm(sizeSquareFeet: number | null | undefined) {
 }
 
 const titleCase = (value: string) => value.charAt(0) + value.slice(1).toLowerCase();
+
+/** Rai with up to two decimals and no trailing zeros: `4.5`, `25`, `0.05`. */
+const formatRai = (rai: number) =>
+  rai.toLocaleString("en-US", { maximumFractionDigits: 2 });
+
+/** Share of the minimum purchase the cart has reached, 0 to 100. */
+export function cartProgressPercent(totalRai: number, minimumRai: number) {
+  if (minimumRai <= 0) return 100;
+  return Math.min(100, Math.max(0, (totalRai / minimumRai) * 100));
+}
 
 function ShareIcon() {
   return (
@@ -114,6 +122,28 @@ function Chevron({ direction }: { direction: "left" | "right" }) {
   );
 }
 
+function DeedIcon() {
+  return (
+    <svg viewBox="0 0 16 16" aria-hidden="true" className="h-4 w-4">
+      <path
+        d="M4 1.75h5.2L12.5 5v8.25a1 1 0 0 1-1 1h-7.5a1 1 0 0 1-1-1v-10.5a1 1 0 0 1 1-1Z"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M9 1.9V5h3.2M5.5 8.2h5M5.5 10.8h3.2"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 function DetailRow({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="grid grid-cols-[minmax(0,40%)_1fr] border-b border-[#eef1f5] last:border-b-0">
@@ -141,8 +171,11 @@ export function PlotDetailPanel({
 }: PlotDetailPanelProps) {
   const statusKey = plotCardStatus(plot.status, plot.isOwned, plot.isInCart);
   const status = STATUS_STYLE[statusKey];
-  const progress = Math.min(100, (CART_DEMO.cartRai / CART_DEMO.minimumRai) * 100);
-  const tier = plot.zone?.tier;
+  // The whole cart (not just this plot) against the minimum purchase.
+  const cart = useCartSnapshot();
+  const progress = cart ? cartProgressPercent(cart.totalRai, cart.minimumRai) : 0;
+  const minimumReached = cart ? cart.totalRai >= cart.minimumRai : false;
+  const tier = plot.zoneCategory?.type;
   const plotName = plot.plotName?.trim() || plot.name;
   const sizeSqm = plotSizeSqm(plot.sizeSquareFeet);
   const place = [plot.location?.name, plot.region.name].filter(Boolean).join(", ");
@@ -209,7 +242,7 @@ export function PlotDetailPanel({
             <circle cx="8" cy="6.7" r="1.6" fill="white" />
           </svg>
           <span className="min-w-0 break-words">
-            {plot.zone ? `${place} • ${plot.zone.name}` : place}
+            {plot.zoneCategory ? `${place} • ${plot.zoneCategory.name}` : place}
           </span>
         </p>
 
@@ -243,8 +276,7 @@ export function PlotDetailPanel({
             <span className="text-[#6b7785]">{`/ ${t("Per Rai")}`}</span>
           </DetailRow>
           <DetailRow label={t("Zone Type")}>
-            {/* The tier ("Icon"), not the zone's numbered name ("Icon 01"). */}
-            {tier ? t(titleCase(tier)) : "—"}
+            {plot.zoneCategory?.name ? t(plot.zoneCategory.name) : "—"}
           </DetailRow>
           {/* "Near By" (Figma) is hidden until the API sends it. */}
           <DetailRow label={t("Cadastre status")}>
@@ -265,22 +297,39 @@ export function PlotDetailPanel({
           </span>
         </div>
 
-        {/* Cart progress: static until the cart flow is wired up. */}
+        {/* Cart progress: the cart's Rai against the minimum purchase (`GET /cart`), live as plots are added or removed. */}
         <div className="mt-4 flex items-center justify-between text-[11px] text-[#0b1f33]">
-          <span>{`${CART_DEMO.cartRai} ${t("Rai")} / ${CART_DEMO.minimumRai} ${t("Rai")}`}</span>
-          <span className="font-medium">
-            {`${t("Total")}: ${money(CART_DEMO.total, "USD")}`}
-          </span>
+          {cart ? (
+            <>
+              <span>
+                <span className="font-medium">{`${t("Cart")}: `}</span>
+                {`${formatRai(cart.totalRai)} ${t("Rai")} / ${formatRai(cart.minimumRai)} ${t("Rai")}`}
+              </span>
+              <span className="font-medium">
+                {`${t("Total")}: ${money(cart.total, plot.currency)}`}
+              </span>
+            </>
+          ) : (
+            // Until the cart loads: same height, so nothing jumps when it arrives.
+            <>
+              <span className={cn(bone, "h-3 w-24")} />
+              <span className={cn(bone, "h-3 w-16")} />
+            </>
+          )}
         </div>
         <div
           role="progressbar"
+          aria-label={t("Cart")}
           aria-valuemin={0}
-          aria-valuemax={CART_DEMO.minimumRai}
-          aria-valuenow={CART_DEMO.cartRai}
+          aria-valuemax={cart?.minimumRai ?? 0}
+          aria-valuenow={cart?.totalRai ?? 0}
           className="mt-2 h-1.5 overflow-hidden rounded-full bg-[#eef1f5]"
         >
           <span
-            className="block h-full rounded-full bg-[#d64242]"
+            className={cn(
+              "block h-full rounded-full transition-[width,background-color] duration-500 ease-out motion-reduce:transition-none",
+              minimumReached ? "bg-[#18a957]" : "bg-[#d64242]",
+            )}
             style={{ width: `${progress}%` }}
           />
         </div>
@@ -308,9 +357,10 @@ export function PlotDetailPanel({
               type="button"
               disabled={isOpeningDeed}
               onClick={onViewDeed}
-              className="flex h-11 w-full cursor-pointer items-center justify-center rounded-[10px] bg-[#eef2f7] text-[13px] font-medium text-[#001f54] hover:bg-[#e2e8f1] disabled:cursor-wait disabled:opacity-70"
+              className="flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-[10px] bg-[#eef2f7] text-[13px] font-medium text-[#001f54] hover:bg-[#e2e8f1] disabled:cursor-wait disabled:opacity-70"
             >
-              {isOpeningDeed ? t("Opening...") : `${t("View Deed")} →`}
+              {isOpeningDeed ? null : <DeedIcon />}
+              {t(isOpeningDeed ? "Opening..." : "View Deed")}
             </button>
           ) : (
             <p className="flex h-11 items-center justify-center rounded-[10px] bg-[#eef1f5] text-[13px] font-medium text-[#8a94a3]">

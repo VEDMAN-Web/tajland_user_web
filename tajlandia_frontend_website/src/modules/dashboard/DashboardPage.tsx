@@ -102,10 +102,13 @@ export function DashboardPage() {
 
   return (
     <div className="min-h-[100svh] bg-[#f7f9fc] text-navy">
-
-      <main className="mx-auto w-full max-w-[1180px] px-5 pb-14 pt-6 sm:px-8 sm:pt-8">
-        <ScrollAnimatedElement animation="fade-in" duration={600}>
-          <section className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      {/* At lg and up the greeting stays pinned while the page scrolls, on a band that also
+          keeps the cards from sliding under the language / cart buttons at the top right. The
+          Explore button moves into the overview row there, so nothing sits under those buttons. */}
+      <div className="lg:sticky lg:top-0 lg:z-30 lg:bg-[#f7f9fc]/95 lg:shadow-[0_1px_0_rgba(11,31,77,0.05)] lg:backdrop-blur-md">
+        <div className="mx-auto w-full max-w-[1180px] px-5 pb-1 pt-6 sm:px-8 sm:pt-8 lg:pb-3">
+          <ScrollAnimatedElement animation="fade-in" duration={600}>
+            <section className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="font-manrope text-[11px] font-bold uppercase tracking-[0.16em] text-navy">
                 {t("Your Tajlandia Home")}
@@ -117,14 +120,17 @@ export function DashboardPage() {
             </div>
             <Button
               href="/dashboard/explore"
-              className="font-manrope h-11 shrink-0 cursor-pointer self-start bg-navy px-5 text-[14px] font-medium shadow-[0_8px_24px_rgba(11,31,77,0.12)] hover:bg-navy-deep sm:self-auto"
+              className="font-manrope h-11 shrink-0 cursor-pointer self-start bg-navy px-5 text-[14px] font-medium shadow-[0_8px_24px_rgba(11,31,77,0.12)] hover:bg-navy-deep sm:self-auto lg:hidden"
             >
               {t("Explore Thailand →")}
             </Button>
-          </section>
-        </ScrollAnimatedElement>
+            </section>
+          </ScrollAnimatedElement>
+        </div>
+      </div>
 
-        <ScrollAnimatedElement animation="fade-in-scale" duration={600} className="mt-8">
+      <main className="mx-auto w-full max-w-[1180px] px-5 pb-14 pt-4 sm:px-8 sm:pt-5">
+        <ScrollAnimatedElement animation="fade-in-scale" duration={600}>
           <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <p className="font-manrope text-[11px] font-bold uppercase tracking-[0.16em] text-navy">
@@ -134,10 +140,18 @@ export function DashboardPage() {
                 {t("Your Collection")}
               </h2>
             </div>
-            <p className="font-manrope flex items-center gap-2 text-[13px] font-medium text-navy">
-              <span className="flex h-4 w-4 items-center justify-center rounded-full bg-navy text-[9px] text-white">✓</span>
-              {t("All holdings verified across Thailand")}
-            </p>
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-3">
+              <p className="font-manrope flex items-center gap-2 text-[13px] font-medium text-navy">
+                <span className="flex h-4 w-4 items-center justify-center rounded-full bg-navy text-[9px] text-white">✓</span>
+                {t("All holdings verified across Thailand")}
+              </p>
+              <Button
+                href="/dashboard/explore"
+                className="font-manrope hidden h-11 shrink-0 cursor-pointer bg-navy px-5 text-[14px] font-medium shadow-[0_8px_24px_rgba(11,31,77,0.12)] hover:bg-navy-deep lg:inline-flex"
+              >
+                {t("Explore Thailand →")}
+              </Button>
+            </div>
           </div>
           {dashboard.status === "error" ? (
             <div

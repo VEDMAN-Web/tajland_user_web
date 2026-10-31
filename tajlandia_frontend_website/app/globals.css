@@ -224,6 +224,29 @@ nextjs-portal {
   }
 }
 
+/* Navbar cart badge: pops each time the count changes (DashboardNavbar.tsx). */
+@keyframes badge-pop {
+  0% {
+    transform: scale(0.5);
+  }
+  60% {
+    transform: scale(1.25);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.badge-pop {
+  animation: badge-pop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .badge-pop {
+    animation: none;
+  }
+}
+
 /* How It Works steps (HowItWorksSection.tsx): the icon pops in with a ripple,
    then its text rises. `--step-delay` staggers the steps sharing a row. */
 @keyframes step-pop {

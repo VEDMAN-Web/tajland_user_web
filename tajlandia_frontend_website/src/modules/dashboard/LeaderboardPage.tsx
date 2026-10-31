@@ -125,12 +125,24 @@ function Avatar({
   sizes: string;
   className: string;
 }) {
+  const [failed, setFailed] = useState(false);
   return (
     <span
       aria-hidden="true"
       className={`relative flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-[#dbe7fb] to-[#b9cdf0] font-manrope font-semibold text-navy ${className}`}
     >
-      {image ? <Image src={image} alt="" fill sizes={sizes} className="object-cover" /> : initials(name)}
+      {image && !failed ? (
+        <Image
+          src={image}
+          alt=""
+          fill
+          sizes={sizes}
+          className="object-cover"
+          onError={() => setFailed(true)}
+        />
+      ) : (
+        initials(name)
+      )}
     </span>
   );
 }

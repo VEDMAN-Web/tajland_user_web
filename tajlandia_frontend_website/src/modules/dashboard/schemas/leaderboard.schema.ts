@@ -25,11 +25,11 @@ const leaderboardPlotSchema = z.object({
   plotName: z.string().nullish(),
   image: z.string().nullish(),
   images: z.array(z.string()).nullish(),
-  // Zone type: "ICON", "POPULAR" or "STANDARD".
-  tier: z.string(),
   city: z.string().nullish(),
   province: z.string().nullish(),
-  zone: z.string().nullish(),
+  // Pricing category name, e.g. "Icon", "Popular" or "Standard".
+  zoneCategoryId: z.string().nullish(),
+  zoneCategory: z.string().nullish(),
   sizeRai: z.number().nonnegative(),
   price: z.number().nonnegative(),
   latitude: z.number().nullish(),

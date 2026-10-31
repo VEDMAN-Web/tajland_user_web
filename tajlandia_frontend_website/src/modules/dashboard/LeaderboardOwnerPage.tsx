@@ -159,7 +159,8 @@ function OwnerProfile({
 }) {
   const { user, overview, plots } = profile;
   const name = [user.firstName, user.lastName].filter(Boolean).join(" ").trim() || t("Tajlandia owner");
-  const photo = isAllowedRemoteImage(user.profileImage) ? user.profileImage : null;
+  const [failedPhoto, setFailedPhoto] = useState(false);
+  const photo = isAllowedRemoteImage(user.profileImage) && !failedPhoto ? user.profileImage : null;
   const standing =
     user.rank === null ? t("Not ranked yet") : user.rank === 1 ? t("National Top Tier") : t("Top Owners");
 
@@ -179,7 +180,14 @@ function OwnerProfile({
                 className="relative flex h-full w-full items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-[#dbe7fb] to-[#b9cdf0] font-manrope text-[24px] font-semibold text-navy sm:text-[30px]"
               >
                 {photo ? (
-                  <Image src={photo} alt="" fill sizes="(min-width: 640px) 90px, 70px" className="object-cover" />
+                  <Image
+                    src={photo}
+                    alt=""
+                    fill
+                    sizes="(min-width: 640px) 90px, 70px"
+                    className="object-cover"
+                    onError={() => setFailedPhoto(true)}
+                  />
                 ) : (
                   initials(name)
                 )}
@@ -333,8 +341,8 @@ function PlotCard({
     <OwnedPlotCard
       title={plot.plotName?.trim() || plot.plotCode}
       plotCode={plot.plotCode}
-      tier={plot.tier}
-      location={[place, plot.zone].filter(Boolean).join(" · ")}
+      tier={plot.zoneCategory ?? ""}
+      location={[place, plot.zoneCategory].filter(Boolean).join(" · ")}
       images={images}
       stats={[
         { label: t("Total Rai"), value: `${number.format(plot.sizeRai)} ${t("Rai")}` },

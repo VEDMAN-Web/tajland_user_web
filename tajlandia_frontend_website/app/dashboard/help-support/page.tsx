@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
+import { PageLoader } from "@/components/ui/PageLoader";
 import { createPageMetadata } from "@/lib/seo/metadata";
 import { HelpSupportPage } from "@/modules/dashboard";
 
@@ -10,5 +12,10 @@ export const metadata: Metadata = createPageMetadata({
 });
 
 export default function DashboardHelpSupportRoutePage() {
-  return <HelpSupportPage />;
+  // useSearchParams (the ?ticket= link from a notification) needs a Suspense boundary.
+  return (
+    <Suspense fallback={<PageLoader label="Loading..." />}>
+      <HelpSupportPage />
+    </Suspense>
+  );
 }

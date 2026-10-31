@@ -4,7 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useEffectEvent, useMemo, useRef, useState } from "react";
 import { isAbortError } from "@/lib/api/browser-client";
 import { isApiError } from "@/lib/api/errors";
-import { notifyCartChanged } from "@/lib/cart/cart-events";
+import { applyCartChange } from "@/lib/cart/cart-snapshot";
 import { routes } from "@/lib/constants/routes";
 import { logError } from "@/lib/logging/logger";
 import { useAuth } from "@/lib/hooks/useAuth";
@@ -884,13 +884,18 @@ export function AuthenticatedExploreMapPage() {
   }
 
   // `POST /cart/items` (the backend reserves the plot itself), then mark it in
-  // the list and the open detail, and tell the navbar badge to reload.
+  // the list and the open detail, and show it in the navbar badge and cart progress
+  // at once (the shared cart snapshot then reloads the real numbers).
   async function addToCart(plotId: string) {
     if (addingPlotIds.includes(plotId)) return;
     setAddingPlotIds((ids) => [...ids, plotId]);
     setSearchMessage("");
     try {
       await addPlotToCart(plotId);
+      const added =
+        plots.find((plot) => plot.id === plotId) ??
+        viewportPlots.find((plot) => plot.id === plotId) ??
+        (plotDetail?.status === "ready" && plotDetail.id === plotId ? plotDetail.plot : undefined);
       setPlots((current) =>
         current.map((plot) => (plot.id === plotId ? { ...plot, isInCart: true } : plot)),
       );
@@ -899,7 +904,7 @@ export function AuthenticatedExploreMapPage() {
           ? { ...current, plot: { ...current.plot, isInCart: true } }
           : current,
       );
-      notifyCartChanged();
+      applyCartChange(1, { rai: added?.sizeRai ?? 0, total: added?.totalPrice ?? 0 });
     } catch (error) {
       if (isApiError(error) && error.code === "API_SESSION_EXPIRED") return;
       const notFound = isApiError(error) && error.status === 404;

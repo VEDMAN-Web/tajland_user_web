@@ -142,7 +142,19 @@ type SidebarContentProps = {
   /** The language choice: in the drawer only. At lg and up it sits at the top right. */
   showLanguage?: boolean;
   onNavigate?: () => void;
+  /** Collapses / expands the desktop sidebar; the button shows only when given. */
+  onToggleRail?: () => void;
 };
+
+function SidebarToggleIcon({ collapsed }: { collapsed: boolean }) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-[18px] w-[18px]" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3.5" y="4.5" width="17" height="15" rx="3" />
+      <path d="M9.5 4.5v15" />
+      <path d={collapsed ? "m13.5 9.5 2.5 2.5-2.5 2.5" : "m16 9.5-2.5 2.5 2.5 2.5"} />
+    </svg>
+  );
+}
 
 /**
  * What the dashboard sidebar shows. Shared by the desktop sidebar and the mobile drawer.
@@ -157,6 +169,7 @@ export function SidebarContent({
   showLogo = true,
   showLanguage = false,
   onNavigate,
+  onToggleRail,
 }: SidebarContentProps) {
   const { language, setLanguage, t } = useDashboardLanguage();
 
@@ -182,18 +195,37 @@ export function SidebarContent({
     ) : null;
   const text = (value: string) => (rail ? <span className="sr-only">{value}</span> : <span className="truncate">{value}</span>);
 
+  const toggleLabel = t(rail ? "Expand sidebar" : "Collapse sidebar");
+  const toggleButton = onToggleRail ? (
+    <button
+      type="button"
+      onClick={onToggleRail}
+      aria-label={toggleLabel}
+      aria-expanded={!rail}
+      title={toggleLabel}
+      className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-[10px] text-[#6b7785] outline-none transition-colors hover:bg-[#f4f7fa] hover:text-navy focus-visible:ring-2 focus-visible:ring-navy/40 motion-reduce:transition-none"
+    >
+      <SidebarToggleIcon collapsed={rail} />
+    </button>
+  ) : null;
+
   return (
     <>
       {showLogo ? (
-        <div className="flex h-16 shrink-0 items-center justify-center">
-          {rail ? (
+        rail ? (
+          // Rail: logo, with the expand button under it (no room beside it).
+          <div className="flex shrink-0 flex-col items-center gap-1 pt-3">
             <Link href={routes.dashboard} aria-label={`${brand.name} home`}>
               <Image src={brand.logo.src} alt="" width={brand.logo.width} height={brand.logo.height} priority className="h-auto w-[52px]" />
             </Link>
-          ) : (
+            {toggleButton}
+          </div>
+        ) : (
+          <div className="relative flex h-16 shrink-0 items-center justify-center">
             <BrandLogo compact href={routes.dashboard} />
-          )}
-        </div>
+            {onToggleRail ? <div className="absolute right-3 top-1/2 -translate-y-1/2">{toggleButton}</div> : null}
+          </div>
+        )
       ) : null}
 
       {mode === "account" && account ? (

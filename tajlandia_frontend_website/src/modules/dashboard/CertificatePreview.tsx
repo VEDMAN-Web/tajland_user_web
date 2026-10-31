@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import dynamic from "next/dynamic";
+import { useState } from "react";
 import { certificatePreviewUrl } from "@/lib/config/remote-images";
 import { useDashboardLanguage } from "./DashboardLanguageContext";
 
@@ -41,11 +42,22 @@ export function CertificatePreview({
   sizes: string;
   priority?: boolean;
 }) {
+  const [imageError, setImageError] = useState(false);
   const image = certificatePreviewUrl(url);
   const fallback = <CertificateUnavailable url={isPdfUrl(url) ? url : null} />;
 
-  if (image) {
-    return <Image src={image} alt={alt} fill sizes={sizes} priority={priority} className="object-contain" />;
+  if (image && !imageError) {
+    return (
+      <Image
+        src={image}
+        alt={alt}
+        fill
+        sizes={sizes}
+        priority={priority}
+        className="object-contain"
+        onError={() => setImageError(true)}
+      />
+    );
   }
   if (isPdfUrl(url)) {
     return <CertificatePdf url={url} alt={alt} loading={loadingSkeleton} fallback={fallback} />;

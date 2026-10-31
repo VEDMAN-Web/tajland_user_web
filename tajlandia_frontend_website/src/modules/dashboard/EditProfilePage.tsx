@@ -108,6 +108,7 @@ export function EditProfilePage() {
   }
 
   const selectedCountry = findCountry(values.countryCode);
+  const [avatarFailed, setAvatarFailed] = useState(false);
   const avatarUrl = photoPreview ?? profilePhoto(profile);
 
   function update(field: keyof FormValues, value: string) {
@@ -214,7 +215,7 @@ export function EditProfilePage() {
 
   return (
     <div className="min-h-[100svh] bg-[#f7f9fc] text-navy">
-      <main className="w-full px-5 pb-14 pt-6 sm:px-8 lg:p-0 lg:[&>section]:mx-auto lg:[&>section]:w-full lg:[&>section]:max-w-[1120px] lg:[&>section]:px-10 lg:[&>section]:py-8">
+      <main className="w-full px-5 pb-14 pt-6 sm:px-8 lg:p-0 lg:[&>section]:mx-auto lg:[&>section]:w-full lg:[&>section]:px-10 lg:[&>section]:py-8">
 
         <section className="min-w-0">
           <h1 className="font-manrope text-[28px] font-semibold leading-none tracking-[-0.03em] text-navy sm:text-[32px]">
@@ -249,8 +250,15 @@ export function EditProfilePage() {
                 // A local data URL preview; next/image can't optimise it.
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={photoPreview} alt="" className="h-full w-full object-cover" />
-              ) : avatarUrl ? (
-                <Image src={avatarUrl} alt="" fill sizes="56px" className="object-cover" />
+              ) : avatarUrl && !avatarFailed ? (
+                <Image
+                  src={avatarUrl}
+                  alt=""
+                  fill
+                  sizes="56px"
+                  className="object-cover"
+                  onError={() => setAvatarFailed(true)}
+                />
               ) : (
                 <Image src="/images/dashboard/profile.png" alt="" width={28} height={28} className="h-7 w-7 object-contain" />
               )}

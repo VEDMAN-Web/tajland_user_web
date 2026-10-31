@@ -58,15 +58,16 @@ export function ProfilePage() {
     return <PageLoader label={t("Loading profile...")} />;
   }
 
+  const [photoFailed, setPhotoFailed] = useState(false);
   const profile = state.status === "ready" ? state.profile : null;
   const loading = state.status === "loading";
   const image = profile?.profileImage;
-  const photo = isAllowedRemoteImage(image) ? image : null;
+  const photo = isAllowedRemoteImage(image) && !photoFailed ? image : null;
   const since = memberSince(profile?.createdAt);
 
   return (
     <div className="min-h-[100svh] bg-[#f7f9fc] text-navy">
-      <main className="w-full px-5 pb-14 pt-6 sm:px-8 lg:p-0 lg:[&>section]:mx-auto lg:[&>section]:w-full lg:[&>section]:max-w-[1120px] lg:[&>section]:px-10 lg:[&>section]:py-8">
+      <main className="w-full px-5 pb-14 pt-6 sm:px-8 lg:p-0 lg:[&>section]:mx-auto lg:[&>section]:w-full lg:[&>section]:px-10 lg:[&>section]:py-8">
 
         <section className="min-w-0">
           <h1 className="font-manrope text-[28px] font-semibold leading-none tracking-[-0.03em] text-navy sm:text-[32px]">
@@ -100,7 +101,14 @@ export function ProfilePage() {
               <div className="relative h-14 w-14 shrink-0">
                 <div className="relative flex h-14 w-14 items-center justify-center overflow-hidden rounded-full bg-[#e8eef5]">
                   {photo ? (
-                    <Image src={photo} alt="" fill sizes="56px" className="object-cover" />
+                    <Image
+                      src={photo}
+                      alt=""
+                      fill
+                      sizes="56px"
+                      className="object-cover"
+                      onError={() => setPhotoFailed(true)}
+                    />
                   ) : (
                     <Image src="/images/dashboard/profile.png" alt="" width={28} height={28} className="h-7 w-7 object-contain" />
                   )}

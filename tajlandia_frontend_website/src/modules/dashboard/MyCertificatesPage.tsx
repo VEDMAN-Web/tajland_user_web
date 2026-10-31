@@ -32,8 +32,8 @@ type CertificatesState =
     }
   | { status: "error" };
 
-// Three cards per row on wide screens.
-const PAGE_SIZE = 9;
+// Four cards per row on wide screens; 12 divides evenly by 1, 2, 3, and 4.
+const PAGE_SIZE = 12;
 
 const SORT_QUERY: Record<SortOption, Pick<CertificateListQuery, "sortBy" | "sortOrder">> = {
   recommended: { sortBy: "createdAt", sortOrder: "desc" },
@@ -80,6 +80,17 @@ function DownloadGlyph() {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true" className="h-3.5 w-3.5">
       <path d="M12 4v10m0 0 3.2-3.2M12 14 8.8 10.8M5 18.5h14" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.7" />
+    </svg>
+  );
+}
+
+function GiftGlyph() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-3 w-3 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="8" width="18" height="4" rx="1" />
+      <path d="M12 8v13" />
+      <path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7" />
+      <path d="M7.5 8a2.5 2.5 0 0 1 0-5A4.8 4.8 0 0 1 12 8a4.8 4.8 0 0 1 4.5-5 2.5 2.5 0 0 1 0 5" />
     </svg>
   );
 }
@@ -162,6 +173,7 @@ export function MyCertificatesPage() {
   if (isLoading || !isAuthenticated) return <PageLoader label={t("Loading certificates...")} />;
 
   const filtersActive = !showMyCertificates || !showGifted;
+  const sortActive = sort !== "recommended";
   // With neither box ticked nothing is fetched, so the list is simply empty.
   const status = nothingSelected ? "ready" : state.status;
   const certificates = state.status === "ready" && !nothingSelected ? state.certificates : [];
@@ -226,7 +238,7 @@ export function MyCertificatesPage() {
 
   return (
     <div className="min-h-[100svh] bg-[#f7f9fc] text-navy">
-      <main className="w-full px-5 pb-14 pt-6 sm:px-8 lg:p-0 lg:[&>section]:mx-auto lg:[&>section]:w-full lg:[&>section]:max-w-[1120px] lg:[&>section]:px-10 lg:[&>section]:py-8">
+      <main className="w-full px-5 pb-14 pt-6 sm:px-8 lg:p-0 lg:[&>section]:mx-auto lg:[&>section]:w-full lg:[&>section]:px-10 lg:[&>section]:py-8">
         <section className="min-w-0">
           <h1 className="font-manrope text-[28px] font-semibold leading-none tracking-[-0.03em] text-navy sm:text-[32px]">
             {t("My Certificates")}
@@ -236,7 +248,16 @@ export function MyCertificatesPage() {
           </p>
           <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
             <h2 className="font-manrope text-[16px] font-semibold text-navy">{t("All Certificates")}</h2>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              {filtersActive || sortActive ? (
+                <button
+                  type="button"
+                  onClick={() => applyQuery({ sort: "recommended", myCertificates: true, gifted: true })}
+                  className="inline-flex h-9 cursor-pointer items-center rounded-[10px] border border-[#f1c7c7] bg-white px-3 font-manrope text-[12px] font-medium text-[#d64242] hover:bg-[#fdeeee]"
+                >
+                  {t("Clear All")}
+                </button>
+              ) : null}
               <button
                 type="button"
                 onClick={openFilter}
@@ -247,6 +268,11 @@ export function MyCertificatesPage() {
               >
                 <FilterGlyph />
                 {t("Filter")}
+                {filtersActive ? (
+                  <span className="flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-navy px-1 text-[10px] font-semibold leading-none text-white">
+                    1
+                  </span>
+                ) : null}
               </button>
               <button
                 type="button"
@@ -262,11 +288,11 @@ export function MyCertificatesPage() {
             </div>
           </div>
           {status === "loading" ? (
-            <div aria-busy="true" className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            <div aria-busy="true" className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               <span className="sr-only" role="status">
                 {t("Loading certificates...")}
               </span>
-              {[0, 1, 2].map((key) => (
+              {[0, 1, 2, 3].map((key) => (
                 <div
                   key={key}
                   aria-hidden="true"
@@ -291,7 +317,7 @@ export function MyCertificatesPage() {
             </div>
           ) : certificates.length ? (
             <>
-              <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {certificates.map((certificate) => (
                   <CertificateCard key={certificate.orderId} certificate={certificate} />
                 ))}
@@ -546,6 +572,7 @@ function CertificateCard({ certificate }: { certificate: CertificateListItem }) 
   const [downloading, setDownloading] = useState(false);
   const [failed, setFailed] = useState(false);
   const issued = formatIssued(certificate.createdAt);
+  const isGift = certificate.purchaseType === "GIFT";
 
   async function download() {
     if (downloading) return;
@@ -561,20 +588,27 @@ function CertificateCard({ certificate }: { certificate: CertificateListItem }) 
   }
 
   return (
-    <article className="rounded-[16px] border border-[#eef1f4] bg-white px-4 pb-4 pt-5 shadow-[0_10px_28px_rgba(11,31,77,0.06)]">
+    <article
+      className={`relative rounded-[16px] px-4 pb-4 pt-5 transition-all duration-200 ${
+        isGift
+          ? "border-2 border-[#f5b838] bg-white shadow-[0_4px_16px_rgba(11,31,77,0.05)] hover:shadow-[0_8px_22px_rgba(11,31,77,0.09)]"
+          : "border border-[#eef1f4] bg-white shadow-[0_4px_16px_rgba(11,31,77,0.05)] hover:shadow-[0_8px_22px_rgba(11,31,77,0.09)]"
+      }`}
+    >
       <div className="relative mx-auto aspect-[616/898] w-[68%] max-w-[210px]">
         <CertificatePreview
           url={certificate.certificateUrl}
           alt={`${t("Certificate ID")}: ${certificate.certificateNo}`}
-          sizes="210px"
+          sizes="(min-width: 1280px) 25vw, (min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
         />
       </div>
       <div className="mt-4 flex items-center justify-between gap-2">
-        <p className="min-w-0 font-manrope text-[12px] leading-4 text-[#8b939e]">
+        <p className="min-w-0 truncate font-manrope text-[12px] leading-4 text-[#8b939e]">
           {t("Generated on")} {issued}
         </p>
-        {certificate.purchaseType === "GIFT" ? (
-          <span className="shrink-0 rounded-full bg-[#fff7e6] px-2.5 py-0.5 font-manrope text-[11px] font-semibold text-[#b7791f]">
+        {isGift ? (
+          <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-[#f5b838]/40 bg-[#fff7e6] px-2.5 py-0.5 font-manrope text-[11px] font-semibold text-[#b7791f]">
+            <GiftGlyph />
             {t("Gifted")}
           </span>
         ) : (
@@ -586,10 +620,10 @@ function CertificateCard({ certificate }: { certificate: CertificateListItem }) 
       <h3 className="mt-1 break-all font-manrope text-[14px] font-semibold leading-5 text-[#1a1a1a]">
         {t("Certificate ID")}: <strong className="font-bold">{certificate.certificateNo}</strong>
       </h3>
-      <div className="mt-4 grid grid-cols-2 gap-2.5">
+      <div className="mt-4 grid grid-cols-2 gap-2">
         <Link
           href={`${routes.certificates}/${encodeURIComponent(certificate.orderId)}`}
-          className="flex h-11 cursor-pointer items-center justify-center rounded-[12px] bg-navy font-manrope text-[13px] font-medium text-white"
+          className="flex h-10 cursor-pointer items-center justify-center rounded-[10px] bg-navy px-2 font-manrope text-[13px] font-medium text-white transition-colors hover:bg-navy-deep"
         >
           {t("View →")}
         </Link>
@@ -598,10 +632,10 @@ function CertificateCard({ certificate }: { certificate: CertificateListItem }) 
           onClick={download}
           disabled={downloading}
           aria-busy={downloading}
-          className="inline-flex h-11 cursor-pointer items-center justify-center gap-1.5 rounded-[12px] border border-[#e6ebf0] bg-[#f7f9fc] font-manrope text-[13px] font-medium text-navy disabled:cursor-wait disabled:opacity-60"
+          className="inline-flex h-10 cursor-pointer items-center justify-center gap-1.5 rounded-[10px] border border-[#e6ebf0] bg-[#f7f9fc] px-2 font-manrope text-[13px] font-medium text-navy transition-colors hover:bg-[#eef2f7] disabled:cursor-wait disabled:opacity-60"
         >
           <DownloadGlyph />
-          {downloading ? t("Downloading...") : t("Download")}
+          <span className="truncate">{downloading ? t("Downloading...") : t("Download")}</span>
         </button>
       </div>
       {failed ? <CertificateDownloadFailedDialog onRetry={download} onClose={() => setFailed(false)} /> : null}

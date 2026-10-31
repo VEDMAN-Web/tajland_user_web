@@ -122,7 +122,7 @@ export function PlotCard({
 }: PlotCardProps) {
   const status = plotCardStatus(plot.status, plot.isOwned, plot.isInCart);
   const badge = STATUS_BADGE[status];
-  const tier = plot.zone?.tier;
+  const tier = plot.zoneCategory?.type;
   const plotName = plot.plotName?.trim() || plot.name;
   const theme = tier ? TIER_THEME[tier.toLowerCase()] : undefined;
 

@@ -17,8 +17,9 @@ const landPlotSchema = z.object({
   plotName: z.string().nullish(),
   imageUrl: z.string().nullish(),
   images: z.array(z.string()).nullish(),
-  zone: z.string(),
-  zoneName: z.string().nullish(),
+  // Pricing category name, e.g. "Icon", "Popular" or "Standard".
+  zoneCategoryId: z.string().nullish(),
+  zoneCategory: z.string().nullish(),
   region: z.string(),
   city: z.string().nullish(),
   rai: z.number().nonnegative(),
