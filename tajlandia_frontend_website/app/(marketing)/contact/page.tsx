@@ -1,14 +1,16 @@
 import type { Metadata } from "next";
 import { ContactPage } from "@/modules/contact";
-import { createPageMetadata } from "@/lib/seo/metadata";
+import { getPageMetadata } from "@/lib/seo/metadata";
 import { routes } from "@/lib/constants/routes";
 
-export const metadata: Metadata = createPageMetadata({
-  title: "Contact",
-  description: "Get in touch with the Tajlandia team.",
-  path: routes.contact,
-  index: false,
-});
+export async function generateMetadata(): Promise<Metadata> {
+  return getPageMetadata({
+    title: "Contact",
+    description:
+      "Questions about Tajlandia, your certificate or a gift? Send the Tajlandia team a message and we will get back to you.",
+    path: routes.contact,
+  });
+}
 
 export default function Page() {
   return <ContactPage />;

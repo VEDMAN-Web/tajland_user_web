@@ -2,12 +2,15 @@ import { Button } from "@/components/ui/Button";
 import { Container } from "@/components/ui/Container";
 import { ScrollDirectionalReveal } from "@/components/animations/ScrollDirectionalReveal";
 import { routes } from "@/lib/constants/routes";
+import type { Locale } from "@/lib/i18n/locale";
+import { homeStrings } from "../data/home.strings";
 import { CertificateReveal } from "../components/CertificateReveal";
 import { HomeMedia } from "../components/HomeMedia";
 import type { HomePageContent } from "../types/home.types";
 
 type TestimonialsSectionProps = {
   content: HomePageContent["testimonials"];
+  locale?: Locale;
 };
 
 function splitKeepsakeHeading(headingBefore: string) {
@@ -20,7 +23,7 @@ function splitKeepsakeHeading(headingBefore: string) {
   return { lead: words.join(" "), bridge };
 }
 
-export function TestimonialsSection({ content }: TestimonialsSectionProps) {
+export function TestimonialsSection({ content, locale = "en" }: TestimonialsSectionProps) {
   const [featured] = content.items;
 
   if (!featured) {
@@ -36,7 +39,7 @@ export function TestimonialsSection({ content }: TestimonialsSectionProps) {
           <div className="min-w-0 lg:py-6">
             <ScrollDirectionalReveal reverseDelay={300}>
               <p className="font-[family-name:var(--font-playfair-display)] text-[18px] font-semibold leading-none text-navy sm:text-[20px]">
-                {content.eyebrow} <span className="italic text-brand-red">Keepsake</span>
+                {content.eyebrow} <span className="italic text-brand-red">{homeStrings[locale].keepsakeAccent}</span>
               </p>
             </ScrollDirectionalReveal>
             <ScrollDirectionalReveal delay={150} reverseDelay={200}>

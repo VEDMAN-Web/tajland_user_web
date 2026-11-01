@@ -2,12 +2,15 @@
 
 import { Button } from "@/components/ui/Button";
 import { Container } from "@/components/ui/Container";
+import type { Locale } from "@/lib/i18n/locale";
+import { homeStrings } from "../data/home.strings";
 import { useInViewReplay } from "@/lib/hooks/useInViewReplay";
 import { useZoomInOut } from "../components/useZoomInOut";
 import type { HomePageContent } from "../types/home.types";
 
 type CtaSectionProps = {
   content: HomePageContent["cta"];
+  locale?: Locale;
 };
 
 /** Stagger slot for the text reveal (see `.cta-reveal` in globals.css). */
@@ -15,7 +18,8 @@ function reveal(index: number) {
   return { "--reveal-i": index } as React.CSSProperties;
 }
 
-export function CtaSection({ content }: CtaSectionProps) {
+export function CtaSection({ content, locale = "en" }: CtaSectionProps) {
+  const strings = homeStrings[locale];
   const zoomRef = useZoomInOut<HTMLDivElement>();
   // Text waits until most of the card is in view, so it follows the zoom-in.
   const { ref: revealRef, inView } = useInViewReplay<HTMLDivElement>(0.5);
@@ -38,7 +42,7 @@ export function CtaSection({ content }: CtaSectionProps) {
                   {content.title}
                 </span>
                 <span className="cta-reveal block italic" style={reveal(1)}>
-                  Thailand is waiting.
+                  {strings.ctaTagline}
                 </span>
               </h2>
               <p className="cta-reveal mt-4 text-[16px] text-white/90" style={reveal(2)}>
@@ -56,7 +60,7 @@ export function CtaSection({ content }: CtaSectionProps) {
                 </div>
               ) : null}
               <p className="cta-reveal mt-5 text-[15px] text-white/90" style={reveal(4)}>
-                No spam. Just important news and good news.
+                {strings.ctaNoSpam}
               </p>
             </div>
           </div>

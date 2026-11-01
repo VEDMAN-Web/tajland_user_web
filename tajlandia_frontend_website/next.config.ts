@@ -27,6 +27,26 @@ const nextConfig: NextConfig = {
         : []),
     ],
   },
+  async rewrites() {
+    // Polish pages live under /pl but are served by the same routes. proxy.ts
+    // tags those requests with x-locale: pl. Only public pages are listed, so
+    // /pl/dashboard and the like stay 404.
+    return {
+      beforeFiles: [
+        // `/blog/{id}` where the id can't be an article (ids are 24-hex Mongo ids,
+        // same as `isBlogId` in the blog module). The blog page streams behind a
+        // loading screen, so its own `notFound()` can only send a 200; no route
+        // matches this destination, so Next renders app/not-found.tsx with a 404.
+        { source: "/blog/:blogId((?![a-fA-F0-9]{24}$)[^/]+)", destination: "/_not-found-page" },
+        { source: "/pl/blog/:blogId((?![a-fA-F0-9]{24}$)[^/]+)", destination: "/_not-found-page" },
+        { source: "/pl", destination: "/" },
+        { source: "/pl/:page(explore|blog|contact|faq|terms|privacy)", destination: "/:page" },
+        { source: "/pl/blog/:blogId", destination: "/blog/:blogId" },
+      ],
+      afterFiles: [],
+      fallback: [],
+    };
+  },
   async headers() {
     return [
       {

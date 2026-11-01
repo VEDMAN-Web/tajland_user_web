@@ -46,4 +46,20 @@ describe("home service", () => {
       "explore",
     ]);
   });
+
+  it("serves a schema-valid Polish home page with the same structure", async () => {
+    const english = await getHomePageContent("en");
+    const polish = await getHomePageContent("pl");
+
+    expect(polish.hero.titleAccent).toBe("Tajlandii.");
+    expect(polish.hero.story?.map((item) => item.id)).toEqual(
+      english.hero.story?.map((item) => item.id),
+    );
+    expect(polish.features.items.map((item) => [item.id, item.href])).toEqual(
+      english.features.items.map((item) => [item.id, item.href]),
+    );
+    expect(polish.howItWorks.steps).toHaveLength(english.howItWorks.steps.length);
+    // Real land-ownership wording must not leak into the Polish copy.
+    expect(JSON.stringify(polish)).not.toMatch(/własno[śs]ć|nieruchomo/i);
+  });
 });
