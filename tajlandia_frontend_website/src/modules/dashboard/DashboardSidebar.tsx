@@ -2,10 +2,8 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { BrandLogo } from "@/components/ui/BrandLogo";
-import { useCartSnapshot } from "@/lib/cart/cart-snapshot";
 import { brand } from "@/lib/constants/brand";
 import { routes } from "@/lib/constants/routes";
 import { AccountMenu, LogoutButton, MenuIcon, REFERRAL_ICON, type AccountKey } from "./AccountMenu";
@@ -253,8 +251,6 @@ export function SidebarContent({
   onToggleRail,
 }: SidebarContentProps) {
   const { t } = useDashboardLanguage();
-  const pathname = usePathname();
-  const cartCount = useCartSnapshot()?.count ?? 0;
 
   const links = [
     { href: routes.dashboard, label: t("Home"), isActive: active === "home", icon: <HomeIcon /> },
@@ -286,7 +282,7 @@ export function SidebarContent({
         {text}
       </span>
     ) : null;
-  const text = (value: string) => (rail ? <span className="sr-only">{value}</span> : <span className="truncate">{value}</span>);
+  const text = (value: string) => (rail ? <span className="sr-only">{value}</span> : <span className="truncate py-0.5 leading-tight">{value}</span>);
 
   const toggleLabel = t(rail ? "Expand sidebar" : "Collapse sidebar");
   const toggleButton = onToggleRail ? (
@@ -304,8 +300,6 @@ export function SidebarContent({
 
   // The drawer ends with it. At lg and up the language button is at the top right.
   const languagePicker = showLanguage ? <SidebarLanguageDropdown openUp /> : null;
-  // The desktop sidebar is the one with the logo row; the drawer draws its own.
-  const inSidebar = showLogo;
 
   return (
     <>
@@ -362,33 +356,9 @@ export function SidebarContent({
             ))}
           </nav>
 
-          {/* My Cart (desktop sidebar only: below lg the top bar has the cart), then the account
-              pages. The language choice is at the top right at lg and up, in the drawer below lg. */}
+          {/* The account pages. Cart and language are at the top right at lg and up; below lg
+              the top bar has the cart and the drawer has the language. */}
           <div className="mx-3 mt-3 grid gap-1 border-t border-[#edf0f3] pt-3">
-            {inSidebar ? (
-              <Link
-                href={routes.cart}
-                aria-current={pathname === routes.cart ? "page" : undefined}
-                aria-label={rail ? t("My Cart") : undefined}
-                className={`${itemBase} ${itemShape} ${pathname === routes.cart ? "bg-navy text-white" : "text-[#4b5563] hover:bg-[#f4f7fa] hover:text-navy"}`}
-              >
-                <img
-                  src="/images/dashboard/navbar/cart-default.png"
-                  alt=""
-                  className={`h-5 w-5 shrink-0 object-contain ${pathname === routes.cart ? "brightness-0 invert" : ""}`}
-                />
-                {text(t("My Cart"))}
-                {cartCount > 0 ? (
-                  <span
-                    aria-label={`${cartCount}`}
-                    className={`flex items-center justify-center rounded-full bg-[#e11d2e] font-manrope font-semibold text-white ${rail ? "absolute right-2 top-1.5 h-4 min-w-4 px-1 text-[10px]" : "ml-auto h-5 min-w-5 px-1.5 text-[11px]"}`}
-                  >
-                    {cartCount}
-                  </span>
-                ) : null}
-                {tooltip(t("My Cart"))}
-              </Link>
-            ) : null}
             {accountLinks.map((link) => (
               <Link
                 key={link.href}
