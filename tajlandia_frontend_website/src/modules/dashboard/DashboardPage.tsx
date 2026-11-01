@@ -27,7 +27,8 @@ function splitMoney(amount: number, currency: string) {
     const parts = new Intl.NumberFormat("en-US", {
       style: "currency",
       currency,
-      minimumFractionDigits: 0,
+      // "$13.20", not "$13.2"; whole amounts stay "$13".
+      minimumFractionDigits: Number.isInteger(amount) ? 0 : 2,
       maximumFractionDigits: 2,
     }).formatToParts(amount);
     return {
