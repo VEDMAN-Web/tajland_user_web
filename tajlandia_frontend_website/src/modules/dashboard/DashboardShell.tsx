@@ -3,7 +3,7 @@
 import { usePathname } from "next/navigation";
 import { useState, useSyncExternalStore } from "react";
 import { routes } from "@/lib/constants/routes";
-import type { AccountKey } from "./AccountMenu";
+import { MAIN_MENU_ACCOUNT_PAGES, type AccountKey } from "./AccountMenu";
 import { AccountBreadcrumb } from "./AccountBreadcrumb";
 import { DashboardNavbar } from "./DashboardNavbar";
 import { DashboardSidebar, type NavbarActive } from "./DashboardSidebar";
@@ -47,12 +47,16 @@ function subscribeRailChoice(onChange: () => void) {
 
 const isPath =(pathname: string, base: string) => pathname === base || pathname.startsWith(`${base}/`);
 
-/** Which sidebar link is current. Account / cart pages highlight none of them. */
+/** Which sidebar link is current. Profile-menu / cart pages highlight none of them. */
 function navbarActive(pathname: string): NavbarActive {
   if (pathname === routes.dashboard) return "home";
   if (isPath(pathname, routes.dashboardExplore)) return "explore";
   if (isPath(pathname, routes.leaderboard)) return "leaderboard";
   if (isPath(pathname, routes.land)) return "my-land";
+  if (isPath(pathname, routes.purchases)) return "purchases";
+  if (isPath(pathname, routes.certificates)) return "certificates";
+  if (isPath(pathname, routes.referral)) return "referral";
+  if (isPath(pathname, routes.settings)) return "settings";
   return "none";
 }
 
@@ -83,12 +87,15 @@ function accountKey(pathname: string): AccountKey | null {
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname() ?? "";
   const active = navbarActive(pathname);
+  // `account`: the page uses the account page frame (breadcrumb, background).
+  // `menuAccount`: the sidebar shows the Profile menu instead of the main links.
   const account = accountKey(pathname);
+  const menuAccount = account && !MAIN_MENU_ACCOUNT_PAGES.has(account) ? account : null;
   const overlay = active === "explore";
   // The user's saved choice from the sidebar's toggle applies to the normal pages (full
   // sidebar until they pick the rail). Explore Map ignores it: the map needs the room, so
   // every time it is opened the sidebar starts as a rail, and the toggle there only lasts
-  // for that visit. The account menu has no rail form, so account pages always show the
+  // for that visit. The Profile menu has no rail form, so its pages always show the
   // full sidebar.
   const railChoice = useSyncExternalStore(subscribeRailChoice, readRailChoice, () => null);
   const [exploreExpanded, setExploreExpanded] = useState(false);
@@ -98,7 +105,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     setWasOverlay(overlay);
     setExploreExpanded(false);
   }
-  const rail = !account && (overlay ? !exploreExpanded : (railChoice ?? false));
+  const rail = !menuAccount && (overlay ? !exploreExpanded : (railChoice ?? false));
   function toggleRail() {
     if (overlay) setExploreExpanded(rail);
     else writeRailChoice(!rail);
@@ -114,13 +121,13 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="relative">
       <DashboardSidebar
-        mode={account ? "account" : "main"}
+        mode={menuAccount ? "account" : "main"}
         active={active}
-        account={account}
+        account={menuAccount}
         rail={rail}
-        onToggleRail={account ? undefined : toggleRail}
+        onToggleRail={menuAccount ? undefined : toggleRail}
       />
-      <DashboardNavbar active={active} account={account} overlay={overlay} />
+      <DashboardNavbar active={active} account={menuAccount} overlay={overlay} />
       <div
         className={`lg:transition-[padding-left] lg:duration-300 motion-reduce:lg:transition-none ${rail ? "lg:pl-[76px]" : "lg:pl-[220px]"}`}
       >

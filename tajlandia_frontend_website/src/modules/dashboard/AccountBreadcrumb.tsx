@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { routes } from "@/lib/constants/routes";
-import type { AccountKey } from "./AccountMenu";
+import { MAIN_MENU_ACCOUNT_PAGES, type AccountKey } from "./AccountMenu";
 import { useDashboardLanguage } from "./DashboardLanguageContext";
 
 const PAGE: Record<AccountKey, { label: string; href: string }> = {
@@ -18,8 +18,8 @@ const PAGE: Record<AccountKey, { label: string; href: string }> = {
 };
 
 /**
- * Where an account page sits: Home / Profile / the page (/ a page inside it, such as Edit
- * Profile or an order). lg and up only, in the empty band above the page heading; below lg
+ * Where an account page sits: Home / Profile / the page, or Home / the page for the ones in
+ * the main menu (/ a page inside it, such as Edit Profile or an order). lg and up only, in the empty band above the page heading; below lg
  * the top bar, the drawer and the page's own heading already say where you are.
  *
  * It stays at the top while the page scrolls. The sticky wrapper has no height, so the page
@@ -29,10 +29,9 @@ const PAGE: Record<AccountKey, { label: string; href: string }> = {
 export function AccountBreadcrumb({ account, pathname }: { account: AccountKey; pathname: string }) {
   const { t } = useDashboardLanguage();
 
-  const trail: { label: string; href: string }[] = [
-    { label: "Home", href: routes.dashboard },
-    PAGE.profile,
-  ];
+  // Pages linked from the main menu sit directly under Home; the rest under Profile.
+  const trail: { label: string; href: string }[] = [{ label: "Home", href: routes.dashboard }];
+  if (!MAIN_MENU_ACCOUNT_PAGES.has(account)) trail.push(PAGE.profile);
   if (account !== "profile") trail.push(PAGE[account]);
   if (pathname.startsWith(`${routes.editProfile}`)) {
     trail.push({ label: "Edit Profile", href: routes.editProfile });

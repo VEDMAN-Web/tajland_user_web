@@ -8,10 +8,19 @@ import { BrandLogo } from "@/components/ui/BrandLogo";
 import { useCartSnapshot } from "@/lib/cart/cart-snapshot";
 import { brand } from "@/lib/constants/brand";
 import { routes } from "@/lib/constants/routes";
-import { AccountMenu, LogoutButton, type AccountKey } from "./AccountMenu";
+import { AccountMenu, LogoutButton, MenuIcon, REFERRAL_ICON, type AccountKey } from "./AccountMenu";
 import { useDashboardLanguage } from "./DashboardLanguageContext";
 
-export type NavbarActive = "home" | "explore" | "leaderboard" | "my-land" | "none";
+export type NavbarActive =
+  | "home"
+  | "explore"
+  | "leaderboard"
+  | "my-land"
+  | "purchases"
+  | "certificates"
+  | "referral"
+  | "settings"
+  | "none";
 
 export const LANGUAGE_OPTIONS = [
   { code: "EN", label: "English", flag: "/images/dashboard/en-flag.svg" },
@@ -243,7 +252,7 @@ export function SidebarContent({
   onNavigate,
   onToggleRail,
 }: SidebarContentProps) {
-  const { language, setLanguage, t } = useDashboardLanguage();
+  const { t } = useDashboardLanguage();
   const pathname = usePathname();
   const cartCount = useCartSnapshot()?.count ?? 0;
 
@@ -254,8 +263,18 @@ export function SidebarContent({
     { href: routes.land, label: t("My Land"), isActive: active === "my-land", icon: <LandIcon /> },
   ];
 
+  // Under My Cart: the account pages people use most, moved out of the Profile menu.
+  const accountLinks = [
+    { href: routes.purchases, label: t("My Purchases"), isActive: active === "purchases", icon: "/images/dashboard/account-menu/purchases.png" },
+    { href: routes.certificates, label: t("My Certificates"), isActive: active === "certificates", icon: "/images/dashboard/account-menu/certificates.png" },
+    { href: routes.referral, label: t("Refer & Earn"), isActive: active === "referral", icon: REFERRAL_ICON },
+    { href: routes.settings, label: t("Settings"), isActive: active === "settings", icon: "/images/dashboard/account-menu/settings.png" },
+  ];
+
+  // Short screens (laptops ~670px tall): slightly shorter rows so the icon rail, which
+  // cannot scroll, still fits down to Logout.
   const itemBase =
-    "group relative flex h-11 items-center rounded-[12px] font-manrope text-[14px] font-medium leading-none outline-none transition-colors focus-visible:ring-2 focus-visible:ring-navy/40 motion-reduce:transition-none";
+    "group relative flex h-11 [@media(max-height:760px)]:h-9 items-center rounded-[12px] font-manrope text-[14px] font-medium leading-none outline-none transition-colors focus-visible:ring-2 focus-visible:ring-navy/40 motion-reduce:transition-none";
   const itemShape = rail ? "justify-center" : "gap-3 px-3";
   // Rail: a label bubble to the right of the icon on hover / focus.
   const tooltip = (text: string) =>
@@ -283,8 +302,7 @@ export function SidebarContent({
     </button>
   ) : null;
 
-  // The drawer ends with it. The desktop sidebar shows it under the links (below), and also
-  // has the language button at the top right.
+  // The drawer ends with it. At lg and up the language button is at the top right.
   const languagePicker = showLanguage ? <SidebarLanguageDropdown openUp /> : null;
   // The desktop sidebar is the one with the logo row; the drawer draws its own.
   const inSidebar = showLogo;
@@ -344,9 +362,10 @@ export function SidebarContent({
             ))}
           </nav>
 
-          {/* Desktop sidebar: Cart and Language, so they are in reach in the empty space too. */}
-          {inSidebar ? (
-            <div className="mx-3 mt-3 border-t border-[#edf0f3] pt-3">
+          {/* My Cart (desktop sidebar only: below lg the top bar has the cart), then the account
+              pages. The language choice is at the top right at lg and up, in the drawer below lg. */}
+          <div className="mx-3 mt-3 grid gap-1 border-t border-[#edf0f3] pt-3">
+            {inSidebar ? (
               <Link
                 href={routes.cart}
                 aria-current={pathname === routes.cart ? "page" : undefined}
@@ -369,9 +388,22 @@ export function SidebarContent({
                 ) : null}
                 {tooltip(t("My Cart"))}
               </Link>
-              {rail ? null : <SidebarLanguageDropdown />}
-            </div>
-          ) : null}
+            ) : null}
+            {accountLinks.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                onClick={onNavigate}
+                aria-current={link.isActive ? "page" : undefined}
+                aria-label={rail ? link.label : undefined}
+                className={`${itemBase} ${itemShape} ${link.isActive ? "bg-navy text-white" : "text-[#4b5563] hover:bg-[#f4f7fa] hover:text-navy"}`}
+              >
+                <MenuIcon src={link.icon} active={link.isActive} />
+                {text(link.label)}
+                {tooltip(link.label)}
+              </Link>
+            ))}
+          </div>
 
           <div className="relative mt-auto border-t border-[#edf0f3] px-3 pb-4 pt-3">
             <Link

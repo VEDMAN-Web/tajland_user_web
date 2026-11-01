@@ -97,11 +97,7 @@ export function DashboardNavbar({ active, account = null, overlay = false }: Das
     routes.profile,
     routes.editProfile,
     routes.changePassword,
-    routes.purchases,
-    routes.certificates,
-    routes.settings,
     routes.helpSupport,
-    routes.referral,
     routes.dashboardTerms,
     routes.dashboardPrivacy,
   ];
