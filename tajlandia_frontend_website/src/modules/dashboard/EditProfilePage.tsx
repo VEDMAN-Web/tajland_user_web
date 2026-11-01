@@ -61,6 +61,8 @@ export function EditProfilePage() {
   const [formError, setFormError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  // Hooks must run before the loading return below, or React crashes once the profile loads.
+  const [avatarFailed, setAvatarFailed] = useState(false);
   const profile = profileState.status === "ready" ? profileState.profile : null;
 
   useEffect(() => {
@@ -108,7 +110,6 @@ export function EditProfilePage() {
   }
 
   const selectedCountry = findCountry(values.countryCode);
-  const [avatarFailed, setAvatarFailed] = useState(false);
   const avatarUrl = photoPreview ?? profilePhoto(profile);
 
   function update(field: keyof FormValues, value: string) {
