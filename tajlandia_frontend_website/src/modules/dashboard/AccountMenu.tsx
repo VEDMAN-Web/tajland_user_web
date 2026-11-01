@@ -11,9 +11,9 @@ import { useDashboardLanguage } from "./DashboardLanguageContext";
 import { logoutFromApi } from "./services/logout.client";
 
 // Icon for "Refer & Earn", drawn inline (it takes the link's text colour) instead of a PNG.
-const REFERRAL_ICON = "svg:referral";
+export const REFERRAL_ICON = "svg:referral";
 
-function MenuIcon({ src, active = false }: { src: string; active?: boolean }) {
+export function MenuIcon({ src, active = false }: { src: string; active?: boolean }) {
   if (src === REFERRAL_ICON) {
     return (
       <span aria-hidden="true" className="flex h-5 w-5 items-center justify-center">
@@ -49,6 +49,9 @@ export type AccountKey =
   | "referral"
   | "terms"
   | "privacy";
+
+/** Account pages linked from the main menu (under My Cart) rather than the Profile menu. */
+export const MAIN_MENU_ACCOUNT_PAGES: ReadonlySet<AccountKey> = new Set(["purchases", "certificates", "referral", "settings"]);
 
 /** A button that opens the "Log Out of Tajlandia?" confirmation and signs the user out. */
 export function LogoutButton({
@@ -154,7 +157,10 @@ export function LogoutButton({
   );
 }
 
-/** The vertical account list, rendered inside the dashboard sidebar and the mobile drawer. */
+/**
+ * The vertical account list, rendered inside the dashboard sidebar and the mobile drawer.
+ * My Purchases, My Certificates, Refer & Earn and Settings are in the main menu instead.
+ */
 export function AccountMenu({
   active,
   onNavigate,
@@ -175,30 +181,6 @@ export function AccountMenu({
       icon: "/images/dashboard/account-menu/change-password.png",
       href: routes.changePassword,
       key: "password" as const,
-    },
-    {
-      label: t("My Purchases"),
-      icon: "/images/dashboard/account-menu/purchases.png",
-      href: routes.purchases,
-      key: "purchases" as const,
-    },
-    {
-      label: t("My Certificates"),
-      icon: "/images/dashboard/account-menu/certificates.png",
-      href: routes.certificates,
-      key: "certificates" as const,
-    },
-    {
-      label: t("Refer & Earn"),
-      icon: REFERRAL_ICON,
-      href: routes.referral,
-      key: "referral" as const,
-    },
-    {
-      label: t("Settings"),
-      icon: "/images/dashboard/account-menu/settings.png",
-      href: routes.settings,
-      key: "settings" as const,
     },
     {
       label: t("Help & Support"),
