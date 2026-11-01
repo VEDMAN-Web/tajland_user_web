@@ -444,7 +444,9 @@ export function DashboardSidebar(props: Omit<SidebarContentProps, "showLogo" | "
   return (
     <aside
       className={`fixed inset-y-0 left-0 z-40 hidden flex-col border-r border-[#e6eaf3] bg-white transition-[width] duration-300 motion-reduce:transition-none lg:flex ${
-        rail ? "w-[76px]" : "w-[220px] overflow-y-auto"
+        // The rail does not scroll so its hover labels can show beside it; on very short
+        // screens it scrolls instead (labels hidden there) so every link stays reachable.
+        rail ? "w-[76px] [@media(max-height:600px)]:overflow-x-hidden [@media(max-height:600px)]:overflow-y-auto" : "w-[220px] overflow-y-auto"
       }`}
     >
       <SidebarContent {...props} />
