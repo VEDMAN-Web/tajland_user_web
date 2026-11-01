@@ -62,7 +62,10 @@ export type RequestOtpActionResult =
   | { ok: true }
   | { ok: false; message: string };
 
-export async function requestOtpAction(email: string): Promise<RequestOtpActionResult> {
+// Tells the backend which email to send (verify email vs reset password). Omitted means signup.
+export type OtpPurpose = "forgot-password";
+
+export async function requestOtpAction(email: string, purpose?: OtpPurpose): Promise<RequestOtpActionResult> {
   if (!email) {
     return { ok: false, message: "Please enter a valid email address." };
   }
@@ -70,7 +73,7 @@ export async function requestOtpAction(email: string): Promise<RequestOtpActionR
   try {
     const response = await apiPost(
       "/auth/request-otp",
-      { email: email.trim() },
+      { email: email.trim(), ...(purpose ? { purpose } : {}) },
       requestOtpResponseSchema,
       { timeoutMs: 20_000 },
     );
@@ -147,7 +150,7 @@ export async function completeSignupWithOtpAction(
   }
 }
 
-export async function resendOtpAction(email: string): Promise<ResendOtpActionResult> {
+export async function resendOtpAction(email: string, purpose?: OtpPurpose): Promise<ResendOtpActionResult> {
   if (!email) {
     return { ok: false, message: "Please enter a valid email address." };
   }
@@ -155,7 +158,7 @@ export async function resendOtpAction(email: string): Promise<ResendOtpActionRes
   try {
     const response = await apiPost(
       "/auth/resend-otp",
-      { email: email.trim() },
+      { email: email.trim(), ...(purpose ? { purpose } : {}) },
       requestOtpResponseSchema,
       { timeoutMs: 20_000 },
     );

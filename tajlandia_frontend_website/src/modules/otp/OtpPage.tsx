@@ -188,7 +188,7 @@ function OtpPageContent() {
     setIsResending(true);
 
     try {
-      const actionResult = await resendOtpAction(email);
+      const actionResult = await resendOtpAction(email, mode === "reset-password" ? "forgot-password" : undefined);
 
       if (actionResult.ok) {
         // The old code is invalid now, so clear the boxes for the new one

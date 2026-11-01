@@ -16,7 +16,7 @@ export async function requestPasswordResetOtpAction(
     return { ok: false, message: parsed.error.issues[0]?.message ?? "Please check all required fields." };
   }
 
-  const otpResult = await requestOtpAction(parsed.data.email);
+  const otpResult = await requestOtpAction(parsed.data.email, "forgot-password");
 
   if (!otpResult.ok) {
     return otpResult;

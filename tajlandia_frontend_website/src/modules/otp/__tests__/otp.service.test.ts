@@ -50,4 +50,32 @@ describe("otp service rate limiting", () => {
       message: "Unable to resend OTP right now. Please try again.",
     });
   });
+
+  it("sends the forgot-password purpose only when asked, so signup emails stay the same", async () => {
+    apiPost.mockResolvedValue({ success: true });
+
+    await requestOtpAction(" user@example.com ");
+    expect(apiPost).toHaveBeenLastCalledWith(
+      "/auth/request-otp",
+      { email: "user@example.com" },
+      expect.anything(),
+      expect.anything(),
+    );
+
+    await requestOtpAction("user@example.com", "forgot-password");
+    expect(apiPost).toHaveBeenLastCalledWith(
+      "/auth/request-otp",
+      { email: "user@example.com", purpose: "forgot-password" },
+      expect.anything(),
+      expect.anything(),
+    );
+
+    await resendOtpAction("user@example.com", "forgot-password");
+    expect(apiPost).toHaveBeenLastCalledWith(
+      "/auth/resend-otp",
+      { email: "user@example.com", purpose: "forgot-password" },
+      expect.anything(),
+      expect.anything(),
+    );
+  });
 });
