@@ -1024,6 +1024,8 @@ const translations: Record<string, Record<Exclude<DashboardLanguage, "EN">, stri
   "Edit Profile": { PL: "Edytuj profil", TH: "แก้ไขโปรไฟล์" },
   "Order Details": { PL: "Szczegóły zamówienia", TH: "รายละเอียดคำสั่งซื้อ" },
   "Breadcrumb": { PL: "Ścieżka nawigacji", TH: "เส้นทางนำทาง" },
+  Checkout: { PL: "Płatność", TH: "ชำระเงิน" },
+  Owner: { PL: "Właściciel", TH: "เจ้าของ" },
   "I agree to the": { PL: "Akceptuję", TH: "ฉันยอมรับ" },
   and: { PL: "oraz", TH: "และ" },
   "Please complete all required fields.": { PL: "Uzupełnij wszystkie wymagane pola.", TH: "กรุณากรอกข้อมูลที่จำเป็นให้ครบ" },

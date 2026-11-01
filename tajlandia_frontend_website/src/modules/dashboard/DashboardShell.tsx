@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 import { useState, useSyncExternalStore } from "react";
 import { routes } from "@/lib/constants/routes";
 import { MAIN_MENU_ACCOUNT_PAGES, type AccountKey } from "./AccountMenu";
-import { AccountBreadcrumb } from "./AccountBreadcrumb";
+import { DashboardTopBar } from "./DashboardTopBar";
 import { DashboardNavbar } from "./DashboardNavbar";
 import { DashboardSidebar, type NavbarActive } from "./DashboardSidebar";
 
@@ -110,13 +110,12 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     if (overlay) setExploreExpanded(rail);
     else writeRailChoice(!rail);
   }
-  // Pages size themselves to the full viewport; below the top bar (h-16 + 1px border) that is
-  // 65px less, at lg and up there is no bar. Written out in full so Tailwind sees the class.
-  // At lg and up each page also starts 32px down. Pages add their own 24-32px on top, so a
-  // right-aligned header button lands at about 64px, just below the language + cart buttons
-  // floating at the top right (they end at 60px). Kept small so there's no empty band above.
+  // Pages size themselves to the full viewport; below the phone top bar (h-16 + 1px border)
+  // that is 65px less. Written out in full so Tailwind sees the class.
+  // At lg and up every page starts below the 76px top bar (DashboardTopBar); pages add their
+  // own 24-32px, so titles sit the same distance below the bar's line on every page.
   // The padding is on the page's own root, so its background still reaches the top.
-  const fillViewport = "[&>*]:min-h-[calc(100svh-65px)] lg:[&>*]:min-h-svh lg:[&>*]:pt-8";
+  const fillViewport = "[&>*]:min-h-[calc(100svh-65px)] lg:[&>*]:min-h-svh lg:[&>*]:pt-[76px]";
 
   return (
     <div className="relative">
@@ -133,12 +132,19 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
       >
         {account ? (
           <div className="relative bg-[#f7f9fc] pt-[65px] lg:pt-0">
-            <AccountBreadcrumb account={account} pathname={pathname} />
+            <DashboardTopBar account={account} pathname={pathname} />
             <div className={`min-w-0 ${fillViewport}`}>{children}</div>
           </div>
         ) : (
           // The Explore Map sits under the top bar (the bar floats over it).
-          <div className={overlay ? undefined : `pt-[65px] lg:pt-0 ${fillViewport}`}>{children}</div>
+          overlay ? (
+            <div>{children}</div>
+          ) : (
+            <div className="pt-[65px] lg:pt-0">
+              <DashboardTopBar account={null} pathname={pathname} />
+              <div className={`min-w-0 ${fillViewport}`}>{children}</div>
+            </div>
+          )
         )}
       </div>
     </div>
