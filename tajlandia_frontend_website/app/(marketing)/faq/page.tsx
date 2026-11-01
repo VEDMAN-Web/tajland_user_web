@@ -1,12 +1,18 @@
 import type { Metadata } from "next";
-import { createPageMetadata } from "@/lib/seo/metadata";
+import { headers } from "next/headers";
+import { JsonLd } from "@/components/shared/JsonLd";
+import { createFaqJsonLd } from "@/lib/seo/json-ld";
+import { getPageMetadata } from "@/lib/seo/metadata";
 import { FAQPage, fetchFaqs, type FaqItem } from "@/modules/faq";
 
-export const metadata: Metadata = createPageMetadata({
-  title: "FAQ",
-  description: "Frequently asked questions about Tajlandia.",
-  path: "/faq",
-});
+export async function generateMetadata(): Promise<Metadata> {
+  return getPageMetadata({
+    title: "FAQ",
+    description:
+      "Answers to common questions about Tajlandia: how plots, certificates, payments and gifting work.",
+    path: "/faq",
+  });
+}
 
 export default async function FAQRoute() {
   let faqs: FaqItem[] | null = null;
@@ -17,5 +23,13 @@ export default async function FAQRoute() {
     // The page shows a retry message instead.
   }
 
-  return <FAQPage faqs={faqs} />;
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
+  const faqJsonLd = faqs ? createFaqJsonLd(faqs.map(({ question, answer }) => ({ question, answer }))) : null;
+
+  return (
+    <>
+      {faqJsonLd ? <JsonLd data={faqJsonLd} nonce={nonce} /> : null}
+      <FAQPage faqs={faqs} />
+    </>
+  );
 }

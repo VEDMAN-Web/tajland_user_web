@@ -6,6 +6,8 @@ import { useInViewReplay } from "@/lib/hooks/useInViewReplay";
 import { cn } from "@/lib/utils/cn";
 import type { HomePageContent } from "../types/home.types";
 import { useEffect, useRef, useState } from "react";
+import type { Locale } from "@/lib/i18n/locale";
+import { homeStrings } from "../data/home.strings";
 import {
   heldProgress,
   lineScrollProgress,
@@ -94,10 +96,12 @@ function HowItWorksStep({ step, index, label, active, lineRevealed }: HowItWorks
 
 type HowItWorksSectionProps = {
   content: HomePageContent["howItWorks"];
+  locale?: Locale;
 };
 
-export function HowItWorksSection({ content }: HowItWorksSectionProps) {
-  const stepLabels = ["EXPLORE", "CHOOSE", "CLAIM", "CERTIFICATE"];
+export function HowItWorksSection({ content, locale = "en" }: HowItWorksSectionProps) {
+  const strings = homeStrings[locale];
+  const stepLabels = strings.stepLabels;
   const [activeStep, setActiveStep] = useState(0);
   // null until we know the layout; then whether the line drives the steps.
   const [lineDriven, setLineDriven] = useState<boolean | null>(null);
@@ -221,9 +225,9 @@ export function HowItWorksSection({ content }: HowItWorksSectionProps) {
           </ScrollDirectionalReveal>
           <ScrollDirectionalReveal delay={150} reverseDelay={0}>
             <p className="mx-auto mt-3 max-w-[34rem] font-[family-name:var(--font-manrope)] text-[16px] font-normal leading-[1.5] text-[#8a99aa] sm:text-[17px]">
-              A seamless process to acquire and showcase
+              {strings.howItWorksSubtitle[0]}
               <br />
-              your digital collectible.
+              {strings.howItWorksSubtitle[1]}
             </p>
           </ScrollDirectionalReveal>
         </div>

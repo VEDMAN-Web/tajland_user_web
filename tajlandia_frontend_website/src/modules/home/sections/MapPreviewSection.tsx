@@ -3,12 +3,15 @@ import type { MapRegion } from "@/components/maps/MapboxMap";
 import { Container } from "@/components/ui/Container";
 import { ScrollAnimatedElement } from "@/components/animations/ScrollAnimatedElement";
 import { ScrollDirectionalReveal } from "@/components/animations/ScrollDirectionalReveal";
+import type { Locale } from "@/lib/i18n/locale";
+import { homeStrings } from "../data/home.strings";
 import { ThailandMap } from "../components/ThailandMap";
 import type { HomePageContent } from "../types/home.types";
 
 type MapPreviewSectionProps = {
   content: HomePageContent["map"];
   regions?: MapRegion[];
+  locale?: Locale;
 };
 
 const descriptionBreakAfter = "resonates";
@@ -25,13 +28,15 @@ function mapDescriptionLines(description: string) {
   );
 }
 
-export function MapPreviewSection({ content, regions = [] }: MapPreviewSectionProps) {
-  const headingLead = content.headingBefore.replace(/\s+experience$/, "");
-  const description =
-    content.description ??
-    "Explore the map, discover a place that resonates with you, and claim its story as your own.";
+export function MapPreviewSection({ content, regions = [], locale = "en" }: MapPreviewSectionProps) {
+  const strings = homeStrings[locale];
+  // The last word of the heading ("experience") sits on its own line before the accent.
+  const headingWords = content.headingBefore.trim().split(/\s+/);
+  const headingLastWord = headingWords.length > 1 ? (headingWords.pop() ?? "") : "";
+  const headingLead = headingWords.join(" ");
+  const description = content.description ?? strings.mapDescription;
   const descriptionLines = mapDescriptionLines(description);
-  const map = <ThailandMap pins={content.pins} regions={regions} />;
+  const map = <ThailandMap pins={content.pins} regions={regions} locale={locale} />;
 
   return (
     <section id="map" className="bg-white py-[60px]">
@@ -39,12 +44,12 @@ export function MapPreviewSection({ content, regions = [] }: MapPreviewSectionPr
         <div className="mb-12 grid items-end gap-6 lg:mb-14 lg:grid-cols-[minmax(0,1.05fr)_minmax(16rem,0.72fr)] lg:gap-16">
           <ScrollDirectionalReveal reverseDelay={150}>
             <p className="mb-3 font-[family-name:var(--font-playfair-display)] text-[16px] text-navy sm:mb-4 sm:text-[18px]">
-              What you <span className="italic text-brand-red">Receive</span>
+              {strings.mapEyebrow[0]} <span className="italic text-brand-red">{strings.mapEyebrow[1]}</span>
             </p>
             <h2 className="max-w-[640px] font-[family-name:var(--font-playfair-display)] text-[40px] font-semibold leading-[1.02] tracking-[-0.03em] text-navy sm:text-[52px] lg:text-[58px]">
               {headingLead}
               <br />
-              experience{" "}
+              {headingLastWord}{" "}
               <span className="italic text-brand-red">{content.headingAccent}.</span>
               {content.headingAfter ? ` ${content.headingAfter}` : null}
             </h2>
