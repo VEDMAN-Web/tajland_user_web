@@ -33,6 +33,8 @@ export function ProfilePage() {
   const { t } = useDashboardLanguage();
   const [state, setState] = useState<ProfileState>({ status: "loading" });
   const [reloadKey, setReloadKey] = useState(0);
+  // Hooks must run before the loading return below, or React crashes once sign-in resolves.
+  const [photoFailed, setPhotoFailed] = useState(false);
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) router.replace(routes.login);
@@ -58,7 +60,6 @@ export function ProfilePage() {
     return <PageLoader label={t("Loading profile...")} />;
   }
 
-  const [photoFailed, setPhotoFailed] = useState(false);
   const profile = state.status === "ready" ? state.profile : null;
   const loading = state.status === "loading";
   const image = profile?.profileImage;
