@@ -107,15 +107,15 @@ export function DashboardPage() {
           keeps the cards from sliding under the language / cart buttons at the top right. The
           Explore button moves into the overview row there, so nothing sits under those buttons. */}
       <div className="lg:sticky lg:top-0 lg:z-30 lg:bg-[#f7f9fc]/95 lg:shadow-[0_1px_0_rgba(11,31,77,0.05)] lg:backdrop-blur-md">
-        <div className="mx-auto w-full max-w-[1180px] px-5 pb-1 pt-6 sm:px-8 sm:pt-8 lg:pb-3">
+        <div className="mx-auto w-full max-w-[1180px] px-5 pb-1 pt-6 sm:px-8 sm:pt-6 lg:pb-3">
           <ScrollAnimatedElement animation="fade-in" duration={600}>
             <section className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="font-manrope text-[11px] font-bold uppercase tracking-[0.16em] text-navy">
                 {t("Your Tajlandia Home")}
               </p>
-              <h1 className="font-manrope mt-2 text-[28px] font-semibold leading-[1.15] tracking-[-0.03em] text-[#1a1a1a] sm:text-[32px]">
-                {t("Welcome back,")} {firstName}
+              <h1 className="font-manrope mt-2 text-[28px] font-semibold leading-[1.15] tracking-[-0.03em] text-[#1a1a1a] sm:mt-2 sm:text-[28px]">
+                {t(user?.isFirstLogin ? "Welcome," : "Welcome back,")} {firstName}
                 <span aria-hidden="true" className="ml-1.5 inline-block translate-y-[-1px] text-[0.62em] text-brand-red">◆</span>
               </h1>
             </div>
@@ -137,7 +137,7 @@ export function DashboardPage() {
               <p className="font-manrope text-[11px] font-bold uppercase tracking-[0.16em] text-navy">
                 {t("Ownership Overview")}
               </p>
-              <h2 className="font-manrope mt-1.5 text-[22px] font-semibold tracking-[-0.02em] text-[#1a1a1a] sm:text-[24px]">
+              <h2 className="font-manrope mt-1.5 text-[22px] font-semibold tracking-[-0.02em] text-[#1a1a1a] sm:mt-2 sm:text-[21px]">
                 {t("Your Collection")}
               </h2>
             </div>
@@ -148,7 +148,7 @@ export function DashboardPage() {
               </p>
               <Button
                 href="/dashboard/explore"
-                className="font-manrope hidden h-11 shrink-0 cursor-pointer bg-navy px-5 text-[14px] font-medium shadow-[0_8px_24px_rgba(11,31,77,0.12)] hover:bg-navy-deep lg:inline-flex"
+                className="font-manrope hidden h-11 shrink-0 cursor-pointer bg-navy px-5 text-[14px] font-medium shadow-[0_8px_24px_rgba(11,31,77,0.12)] hover:bg-navy-deep lg:inline-flex lg:h-10 lg:text-[13px]"
               >
                 {t("Explore Thailand →")}
               </Button>
@@ -219,7 +219,7 @@ export function DashboardPage() {
         <section className="mt-5">
           {/* Hidden only when the API turns gifting off. */}
           {data?.gift?.enabled === false ? null : (
-          <div className="relative overflow-hidden rounded-[22px] border border-[#f3c3c3] bg-[#fff8f8] px-5 py-6 sm:px-8 sm:py-7 lg:px-10">
+          <div className="relative overflow-hidden rounded-[22px] border border-[#f3c3c3] bg-[#fff8f8] px-5 py-6 sm:px-8 sm:py-5 lg:px-10">
             <span aria-hidden="true" className="gift-shine pointer-events-none absolute inset-y-0 left-0 z-20 w-[18%] bg-linear-to-r from-transparent via-white/70 to-transparent" />
             <Image
               src="/images/dashboard/gift-ribbon.png"
@@ -233,10 +233,10 @@ export function DashboardPage() {
                 <p className="font-manrope text-[11px] font-bold uppercase tracking-[0.16em] text-brand-red">
                   {t("Give a Little Piece")}
                 </p>
-                <h2 className="font-manrope mt-2 text-[22px] font-semibold leading-tight tracking-[-0.02em] text-[#1a1a1a] sm:text-[26px]">
+                <h2 className="font-manrope mt-2 text-[22px] font-semibold leading-tight tracking-[-0.02em] text-[#1a1a1a] sm:text-[23px]">
                   {t("Give a Little Piece of Thailand")}
                 </h2>
-                <p className="font-manrope mt-2 text-[13px] font-normal leading-5 text-[#8b939e] sm:text-[14px] sm:leading-6">
+                <p className="font-manrope mt-2 text-[13px] font-normal leading-5 text-[#8b939e] sm:text-[13px] sm:leading-5">
                   <span className="block">{t("Share a place worth remembering. Gift a Tajlandia plot to someone")}</span>
                   <span className="block">{t("special and let them build their own collection.")}</span>
                 </p>
@@ -244,7 +244,7 @@ export function DashboardPage() {
               <div className="flex flex-col items-start gap-4 lg:items-end lg:self-stretch lg:justify-between lg:py-1">
                 <Button
                   href="/dashboard/explore"
-                  className="font-manrope h-11 cursor-pointer bg-brand-red px-5 text-[14px] font-medium shadow-[0_8px_24px_rgba(11,31,77,0.12)] hover:bg-[#a81818]"
+                  className="font-manrope h-11 cursor-pointer bg-brand-red px-5 text-[14px] font-medium sm:h-10 sm:text-[13px] shadow-[0_8px_24px_rgba(11,31,77,0.12)] hover:bg-[#a81818]"
                 >
                   {t("Gift a plot")} →
                 </Button>
@@ -265,7 +265,7 @@ export function DashboardPage() {
                 <p className="font-manrope text-[11px] font-bold uppercase tracking-[0.16em] text-brand-red">
                   {t("Your Land Archive")}
                 </p>
-                <h2 className="font-manrope mt-1.5 text-[22px] font-semibold tracking-[-0.02em] text-navy sm:text-[24px]">
+                <h2 className="font-manrope mt-1.5 text-[22px] sm:mt-2 font-semibold tracking-[-0.02em] text-navy sm:text-[21px]">
                   {t("Explore Thailand")}
                 </h2>
               </div>
@@ -308,7 +308,7 @@ function Stat({
   return (
     <Link
       href={href}
-      className="group relative block h-[132px] overflow-hidden rounded-[16px] border border-[#e7edf3] bg-white px-4 py-4 shadow-[0_8px_24px_rgba(11,31,77,0.05)] outline-none transition-[transform,border-color,box-shadow] duration-300 ease-out hover:-translate-y-1 hover:border-[#e11d2e] hover:shadow-[0_18px_40px_-12px_rgba(225,29,46,0.35)] focus-visible:-translate-y-1 focus-visible:border-[#e11d2e] focus-visible:ring-4 focus-visible:ring-[#e11d2e]/15 active:translate-y-0 active:scale-[0.99] motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:focus-visible:translate-y-0"
+      className="group relative block h-[132px] overflow-hidden rounded-[16px] border border-[#e7edf3] bg-white px-4 py-4 sm:h-[116px] sm:py-3.5 shadow-[0_8px_24px_rgba(11,31,77,0.05)] outline-none transition-[transform,border-color,box-shadow] duration-300 ease-out hover:-translate-y-1 hover:border-[#e11d2e] hover:shadow-[0_18px_40px_-12px_rgba(225,29,46,0.35)] focus-visible:-translate-y-1 focus-visible:border-[#e11d2e] focus-visible:ring-4 focus-visible:ring-[#e11d2e]/15 active:translate-y-0 active:scale-[0.99] motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:focus-visible:translate-y-0"
     >
       <span
         aria-hidden="true"
@@ -342,14 +342,14 @@ function Stat({
           alt=""
           width={38}
           height={38}
-          className="h-[38px] w-[38px] transition-transform duration-300 ease-out group-hover:-rotate-6 group-hover:scale-110 group-focus-visible:scale-110 motion-reduce:transition-none motion-reduce:group-hover:rotate-0 motion-reduce:group-hover:scale-100"
+          className="h-[38px] w-[38px] sm:h-8 sm:w-8 transition-transform duration-300 ease-out group-hover:-rotate-6 group-hover:scale-110 group-focus-visible:scale-110 motion-reduce:transition-none motion-reduce:group-hover:rotate-0 motion-reduce:group-hover:scale-100"
         />
-        <p className="font-manrope mt-3 text-[26px] font-bold leading-none tracking-[-0.03em] text-[#1a1a1a]">
+        <p className="font-manrope mt-3 text-[26px] font-bold leading-none tracking-[-0.03em] text-[#1a1a1a] sm:mt-2 sm:text-[24px]">
           {prefix ? <span className="text-[0.72em]">{prefix}</span> : null}
           {value}
           {suffix ? <span className="ml-1 text-[13px] font-semibold tracking-normal">{suffix}</span> : null}
         </p>
-        <p className="font-manrope mt-2 text-[13px] font-medium text-[#8b939e] transition-colors duration-300 group-hover:text-[#e11d2e] group-focus-visible:text-[#e11d2e]">
+        <p className="font-manrope mt-2 text-[13px] font-medium text-[#8b939e] sm:mt-1.5 sm:text-[12px] transition-colors duration-300 group-hover:text-[#e11d2e] group-focus-visible:text-[#e11d2e]">
           {label}
         </p>
       </div>
@@ -365,11 +365,11 @@ function StatSkeleton() {
   return (
     <div
       aria-hidden="true"
-      className="h-[132px] rounded-[16px] border border-[#e7edf3] bg-white px-4 py-4 shadow-[0_8px_24px_rgba(11,31,77,0.05)]"
+      className="h-[132px] rounded-[16px] border border-[#e7edf3] bg-white px-4 py-4 sm:h-[116px] sm:py-3.5 shadow-[0_8px_24px_rgba(11,31,77,0.05)]"
     >
-      <span className={`${bone} block h-[38px] w-[38px] rounded-full`} />
-      <span className={`${bone} mt-3 block h-[26px] w-24`} />
-      <span className={`${bone} mt-2 block h-3.5 w-28`} />
+      <span className={`${bone} block h-[38px] w-[38px] rounded-full sm:h-8 sm:w-8`} />
+      <span className={`${bone} mt-3 block h-[26px] w-24 sm:mt-2 sm:h-6`} />
+      <span className={`${bone} mt-2 block h-3.5 w-28 sm:mt-1.5`} />
     </div>
   );
 }

@@ -15,6 +15,9 @@ import {
   SUPPORT_SUBJECT_MAX_LENGTH,
   type SupportTicket,
 } from "./schemas/help-support.schema";
+import { openOnboarding } from "./OnboardingTour";
+import { startTutorial } from "./tutorial/tutorial-store";
+import { TUTORIALS } from "./tutorial/tutorials";
 import { createSupportTicket, getSupportTickets } from "./services/help-support.client";
 import {
   formatSupportDate,
@@ -198,6 +201,33 @@ export function HelpSupportPage() {
                   </h1>
                   <p className="font-manrope mt-2 text-[14px] leading-5 text-[#8b939e]">{t("Need help? We're here for you.")}</p>
                 </div>
+                <div className="flex w-full flex-wrap items-center gap-3 sm:w-auto sm:shrink-0 lg:mt-[52px]">
+                {/* Guided tutorials: the tour walks through the real screens, click by click. */}
+                {TUTORIALS.map((tutorial) => (
+                  <button
+                    key={tutorial.id}
+                    type="button"
+                    title={t(tutorial.description)}
+                    onClick={() => {
+                      // The first step points at the sidebar's Explore Map, which Home shows.
+                      startTutorial(tutorial.id);
+                      router.push(routes.dashboard);
+                    }}
+                    className="inline-flex h-11 shrink-0 cursor-pointer items-center justify-center gap-2 rounded-full border border-[#d5deea] bg-white px-5 font-manrope text-[14px] font-medium leading-none text-navy transition hover:bg-[#f5f7fb]"
+                  >
+                    <svg viewBox="0 0 16 16" aria-hidden="true" className="h-3.5 w-3.5">
+                      <path d="M4.5 2.8v10.4L13 8 4.5 2.8Z" fill="currentColor" />
+                    </svg>
+                    {t(tutorial.title)}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  onClick={openOnboarding}
+                  className="inline-flex h-11 shrink-0 cursor-pointer items-center justify-center rounded-full border border-[#d5deea] bg-white px-5 font-manrope text-[14px] font-medium leading-none text-navy transition hover:bg-[#f5f7fb]"
+                >
+                  {t("Take the tour")}
+                </button>
                 <button
                   type="button"
                   aria-expanded={showForm}
@@ -205,13 +235,14 @@ export function HelpSupportPage() {
                     setShowForm((open) => !open);
                     setSent(false);
                   }}
-                  className="inline-flex h-11 shrink-0 cursor-pointer items-center justify-center gap-2 rounded-full bg-navy px-5 font-manrope text-[14px] lg:mt-[52px] font-medium leading-none text-white transition hover:bg-navy-deep"
+                  className="inline-flex h-11 shrink-0 cursor-pointer items-center justify-center gap-2 rounded-full bg-navy px-5 font-manrope text-[14px] font-medium leading-none text-white transition hover:bg-navy-deep"
                 >
                   <svg viewBox="0 0 16 16" aria-hidden="true" className={`h-3.5 w-3.5 transition-transform ${showForm ? "rotate-45" : ""}`}>
                     <path d="M8 3v10M3 8h10" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
                   </svg>
                   {t("New Ticket")}
                 </button>
+                </div>
               </div>
 
               {sent ? (
@@ -322,7 +353,7 @@ export function HelpSupportPage() {
                   <div
                     role="group"
                     aria-label={t("Status")}
-                    className="-mx-5 flex gap-2 overflow-x-auto px-5 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 sm:pb-0"
+                    className="-mx-5 flex gap-2 overflow-x-auto px-5 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 sm:pb-0"
                   >
                     {STATUS_FILTERS.map((option) => (
                       <button

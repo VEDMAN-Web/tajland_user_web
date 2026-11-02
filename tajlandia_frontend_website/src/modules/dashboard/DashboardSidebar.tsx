@@ -2,10 +2,12 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { BrandLogo } from "@/components/ui/BrandLogo";
 import { brand } from "@/lib/constants/brand";
 import { routes } from "@/lib/constants/routes";
+import { requestExploreReset } from "@/lib/explore/explore-signals";
 import { AccountMenu, LogoutButton, MenuIcon, REFERRAL_ICON, type AccountKey } from "./AccountMenu";
 import { useDashboardLanguage } from "./DashboardLanguageContext";
 
@@ -251,6 +253,7 @@ export function SidebarContent({
   onToggleRail,
 }: SidebarContentProps) {
   const { t } = useDashboardLanguage();
+  const router = useRouter();
 
   const links = [
     { href: routes.dashboard, label: t("Home"), isActive: active === "home", icon: <HomeIcon /> },
@@ -344,7 +347,16 @@ export function SidebarContent({
               <Link
                 key={link.href}
                 href={link.href}
-                onClick={onNavigate}
+                data-tour={link.href === routes.dashboardExplore ? "nav-explore" : undefined}
+                onClick={(event) => {
+                  // Explore Map again while on it: start over instead of doing nothing.
+                  if (link.href === routes.dashboardExplore && link.isActive) {
+                    event.preventDefault();
+                    router.replace(routes.dashboardExplore);
+                    requestExploreReset();
+                  }
+                  onNavigate?.();
+                }}
                 aria-current={link.isActive ? "page" : undefined}
                 aria-label={rail ? link.label : undefined}
                 className={`${itemBase} ${itemShape} ${link.isActive ? "bg-navy text-white" : "text-[#4b5563] hover:bg-[#f4f7fa] hover:text-navy"}`}

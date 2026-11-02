@@ -5,6 +5,7 @@ import { useEffect, useEffectEvent, useMemo, useRef, useState } from "react";
 import { isAbortError } from "@/lib/api/browser-client";
 import { isApiError } from "@/lib/api/errors";
 import { applyCartChange } from "@/lib/cart/cart-snapshot";
+import { EXPLORE_RESET_EVENT } from "@/lib/explore/explore-signals";
 import { routes } from "@/lib/constants/routes";
 import { logError } from "@/lib/logging/logger";
 import { useAuth } from "@/lib/hooks/useAuth";
@@ -13,6 +14,7 @@ import {
   type MapboxMapHandle,
   type MapboxMapStatus,
   type MapPlot,
+  type MapPlotHover,
   type MapRegion,
   type MapView,
 } from "@/components/maps/MapboxMap";
@@ -29,12 +31,15 @@ import {
   PlotDetailSkeleton,
 } from "./components/PlotDetailPanel";
 import { RecentSearchRow } from "./components/RecentSearchRow";
+import { SearchPlotRow } from "./components/SearchPlotRow";
 import { SearchResultRow } from "./components/SearchResultRow";
 import { SortPlotsPanel } from "./components/SortPlotsPanel";
+import { clearExploreState, loadExploreState, saveExploreState } from "./explore-session";
 import { DEFAULT_PLOT_FILTERS, toPlotFilterQuery } from "./constants/explore-filters";
 import { OWNED_PLOT_FILL, PLOT_STATUS_COLORS, plotColor } from "./constants/plot-status";
 import {
   addPlotToCart,
+  removePlotFromCart,
   clearRecentSearches,
   deleteRecentSearch,
   getExploreMap,
@@ -53,6 +58,7 @@ import {
   getSortOptions,
   searchPlaces,
   type PlotScope,
+  type SaveRecentSearchInput,
 } from "./services/explore-map.client";
 import type {
   FilterOptions,
@@ -64,6 +70,8 @@ import type {
   ExplorePlotDetail,
   MapBounds,
   RecentSearch,
+  SearchHit,
+  SearchPlotResult,
   SearchResult,
   SearchSuggestion,
 } from "./types/explore-map.types";
@@ -115,8 +123,55 @@ function polygonBounds(plot: Pick<ExplorePlot, "geometry">): MapBounds | null {
   };
 }
 
-// From sm up the list is a 340px panel over the left of the map.
-const PANEL_WIDTH = 340;
+type ArrowKey = "ArrowLeft" | "ArrowRight" | "ArrowUp" | "ArrowDown";
+
+function isArrowKey(key: string): key is ArrowKey {
+  return key === "ArrowLeft" || key === "ArrowRight" || key === "ArrowUp" || key === "ArrowDown";
+}
+
+/**
+ * The closest plot from `from` in the arrow's direction. Plots within 45° of the direction
+ * come first; with none there, any plot on that side. Longitude is scaled to match latitude.
+ */
+function nearestPlotInDirection(
+  from: ExplorePlot,
+  plots: ExplorePlot[],
+  key: ArrowKey,
+): ExplorePlot | null {
+  const lngScale = Math.cos((from.coordinates.lat * Math.PI) / 180);
+  let nearestInCone: { plot: ExplorePlot; distance: number } | null = null;
+  let nearestOnSide: { plot: ExplorePlot; distance: number } | null = null;
+
+  for (const plot of plots) {
+    if (plot.id === from.id) continue;
+    // East and north are positive.
+    const dx = (plot.coordinates.lng - from.coordinates.lng) * lngScale;
+    const dy = plot.coordinates.lat - from.coordinates.lat;
+    const along =
+      key === "ArrowRight" ? dx : key === "ArrowLeft" ? -dx : key === "ArrowUp" ? dy : -dy;
+    const across = key === "ArrowLeft" || key === "ArrowRight" ? dy : dx;
+    if (along <= 0) continue;
+    const distance = Math.hypot(dx, dy);
+    if (Math.abs(across) <= along && (!nearestInCone || distance < nearestInCone.distance)) {
+      nearestInCone = { plot, distance };
+    }
+    if (!nearestOnSide || distance < nearestOnSide.distance) nearestOnSide = { plot, distance };
+  }
+  return (nearestInCone ?? nearestOnSide)?.plot ?? null;
+}
+
+// Hover card above a plot name: the list card (340 x 164: panel 364 minus padding), drawn a
+// little smaller. The sizes below are what shows on screen.
+const HOVER_CARD_SCALE = 0.85;
+const HOVER_CARD_WIDTH = Math.round(340 * HOVER_CARD_SCALE);
+const HOVER_CARD_HEIGHT = Math.round(164 * HOVER_CARD_SCALE);
+// Space between the plot name under the cursor and the card (clears the name's pill).
+const HOVER_CARD_GAP = 20;
+// How long the card stays after the cursor leaves the name (time to move onto the card).
+const HOVER_CARD_HIDE_MS = 300;
+
+// From sm up the list is a 364px panel over the left of the map.
+const PANEL_WIDTH = 364;
 
 function isSmUp() {
   return window.matchMedia("(min-width: 640px)").matches;
@@ -188,6 +243,11 @@ function toMapPlot(plot: ExplorePlot): MapPlot {
     priority: plot.isOwned ? 0 : plot.status === "AVAILABLE" ? 1 : plot.status === "LOCKED" ? 2 : 3,
     fill: plot.isOwned ? OWNED_PLOT_FILL : undefined,
   };
+}
+
+/** A search hit that is a plot (it has no coordinates, unlike a region or city). */
+function isPlotHit(hit: SearchHit): hit is SearchPlotResult {
+  return hit.type === "plot";
 }
 
 /** The rest of the suggestion after what was typed, or "" if it doesn't start with it. */
@@ -274,7 +334,37 @@ const LOCATION_NOTICES = {
   },
 } as const;
 
+/**
+ * Choosing Explore Map again while it is open (sidebar) starts it over, like a tab re-tap:
+ * the page remounts (no plot, search, filters or zoom left) once the URL has no
+ * `regionId` / `plotId` params, which the page only reads when it mounts.
+ */
 export function AuthenticatedExploreMapPage() {
+  const searchParams = useSearchParams();
+  const [resetKey, setResetKey] = useState(0);
+  const [resetPending, setResetPending] = useState(false);
+  const hasParams = searchParams.size > 0;
+
+  useEffect(() => {
+    function handleReset() {
+      // Start over means the saved place is gone too (the remount would restore it).
+      clearExploreState();
+      setResetPending(true);
+    }
+    window.addEventListener(EXPLORE_RESET_EVENT, handleReset);
+    return () => window.removeEventListener(EXPLORE_RESET_EVENT, handleReset);
+  }, []);
+
+  // The URL is clean now, so the remount reads no old `regionId` / `plotId`.
+  if (resetPending && !hasParams) {
+    setResetPending(false);
+    setResetKey((key) => key + 1);
+  }
+
+  return <ExploreMapContent key={resetKey} />;
+}
+
+function ExploreMapContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const mapRef = useRef<MapboxMapHandle>(null);
@@ -289,12 +379,20 @@ export function AuthenticatedExploreMapPage() {
     const name = searchParams.get("region")?.trim();
     return id && name ? { id, name } : null;
   });
-  const [search, setSearch] = useState(linkedRegion?.name ?? "");
-  const [isSearchExpanded, setIsSearchExpanded] = useState(Boolean(linkedRegion));
+  // Coming back to Explore Map (sidebar, Home button) shows where the user left it: the
+  // area, open plot, filters and map position saved for this tab. A link that names a
+  // region or plot (dashboard cards, My Land) wins over that. Read once.
+  const [restored] = useState(() =>
+    searchParams.get("regionId") || searchParams.get("plotId") ? null : loadExploreState(),
+  );
+  const [search, setSearch] = useState(linkedRegion?.name ?? restored?.search ?? "");
+  const [isSearchExpanded, setIsSearchExpanded] = useState(
+    Boolean(linkedRegion) || Boolean(restored?.plotScope),
+  );
   // From sm up the left panel is always there; this only slides it away (the map gets the room).
-  const [isPanelCollapsed, setIsPanelCollapsed] = useState(false);
+  const [isPanelCollapsed, setIsPanelCollapsed] = useState(restored?.isPanelCollapsed ?? false);
   // Same value, readable inside the map callbacks right after a handler changes it.
-  const isPanelCollapsedRef = useRef(false);
+  const isPanelCollapsedRef = useRef(restored?.isPanelCollapsed ?? false);
   function setPanelCollapsed(collapsed: boolean) {
     isPanelCollapsedRef.current = collapsed;
     setIsPanelCollapsed(collapsed);
@@ -306,7 +404,9 @@ export function AuthenticatedExploreMapPage() {
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [isSortOpen, setIsSortOpen] = useState(false);
   // Applied values; they will drive the plot API once it is wired up.
-  const [plotFilters, setPlotFilters] = useState<PlotFilters>(DEFAULT_PLOT_FILTERS);
+  const [plotFilters, setPlotFilters] = useState<PlotFilters>(
+    restored?.plotFilters ?? DEFAULT_PLOT_FILTERS,
+  );
   // Filter panel options (`/explore/filters?regionId=`), for the open area's region.
   const [filterOptionsResult, setFilterOptionsResult] = useState<
     { regionId: string; options: FilterOptions } | { regionId: string; failed: true } | null
@@ -319,7 +419,7 @@ export function AuthenticatedExploreMapPage() {
   >("loading");
   const [sortOptionsReloadKey, setSortOptionsReloadKey] = useState(0);
   // Null: the backend's default order.
-  const [plotSortKey, setPlotSortKey] = useState<string | null>(null);
+  const [plotSortKey, setPlotSortKey] = useState<string | null>(restored?.plotSortKey ?? null);
   const [searchMessage, setSearchMessage] = useState("");
   // Last suggestion lookup; only used while it still matches what is typed.
   const [suggestionLookup, setSuggestionLookup] = useState<{
@@ -330,7 +430,7 @@ export function AuthenticatedExploreMapPage() {
   // Results of the last submitted search; shown while the query still matches.
   const [searchResults, setSearchResults] = useState<{
     query: string;
-    results: SearchResult[];
+    results: SearchHit[];
   } | null>(null);
   // Query of the search request in flight, if any.
   const [searchingQuery, setSearchingQuery] = useState<string | null>(null);
@@ -340,10 +440,12 @@ export function AuthenticatedExploreMapPage() {
   // box is filled in for them (opening a region, a recent search, Tab).
   const typedSearchRef = useRef("");
   // Mirrors for the async search flow (state would be stale inside timers).
-  const lastResultsRef = useRef<{ query: string; results: SearchResult[] } | null>(null);
+  const lastResultsRef = useRef<{ query: string; results: SearchHit[] } | null>(null);
   const inFlightQueryRef = useRef<string | null>(null);
   // Set by Enter / recent click: fly to the first result once that query's results arrive.
   const flyWhenReadyRef = useRef<string | null>(null);
+  // A plot opened from search: zoom to it once its detail (with coordinates) has loaded.
+  const focusDetailRef = useRef<string | null>(null);
   // Recent searches (backend history). `recentReloadKey` refetches them.
   const [recentSearches, setRecentSearches] = useState<RecentSearch[]>([]);
   const [recentStatus, setRecentStatus] = useState<"loading" | "ready" | "error">(
@@ -366,28 +468,38 @@ export function AuthenticatedExploreMapPage() {
   const hasMapError = mapStatus === "error" || hasDataError;
   // Area picked from search; its plots are drawn on the map (all statuses, no sort yet).
   const [plotScope, setPlotScope] = useState<PlotScope | null>(
-    linkedRegion ? { param: "regionId", id: linkedRegion.id } : null,
+    linkedRegion ? { param: "regionId", id: linkedRegion.id } : (restored?.plotScope ?? null),
   );
   const [plots, setPlots] = useState<ExplorePlot[]>([]);
   const [plotsReloadKey, setPlotsReloadKey] = useState(0);
   const [plotsStatus, setPlotsStatus] = useState<"idle" | "loading" | "ready" | "error">(
-    linkedRegion ? "loading" : "idle",
+    linkedRegion || restored?.plotScope ? "loading" : "idle",
   );
   // Name shown in the search box for the open area; the plot list shows while it matches.
-  const [plotAreaName, setPlotAreaName] = useState(linkedRegion?.name ?? "");
-  const [selectedPlotId, setSelectedPlotId] = useState<string | null>(null);
+  const [plotAreaName, setPlotAreaName] = useState(
+    linkedRegion?.name ?? restored?.plotAreaName ?? "",
+  );
+  const [selectedPlotId, setSelectedPlotId] = useState<string | null>(
+    restored?.selectedPlotId ?? null,
+  );
+  // Plot name under the cursor on the map, and where (px in the map).
+  const [hoveredPlot, setHoveredPlot] = useState<MapPlotHover | null>(null);
+  const hoverTimerRef = useRef<number | undefined>(undefined);
+  useEffect(() => () => window.clearTimeout(hoverTimerRef.current), []);
   // Plot whose detail panel is open (replaces the list until closed).
-  const [detailPlotId, setDetailPlotId] = useState<string | null>(null);
+  const [detailPlotId, setDetailPlotId] = useState<string | null>(restored?.detailPlotId ?? null);
   // `GET /explore/plots/{plotId}` result for the open detail (matched by id).
   const [plotDetail, setPlotDetail] = useState<
     | { id: string; status: "loading" }
     | { id: string; status: "ready"; plot: ExplorePlotDetail }
     | { id: string; status: "error"; notFound: boolean }
     | null
-  >(null);
+  >(restored?.detailPlotId ? { id: restored.detailPlotId, status: "loading" } : null);
   const [plotDetailReloadKey, setPlotDetailReloadKey] = useState(0);
   // Plots whose Add to Cart request is running (buttons show "Adding...").
   const [addingPlotIds, setAddingPlotIds] = useState<string[]>([]);
+  // Plots whose Remove from cart request is running.
+  const [removingPlotIds, setRemovingPlotIds] = useState<string[]>([]);
   // Plot whose deed (certificate) is being looked up after View Deed.
   const [openingDeedId, setOpeningDeedId] = useState<string | null>(null);
   // Zoomed in with no area open: the plots in view (`GET /explore/plots?bbox=`).
@@ -435,7 +547,7 @@ export function AuthenticatedExploreMapPage() {
       : null;
   const needsAreaTotal = isFilterOpen && hasActiveFilters && areaTotal === null;
   // Set once the user moves the map, so late API data doesn't yank the camera back.
-  const hasNavigatedRef = useRef(Boolean(linkedRegion));
+  const hasNavigatedRef = useRef(Boolean(linkedRegion) || Boolean(restored?.camera));
   // Set when an area is opened without a known location (a recent search or a
   // dashboard link): fit the map to its plots once they load.
   const fitToPlotsRef = useRef(Boolean(linkedRegion));
@@ -478,6 +590,34 @@ export function AuthenticatedExploreMapPage() {
         : mapPlots,
     [mapPlots, selectedPlot, showLinkedPreview],
   );
+
+  // Keep where the user is, so leaving Explore Map and coming back picks it up again.
+  useEffect(() => {
+    saveExploreState({
+      search,
+      plotScope,
+      plotAreaName,
+      selectedPlotId,
+      detailPlotId,
+      plotFilters,
+      plotSortKey,
+      isPanelCollapsed,
+      camera:
+        mapView && hasNavigatedRef.current
+          ? { center: mapView.center, zoom: mapView.zoom }
+          : null,
+    });
+  }, [
+    search,
+    plotScope,
+    plotAreaName,
+    selectedPlotId,
+    detailPlotId,
+    plotFilters,
+    plotSortKey,
+    isPanelCollapsed,
+    mapView,
+  ]);
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -714,7 +854,14 @@ export function AuthenticatedExploreMapPage() {
     // Switching plots aborts the previous request, so a late reply never shows the wrong plot.
     const controller = new AbortController();
     getPlotDetail(detailPlotId, controller.signal)
-      .then((plot) => setPlotDetail({ id: detailPlotId, status: "ready", plot }))
+      .then((plot) => {
+        setPlotDetail({ id: detailPlotId, status: "ready", plot });
+        // Opened from search, which has no coordinates: zoom to it now they are known.
+        if (focusDetailRef.current === detailPlotId) {
+          focusDetailRef.current = null;
+          focusPlot(plot);
+        }
+      })
       .catch((error: unknown) => {
         if (isAbortError(error)) return;
         if (isApiError(error) && error.code === "API_SESSION_EXPIRED") return;
@@ -767,14 +914,42 @@ export function AuthenticatedExploreMapPage() {
     }
   }
 
+  // A plot found by number or name: open its city's plots (the list the detail's
+  // back button returns to) with the plot's detail on top, then zoom to it.
+  function openSearchedPlot(plot: SearchPlotResult, { remember = true } = {}) {
+    const area = plot.city ?? plot.region;
+    hasNavigatedRef.current = true;
+    mapRef.current?.clearMarker();
+    if (area) {
+      showAreaPlots(
+        { param: plot.city ? "cityId" : "regionId", id: area.id },
+        area.name,
+      );
+      window.clearTimeout(searchTimerRef.current);
+      setSearch(area.name);
+    }
+    focusDetailRef.current = plot.id;
+    setSelectedPlotId(plot.id);
+    setPlotDetail({ id: plot.id, status: "loading" });
+    setDetailPlotId(plot.id);
+    setIsSearchExpanded(true);
+    if (remember) {
+      saveRecent({ query: plot.plotNumber, type: "PLOT", referenceId: plot.id });
+    }
+  }
+
   // Saves the picked place to recent searches. Best effort: a failure only logs.
   function rememberPlace(place: SearchResult) {
     const type = place.type.toUpperCase();
-    saveRecentSearch({
+    saveRecent({
       query: place.name,
       type: type === "REGION" || type === "CITY" ? type : "LOCATION",
       referenceId: place.id,
-    })
+    });
+  }
+
+  function saveRecent(input: SaveRecentSearchInput) {
+    saveRecentSearch(input)
       .then(() => setRecentReloadKey((key) => key + 1))
       .catch((error: unknown) => {
         if (isApiError(error) && error.code === "API_SESSION_EXPIRED") return;
@@ -837,8 +1012,9 @@ export function AuthenticatedExploreMapPage() {
   }
 
   // Keeps the panel open: it switches to the area's plot list.
-  function selectResult(result: SearchResult) {
-    openPlace(result);
+  function selectResult(result: SearchHit) {
+    if (isPlotHit(result)) openSearchedPlot(result);
+    else openPlace(result);
     setIsFilterOpen(false);
     setIsSortOpen(false);
   }
@@ -894,9 +1070,10 @@ export function AuthenticatedExploreMapPage() {
         plots.find((plot) => plot.id === plotId) ??
         viewportPlots.find((plot) => plot.id === plotId) ??
         (plotDetail?.status === "ready" && plotDetail.id === plotId ? plotDetail.plot : undefined);
-      setPlots((current) =>
-        current.map((plot) => (plot.id === plotId ? { ...plot, isInCart: true } : plot)),
-      );
+      const markInCart = (plot: ExplorePlot) =>
+        plot.id === plotId ? { ...plot, isInCart: true } : plot;
+      setPlots((current) => current.map(markInCart));
+      setViewportPlots((current) => current.map(markInCart));
       setPlotDetail((current) =>
         current?.status === "ready" && current.id === plotId
           ? { ...current, plot: { ...current.plot, isInCart: true } }
@@ -919,6 +1096,41 @@ export function AuthenticatedExploreMapPage() {
       if (conflict) setPlotsReloadKey((key) => key + 1);
     } finally {
       setAddingPlotIds((ids) => ids.filter((id) => id !== plotId));
+    }
+  }
+
+  // `DELETE /cart/items/{plotId}` (the backend releases the plot's reservation), then show
+  // the plot as available again in the list and the open detail, and drop it from the
+  // navbar badge and cart progress at once.
+  async function removeFromCart(plotId: string) {
+    if (removingPlotIds.includes(plotId)) return;
+    setRemovingPlotIds((ids) => [...ids, plotId]);
+    setSearchMessage("");
+    try {
+      await removePlotFromCart(plotId);
+      const removed =
+        plots.find((plot) => plot.id === plotId) ??
+        viewportPlots.find((plot) => plot.id === plotId) ??
+        (plotDetail?.status === "ready" && plotDetail.id === plotId ? plotDetail.plot : undefined);
+      // The plot's own reservation is gone with it.
+      const markOutOfCart = <T extends ExplorePlot | ExplorePlotDetail>(plot: T): T =>
+        plot.id === plotId
+          ? { ...plot, isInCart: false, status: plot.status === "LOCKED" ? "AVAILABLE" : plot.status }
+          : plot;
+      setPlots((current) => current.map(markOutOfCart));
+      setViewportPlots((current) => current.map(markOutOfCart));
+      setPlotDetail((current) =>
+        current?.status === "ready" && current.id === plotId
+          ? { ...current, plot: markOutOfCart(current.plot) }
+          : current,
+      );
+      applyCartChange(-1, { rai: removed?.sizeRai ?? 0, total: removed?.totalPrice ?? 0 });
+    } catch (error) {
+      if (isApiError(error) && error.code === "API_SESSION_EXPIRED") return;
+      logError(error, "Failed to remove plot from cart");
+      showSearchMessage("Couldn't remove from cart. Please try again.");
+    } finally {
+      setRemovingPlotIds((ids) => ids.filter((id) => id !== plotId));
     }
   }
 
@@ -989,6 +1201,49 @@ export function AuthenticatedExploreMapPage() {
     focusPlot(inView, zoomDuration);
   }
 
+  // The hover card closes a moment after the cursor leaves the name, so it can reach the
+  // card (and its buttons); entering the card cancels the close.
+  function handleMapPlotHover(hover: MapPlotHover | null) {
+    window.clearTimeout(hoverTimerRef.current);
+    if (hover) {
+      setHoveredPlot(hover);
+      return;
+    }
+    hoverTimerRef.current = window.setTimeout(() => setHoveredPlot(null), HOVER_CARD_HIDE_MS);
+  }
+
+  // Arrow key with a plot open: select the nearest plot in that direction (among the
+  // plots drawn on the map) and open it, as a click would.
+  const switchPlotWithArrow = useEffectEvent((key: ArrowKey) => {
+    const candidates = plotScope ? plots : viewportPlots;
+    const current = candidates.find((item) => item.id === detailPlotId);
+    if (!current) return;
+    const next = nearestPlotInDirection(current, candidates, key);
+    if (!next) return;
+    setHoveredPlot(null);
+    handleMapPlotClick(next.id);
+  });
+
+  useEffect(() => {
+    if (!detailPlotId) return;
+
+    function handleArrowKey(event: KeyboardEvent) {
+      if (!isArrowKey(event.key)) return;
+      if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+      // Arrows belong to text fields, selects and the like.
+      const target = event.target as HTMLElement | null;
+      if (target?.closest("input, textarea, select, [contenteditable='true'], [role='slider']"))
+        return;
+      // Stop the map's own arrow-key panning (and page scroll).
+      event.preventDefault();
+      event.stopPropagation();
+      switchPlotWithArrow(event.key);
+    }
+
+    document.addEventListener("keydown", handleArrowKey, true);
+    return () => document.removeEventListener("keydown", handleArrowKey, true);
+  }, [detailPlotId]);
+
   // Region pill: the same as picking the region in search.
   function handleMapRegionClick(regionId: string) {
     const region = mapRegions.find((item) => item.id === regionId);
@@ -1007,6 +1262,35 @@ export function AuthenticatedExploreMapPage() {
       ),
     );
   }
+
+  // The plot under the cursor, as a card above its name (so the plots around it stay
+  // visible), or below when there is no room above. Centred on the cursor, kept inside the
+  // map and right of the open left panel.
+  // Not while the plot whose detail is open in the left panel is under the cursor
+  // (even when another plot's shape overlaps it).
+  const hoveredItem =
+    hoveredPlot && !(detailPlotId && hoveredPlot.plotIds.includes(detailPlotId))
+    ? (plots.find((item) => item.id === hoveredPlot.plotId) ??
+      viewportPlots.find((item) => item.id === hoveredPlot.plotId))
+    : undefined;
+  const hoverCardMinLeft = (hoveredPlot && isSmUp() && !isPanelCollapsed ? PANEL_WIDTH : 0) + 8;
+  const hoverCard =
+    hoveredPlot && hoveredItem
+      ? {
+          plot: hoveredItem,
+          left: Math.min(
+            Math.max(hoveredPlot.x - HOVER_CARD_WIDTH / 2, hoverCardMinLeft),
+            Math.max(hoverCardMinLeft, hoveredPlot.width - HOVER_CARD_WIDTH - 8),
+          ),
+          top:
+            hoveredPlot.y - HOVER_CARD_GAP - HOVER_CARD_HEIGHT >= 72
+              ? hoveredPlot.y - HOVER_CARD_GAP - HOVER_CARD_HEIGHT
+              : Math.min(
+                  hoveredPlot.y + HOVER_CARD_GAP,
+                  Math.max(72, hoveredPlot.height - HOVER_CARD_HEIGHT - 12),
+                ),
+        }
+      : null;
 
   // Only the open plot's own result counts (a stale one shows the skeleton).
   const openDetail = plotDetail?.id === detailPlotId ? plotDetail : null;
@@ -1204,10 +1488,11 @@ export function AuthenticatedExploreMapPage() {
     }
   }
 
-  function flyToFirstResult(results: SearchResult[]) {
+  function flyToFirstResult(results: SearchHit[]) {
     const [first] = results;
     if (first) {
-      openPlace(first);
+      if (isPlotHit(first)) openSearchedPlot(first);
+      else openPlace(first);
     } else {
       showSearchMessage("Please search for locations within Thailand.");
     }
@@ -1288,20 +1573,22 @@ export function AuthenticatedExploreMapPage() {
 
   return (
     <main
-      className={`relative min-h-[100svh] overflow-hidden text-navy [&_.mapboxgl-ctrl-top-right]:mt-[66px] [&_.mapboxgl-ctrl-bottom-left]:transition-[margin] [&_.mapboxgl-ctrl-bottom-left]:duration-300 ${isPanelCollapsed ? "" : "sm:[&_.mapboxgl-ctrl-bottom-left]:ml-[340px]"} ${mapStatus === "error" ? "bg-[#eef3f6]" : "bg-[#74d0e1]"}`}
+      className={`relative min-h-[100svh] overflow-hidden text-navy [&_.mapboxgl-ctrl-top-right]:mt-[66px] [&_.mapboxgl-ctrl-bottom-left]:transition-[margin] [&_.mapboxgl-ctrl-bottom-left]:duration-300 ${isPanelCollapsed ? "" : "sm:[&_.mapboxgl-ctrl-bottom-left]:ml-[364px]"} ${mapStatus === "error" ? "bg-[#eef3f6]" : "bg-[#74d0e1]"}`}
     >
       <MapboxMap
         key={mapKey}
         ref={mapRef}
         className="absolute inset-0"
         selectedLocation={selectedPlot}
+        initialCenter={restored?.camera?.center}
+        initialZoom={restored?.camera?.zoom}
         onStatusChange={setMapStatus}
         showErrorOverlay={false}
         // Centre the loading card in the map left visible: right of the open
         // search panel (sm up), or between the search bar and the plot list's
         // bottom sheet (phones).
         loadingOverlayClassName={
-          `${isSearchExpanded && showPlotList ? "max-sm:pb-[58svh] max-sm:pt-32" : ""} ${isPanelCollapsed ? "" : "sm:pl-[340px]"}`
+          `${isSearchExpanded && showPlotList ? "max-sm:pb-[58svh] max-sm:pt-32" : ""} ${isPanelCollapsed ? "" : "sm:pl-[364px]"}`
         }
         loadingLabels={{
           title: t("Loading Map"),
@@ -1309,17 +1596,51 @@ export function AuthenticatedExploreMapPage() {
         }}
         plots={shownMapPlots}
         onPlotClick={handleMapPlotClick}
+        onPlotHover={handleMapPlotHover}
         regions={mapRegions}
         regionsMaxZoom={VIEWPORT_PLOTS_MIN_ZOOM}
         onRegionClick={handleMapRegionClick}
         onViewChange={setMapView}
       />
 
+      {hoverCard ? (
+        // The same card as the plot list, beside the plot name under the cursor. Mouse
+        // devices only (touch has no hover). Moving onto the card keeps it open, so
+        // its buttons work.
+        <div
+          className="absolute z-20 hidden w-[340px] [@media(hover:hover)]:block"
+          style={{
+            left: hoverCard.left,
+            top: hoverCard.top,
+            transform: `scale(${HOVER_CARD_SCALE})`,
+            transformOrigin: "top left",
+          }}
+          onMouseEnter={() => window.clearTimeout(hoverTimerRef.current)}
+          onMouseLeave={() => handleMapPlotHover(null)}
+        >
+          <PlotCard
+            plot={hoverCard.plot}
+            selected={hoverCard.plot.id === selectedPlotId}
+            onSelect={(item) => {
+              setHoveredPlot(null);
+              handleMapPlotClick(item.id);
+            }}
+            isAddingToCart={addingPlotIds.includes(hoverCard.plot.id)}
+            onAddToCart={(item) => void addToCart(item.id)}
+            isRemovingFromCart={removingPlotIds.includes(hoverCard.plot.id)}
+            onRemoveFromCart={(item) => void removeFromCart(item.id)}
+            isOpeningDeed={openingDeedId === hoverCard.plot.id}
+            onViewDeed={(item) => void viewDeed(item.id)}
+            t={t}
+          />
+        </div>
+      ) : null}
+
       {hasMapError && !isErrorDismissed ? (
         // Centred on screen; from sm up it slides right of the search panel while
         // that is open, matching the search box's 300ms width transition.
         <div
-          className={`pointer-events-none absolute inset-0 z-30 flex items-center justify-center px-4 transition-[padding] duration-300 ease-out motion-reduce:transition-none ${isPanelCollapsed ? "" : "sm:pl-[340px]"}`}
+          className={`pointer-events-none absolute inset-0 z-30 flex items-center justify-center px-4 transition-[padding] duration-300 ease-out motion-reduce:transition-none ${isPanelCollapsed ? "" : "sm:pl-[364px]"}`}
         >
           {/* Container query: the dialog adapts to the room left beside the panel. */}
           <div className="pointer-events-auto flex w-full justify-center @container">
@@ -1335,10 +1656,11 @@ export function AuthenticatedExploreMapPage() {
       {/* From sm up: a full-height white panel on the left (the search bar with its Filter/Sort icons, then the list). On phones the wrapper disappears
           (display: contents) and the pieces keep their own positions. */}
       <div
-        className={`contents sm:absolute sm:bottom-0 sm:left-0 sm:top-[65px] lg:top-0 sm:z-20 sm:flex sm:w-[340px] sm:flex-col sm:border-r sm:border-[#e6eaf3] sm:bg-white sm:shadow-[4px_0_24px_-12px_rgba(11,31,77,0.2)] sm:transition-transform sm:duration-300 motion-reduce:sm:transition-none ${isPanelCollapsed ? "sm:-translate-x-full" : ""}`}
+        className={`contents sm:absolute sm:bottom-0 sm:left-0 sm:top-[65px] lg:top-0 sm:z-20 sm:flex sm:w-[364px] sm:flex-col sm:border-r sm:border-[#e6eaf3] sm:bg-white sm:shadow-[4px_0_24px_-12px_rgba(11,31,77,0.2)] sm:transition-transform sm:duration-300 motion-reduce:sm:transition-none ${isPanelCollapsed ? "sm:-translate-x-full" : ""}`}
       >
       <div
         ref={searchAreaRef}
+        data-tour="explore-search"
         // An open Filter/Sort panel is inside this box, so the box itself must sit
         // above the plot list (phones: a z-30 bottom sheet) or it covers "Apply".
         className={`absolute inset-x-4 top-20 flex items-start gap-2 sm:relative sm:inset-x-auto sm:top-auto sm:grid sm:shrink-0 sm:gap-0 sm:p-4 ${isFilterOpen || isSortOpen ? "z-40" : "z-20"}`}
@@ -1512,7 +1834,7 @@ export function AuthenticatedExploreMapPage() {
                 // "list of plots" panel (420 wide, radius 24), 16px below the search box and
                 // 16px above the screen bottom; scrolls inside.
                 "fixed inset-x-0 bottom-0 z-30 flex h-[58svh] flex-col overflow-hidden rounded-t-[24px] bg-white shadow-[0_-8px_24px_rgba(0,0,0,0.12)] sm:pointer-events-auto sm:relative sm:inset-x-auto sm:bottom-auto sm:z-10 sm:h-auto sm:min-h-0 sm:flex-1 sm:rounded-none sm:border-t sm:border-[#eef1f4] sm:shadow-none"
-              : `absolute inset-x-4 top-32 z-10 flex max-h-[calc(100svh-12rem)] flex-col overflow-hidden rounded-[18px] bg-white/95 p-4 shadow-[0_5px_20px_rgba(11,31,77,0.14)] sm:pointer-events-auto sm:relative sm:inset-x-auto sm:top-auto sm:max-h-[calc(100svh-11rem)] sm:min-h-0 sm:rounded-none sm:border-t sm:border-[#eef1f4] sm:bg-white sm:px-3 sm:pb-3 sm:pt-2 sm:shadow-none ${hasMapError ? "h-[calc(100svh-15rem)]" : ""} ${
+              : `absolute inset-x-4 top-32 z-10 flex max-h-[calc(100svh-12rem)] flex-col overflow-hidden rounded-[18px] bg-white/95 p-4 shadow-[0_5px_20px_rgba(11,31,77,0.14)] sm:pointer-events-auto sm:relative sm:inset-x-auto sm:top-auto sm:max-h-[calc(100svh-8rem)] sm:min-h-0 sm:rounded-none sm:border-t sm:border-[#eef1f4] sm:bg-white sm:px-3 sm:pb-3 sm:pt-2 sm:shadow-none ${hasMapError ? "h-[calc(100svh-15rem)]" : ""} ${
                   // Phones: the error dialog would sit on top of this panel, so
                   // hide it until "Continue" (it then shows "Map unavailable").
                   hasMapError && !isErrorDismissed ? "max-sm:hidden" : ""
@@ -1557,6 +1879,8 @@ export function AuthenticatedExploreMapPage() {
                       onFocusPlot={() => focusPlot(openDetail.plot)}
                       isAddingToCart={addingPlotIds.includes(openDetail.plot.id)}
                       onAddToCart={() => void addToCart(openDetail.plot.id)}
+                      isRemovingFromCart={removingPlotIds.includes(openDetail.plot.id)}
+                      onRemoveFromCart={() => void removeFromCart(openDetail.plot.id)}
                       isOpeningDeed={openingDeedId === openDetail.plot.id}
                       onViewDeed={() => void viewDeed(openDetail.plot.id)}
                       onBack={closePlotDetail}
@@ -1599,6 +1923,8 @@ export function AuthenticatedExploreMapPage() {
                       onSelect={openPlotDetail}
                       isAddingToCart={addingPlotIds.includes(plot.id)}
                       onAddToCart={(item) => void addToCart(item.id)}
+                      isRemovingFromCart={removingPlotIds.includes(plot.id)}
+                      onRemoveFromCart={(item) => void removeFromCart(item.id)}
                       isOpeningDeed={openingDeedId === plot.id}
                       onViewDeed={(item) => void viewDeed(item.id)}
                       t={t}
@@ -1629,11 +1955,15 @@ export function AuthenticatedExploreMapPage() {
                     <ul aria-label={t("Search results")}>
                       {currentResults.map((result) => (
                         <li key={`${result.type}-${result.id}`}>
-                          <SearchResultRow
-                            result={result}
-                            onSelect={selectResult}
-                            t={t}
-                          />
+                          {isPlotHit(result) ? (
+                            <SearchPlotRow plot={result} onSelect={selectResult} t={t} />
+                          ) : (
+                            <SearchResultRow
+                              result={result}
+                              onSelect={selectResult}
+                              t={t}
+                            />
+                          )}
                         </li>
                       ))}
                     </ul>
@@ -1674,7 +2004,7 @@ export function AuthenticatedExploreMapPage() {
                   </ul>
                 ) : (
                   <p className="px-2 py-8 text-center text-[11px] text-[#8d97a3]">
-                    {t("Search for a region, city or zone.")}
+                    {t("Search for a region, city or plot number.")}
                   </p>
                 )}
               </div>
@@ -1725,7 +2055,7 @@ export function AuthenticatedExploreMapPage() {
         aria-label={t(isPanelCollapsed ? "Open panel" : "Close panel")}
         aria-expanded={!isPanelCollapsed}
         onClick={() => setPanelCollapsed(!isPanelCollapsed)}
-        className={`absolute top-1/2 z-30 hidden h-14 w-7 -translate-y-1/2 cursor-pointer items-center justify-center rounded-r-[10px] border border-l-0 border-[#e6eaf3] bg-white text-navy shadow-[2px_0_12px_-4px_rgba(11,31,77,0.25)] transition-[left] duration-300 hover:bg-[#f5f7fb] motion-reduce:transition-none sm:flex ${isPanelCollapsed ? "left-0" : "left-[340px]"}`}
+        className={`absolute top-1/2 z-30 hidden h-14 w-7 -translate-y-1/2 cursor-pointer items-center justify-center rounded-r-[10px] border border-l-0 border-[#e6eaf3] bg-white text-navy shadow-[2px_0_12px_-4px_rgba(11,31,77,0.25)] transition-[left] duration-300 hover:bg-[#f5f7fb] motion-reduce:transition-none sm:flex ${isPanelCollapsed ? "left-0" : "left-[364px]"}`}
       >
         <svg viewBox="0 0 16 16" aria-hidden="true" className={`h-4 w-4 ${isPanelCollapsed ? "rotate-180" : ""}`}>
           <path d="m10 3-5 5 5 5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
@@ -1734,23 +2064,23 @@ export function AuthenticatedExploreMapPage() {
 
       {/* Bottom right corner. On phones it hides under the open plot sheet. */}
       <div
-        className={`absolute bottom-3 right-3 flex max-w-[calc(100%-8rem)] flex-wrap items-center justify-end gap-3 rounded-md bg-white/95 px-3 py-2 text-[9px] text-[#273044] shadow-[0_3px_12px_rgba(11,31,77,0.12)] sm:bottom-3 sm:right-4 sm:max-w-none sm:rounded-full sm:px-4 ${showPlotList && isSearchExpanded ? "max-sm:hidden" : ""}`}
+        className={`absolute bottom-3 right-3 flex max-w-[calc(100%-8rem)] flex-wrap items-center justify-end gap-3 rounded-md bg-white/95 px-3 py-2 text-[11px] font-semibold text-[#273044] shadow-[0_3px_12px_rgba(11,31,77,0.12)] sm:bottom-3 sm:right-4 sm:max-w-none sm:rounded-full sm:px-4 ${showPlotList && isSearchExpanded ? "max-sm:hidden" : ""}`}
       >
-        <span className="font-medium uppercase tracking-wide">{t("Plot Status")}</span>
-        <span className="flex items-center gap-1">
-          <i className="h-1.5 w-1.5 rounded-full bg-[#2cbf65]" />
+        <span className="font-bold uppercase tracking-wide">{t("Plot Status")}</span>
+        <span className="flex items-center gap-1.5">
+          <i className="h-2 w-2 rounded-full bg-[#2cbf65]" />
           {t("Available")}
         </span>
-        <span className="flex items-center gap-1">
-          <i className="h-1.5 w-1.5 rounded-full bg-[#e7b52c]" />
+        <span className="flex items-center gap-1.5">
+          <i className="h-2 w-2 rounded-full bg-[#e7b52c]" />
           {t("Locked")}
         </span>
-        <span className="flex items-center gap-1">
-          <i className="h-1.5 w-1.5 rounded-full bg-[#d64242]" />
+        <span className="flex items-center gap-1.5">
+          <i className="h-2 w-2 rounded-full bg-[#d64242]" />
           {t("Taken")}
         </span>
-        <span className="hidden items-center gap-1 sm:flex">
-          <i className="h-1.5 w-1.5 rounded-full bg-navy" />
+        <span className="hidden items-center gap-1.5 sm:flex">
+          <i className="h-2 w-2 rounded-full bg-navy" />
           {t("Your plots")}
         </span>
       </div>

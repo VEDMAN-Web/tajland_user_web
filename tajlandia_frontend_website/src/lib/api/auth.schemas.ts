@@ -53,6 +53,8 @@ export const verifyOtpResponseSchema = authResponseBaseSchema.extend({
     .object({
       accessToken: z.string().optional(),
       refreshToken: z.string().optional(),
+      // Only sent for a forgot-password OTP; `/auth/reset-password` needs it.
+      resetToken: z.string().optional(),
       user: z
         .object({
           id: z.string(),

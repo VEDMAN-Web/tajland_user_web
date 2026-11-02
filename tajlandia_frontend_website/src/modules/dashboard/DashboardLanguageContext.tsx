@@ -752,6 +752,10 @@ const translations: Record<string, Record<Exclude<DashboardLanguage, "EN">, stri
     PL: "Wyszukaj region, miasto lub strefę.",
     TH: "ค้นหาภูมิภาค เมือง หรือโซน",
   },
+  "Search for a region, city or plot number.": {
+    PL: "Wyszukaj region, miasto lub numer działki.",
+    TH: "ค้นหาภูมิภาค เมือง หรือหมายเลขแปลง",
+  },
   "Type at least 2 characters to search.": {
     PL: "Wpisz co najmniej 2 znaki, aby wyszukać.",
     TH: "พิมพ์อย่างน้อย 2 ตัวอักษรเพื่อค้นหา",
@@ -968,6 +972,7 @@ const translations: Record<string, Record<Exclude<DashboardLanguage, "EN">, stri
   "Loading order...": { PL: "Ładowanie zamówienia...", TH: "กำลังโหลดคำสั่งซื้อ..." },
   "Your Tajlandia Home": { PL: "Twój dom Tajlandia", TH: "บ้าน Tajlandia ของคุณ" },
   "Welcome back,": { PL: "Witaj ponownie,", TH: "ยินดีต้อนรับกลับมา," },
+  "Welcome,": { PL: "Witaj,", TH: "ยินดีต้อนรับ," },
   "Here’s everything you own in Thailand.": { PL: "Oto wszystko, co posiadasz w Tajlandii.", TH: "นี่คือทุกสิ่งที่คุณเป็นเจ้าของในประเทศไทย" },
   "Explore Thailand →": { PL: "Odkrywaj Tajlandię →", TH: "สำรวจประเทศไทย →" },
   "Ownership Overview": { PL: "Przegląd własności", TH: "ภาพรวมความเป็นเจ้าของ" },
@@ -1329,6 +1334,95 @@ const translations: Record<string, Record<Exclude<DashboardLanguage, "EN">, stri
   "Yes, clear": { PL: "Tak, wyczyść", TH: "ใช่ ล้างเลย" },
   "Previous": { PL: "Poprzednia", TH: "ก่อนหน้า" },
   "Next": { PL: "Następna", TH: "ถัดไป" },
+  // Guided tutorials (TutorialTour, Help & Support)
+  "Tutorials": { PL: "Samouczki", TH: "บทเรียน" },
+  "Tutorial": { PL: "Samouczek", TH: "บทเรียน" },
+  "Start": { PL: "Start", TH: "เริ่ม" },
+  "Finish": { PL: "Zakończ", TH: "เสร็จสิ้น" },
+  "steps": { PL: "kroków", TH: "ขั้นตอน" },
+  "Skip tutorial": { PL: "Pomiń samouczek", TH: "ข้ามบทเรียน" },
+  "Skip step": { PL: "Pomiń krok", TH: "ข้ามขั้นตอน" },
+  "Click the highlighted part to continue": {
+    PL: "Kliknij podświetlony element, aby kontynuować",
+    TH: "คลิกส่วนที่ไฮไลต์เพื่อดำเนินการต่อ",
+  },
+  "Do this on the screen to continue": {
+    PL: "Zrób to na ekranie, aby kontynuować",
+    TH: "ทำบนหน้าจอเพื่อดำเนินการต่อ",
+  },
+  "How to buy a plot": { PL: "Jak kupić działkę", TH: "วิธีซื้อที่ดิน" },
+  "From finding a plot to checkout, with a guided tour of the real buttons.": {
+    PL: "Od znalezienia działki do płatności, z przewodnikiem po prawdziwych przyciskach.",
+    TH: "ตั้งแต่ค้นหาแปลงที่ดินจนถึงชำระเงิน พร้อมคำแนะนำบนปุ่มจริง",
+  },
+  "Open Explore Map": { PL: "Otwórz mapę", TH: "เปิดแผนที่สำรวจ" },
+  "Click Explore Map to see the plots on the map.": {
+    PL: "Kliknij Mapę, aby zobaczyć działki na mapie.",
+    TH: "คลิกแผนที่สำรวจเพื่อดูแปลงที่ดินบนแผนที่",
+  },
+  "Search a region": { PL: "Wyszukaj region", TH: "ค้นหาภูมิภาค" },
+  "Type a region such as Phuket or Pattaya and pick it from the list. Its plots will appear.": {
+    PL: "Wpisz region, np. Phuket lub Pattaya, i wybierz go z listy. Pojawią się jego działki.",
+    TH: "พิมพ์ชื่อภูมิภาค เช่น ภูเก็ตหรือพัทยา แล้วเลือกจากรายการ แปลงที่ดินจะปรากฏขึ้น",
+  },
+  "Pick a plot": { PL: "Wybierz działkę", TH: "เลือกแปลงที่ดิน" },
+  "Click an available plot to see its details: price, size and photos.": {
+    PL: "Kliknij dostępną działkę, aby zobaczyć szczegóły: cenę, rozmiar i zdjęcia.",
+    TH: "คลิกแปลงที่ดินที่ว่างเพื่อดูรายละเอียด: ราคา ขนาด และรูปภาพ",
+  },
+  "Add it to your cart": { PL: "Dodaj ją do koszyka", TH: "เพิ่มลงตะกร้า" },
+  "Press Add to Cart. The plot is held for you for 10 minutes.": {
+    PL: "Naciśnij Dodaj do koszyka. Działka jest dla Ciebie rezerwowana na 10 minut.",
+    TH: "กดเพิ่มลงตะกร้า แปลงที่ดินจะถูกกันไว้ให้คุณ 10 นาที",
+  },
+  "Added to your cart": { PL: "Dodano do koszyka", TH: "เพิ่มลงตะกร้าแล้ว" },
+  "This plot is held for you for 10 minutes. View Cart opens your cart, Remove takes it out again.": {
+    PL: "Ta działka jest dla Ciebie rezerwowana na 10 minut. Zobacz koszyk otwiera koszyk, Usuń wyjmuje ją z koszyka.",
+    TH: "แปลงนี้ถูกกันไว้ให้คุณ 10 นาที ดูตะกร้าเพื่อเปิดตะกร้า ลบเพื่อนำออกอีกครั้ง",
+  },
+  "Open your cart": { PL: "Otwórz koszyk", TH: "เปิดตะกร้าของคุณ" },
+  "Your cart lists every plot you added. Click the cart button.": {
+    PL: "Koszyk zawiera wszystkie dodane działki. Kliknij przycisk koszyka.",
+    TH: "ตะกร้าแสดงทุกแปลงที่คุณเพิ่ม คลิกปุ่มตะกร้า",
+  },
+  "Reach {min} Rai": { PL: "Osiągnij {min} Rai", TH: "ให้ครบ {min} ไร่" },
+  "You need at least {min} Rai in total to check out. Add more plots until the bar is full.": {
+    PL: "Do płatności potrzebujesz łącznie co najmniej {min} Rai. Dodawaj działki, aż pasek się wypełni.",
+    TH: "ต้องมีรวมอย่างน้อย {min} ไร่จึงจะชำระเงินได้ เพิ่มแปลงที่ดินจนแถบเต็ม",
+  },
+  "Proceed to checkout": { PL: "Przejdź do płatności", TH: "ไปที่การชำระเงิน" },
+  "At {min} Rai this button turns on. Then you pay and your certificate is issued.": {
+    PL: "Przy {min} Rai ten przycisk się włącza. Następnie płacisz i otrzymujesz certyfikat.",
+    TH: "เมื่อครบ {min} ไร่ ปุ่มนี้จะเปิดใช้งาน จากนั้นชำระเงินและรับใบรับรอง",
+  },
+  // Welcome tour (OnboardingTour)
+  "Step": { PL: "Krok", TH: "ขั้นตอน" },
+  "Skip": { PL: "Pomiń", TH: "ข้าม" },
+  "Get started": { PL: "Zaczynamy", TH: "เริ่มต้นใช้งาน" },
+  "Take the tour": { PL: "Zobacz przewodnik", TH: "ดูการแนะนำ" },
+  "Welcome to Tajlandia": { PL: "Witamy w Tajlandii", TH: "ยินดีต้อนรับสู่ Tajlandia" },
+  "Own a piece of Thailand. Here is a quick look at how it works.": {
+    PL: "Zostań właścicielem kawałka Tajlandii. Oto krótki przegląd, jak to działa.",
+    TH: "เป็นเจ้าของที่ดินส่วนหนึ่งในประเทศไทย มาดูวิธีการใช้งานแบบสั้นๆ กัน",
+  },
+  "Explore the map": { PL: "Przeglądaj mapę", TH: "สำรวจแผนที่" },
+  "Search a region, open any plot and see its price, size and photos.": {
+    PL: "Wyszukaj region, otwórz dowolną działkę i zobacz jej cenę, rozmiar i zdjęcia.",
+    TH: "ค้นหาภูมิภาค เปิดแปลงที่ดินใดก็ได้ แล้วดูราคา ขนาด และรูปภาพ",
+  },
+  "Add plots to your cart": { PL: "Dodaj działki do koszyka", TH: "เพิ่มแปลงที่ดินลงในตะกร้า" },
+  "Pick plots worth at least {min} Rai. Each plot is held for you for 10 minutes after you add it.": {
+    PL: "Wybierz działki o łącznej powierzchni co najmniej {min} Rai. Każda działka jest dla Ciebie rezerwowana na 10 minut po dodaniu.",
+    TH: "เลือกแปลงที่ดินรวมอย่างน้อย {min} ไร่ แต่ละแปลงจะถูกกันไว้ให้คุณ 10 นาทีหลังจากเพิ่มลงตะกร้า",
+  },
+  "Checkout and get your certificate": {
+    PL: "Zapłać i odbierz certyfikat",
+    TH: "ชำระเงินและรับใบรับรองของคุณ",
+  },
+  "Pay securely and find your digital certificate and cadastre deed in My Certificates.": {
+    PL: "Zapłać bezpiecznie i znajdź cyfrowy certyfikat oraz akt katastralny w sekcji Moje certyfikaty.",
+    TH: "ชำระเงินอย่างปลอดภัย แล้วรับใบรับรองดิจิทัลและโฉนดได้ที่ใบรับรองของฉัน",
+  },
   "Page": { PL: "Strona", TH: "หน้า" },
   "Pagination": { PL: "Paginacja", TH: "การแบ่งหน้า" },
   "Couldn't load more plots. Please try again.": { PL: "Nie udało się załadować kolejnych działek. Spróbuj ponownie.", TH: "ไม่สามารถโหลดแปลงเพิ่มเติมได้ โปรดลองอีกครั้ง" },

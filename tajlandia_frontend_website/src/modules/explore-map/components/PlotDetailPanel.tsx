@@ -16,6 +16,8 @@ type PlotDetailPanelProps = {
   /** True while this plot's Add to Cart request runs. */
   isAddingToCart: boolean;
   onAddToCart: () => void;
+  isRemovingFromCart: boolean;
+  onRemoveFromCart: () => void;
   /** True while this plot's deed (certificate) is being looked up. */
   isOpeningDeed: boolean;
   onViewDeed: () => void;
@@ -118,10 +120,10 @@ function DeedIcon() {
 function DetailRow({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="grid grid-cols-[minmax(0,40%)_1fr] border-b border-[#eef1f5] last:border-b-0">
-      <dt className="border-r border-[#eef1f5] px-3.5 py-3 text-[11px] text-[#6b7785]">
+      <dt className="border-r border-[#eef1f5] px-3.5 py-3 text-[11px] text-[#6b7785] sm:[@media(max-height:760px)]:py-1.5">
         {label}
       </dt>
-      <dd className="min-w-0 px-3.5 py-3 text-[13px] text-[#0b1f33]">{children}</dd>
+      <dd className="min-w-0 px-3.5 py-3 text-[13px] text-[#0b1f33] sm:[@media(max-height:760px)]:py-1.5">{children}</dd>
     </div>
   );
 }
@@ -132,6 +134,8 @@ export function PlotDetailPanel({
   onFocusPlot,
   isAddingToCart,
   onAddToCart,
+  isRemovingFromCart,
+  onRemoveFromCart,
   isOpeningDeed,
   onViewDeed,
   onBack,
@@ -150,7 +154,7 @@ export function PlotDetailPanel({
   // `images` (Cloudinary) first; plots without them fall back to the single `imageUrl`.
   const photos = plot.images?.length ? plot.images : plot.imageUrl ? [plot.imageUrl] : [];
   return (
-    <article className="flex flex-col" aria-label={t("Plot details")}>
+    <article className="flex flex-col" aria-label={t("Plot details")} data-tour="plot-detail">
       {/* Image header: edge to edge, 190px tall; slides through the photos on its own. */}
       <PlotPhotoSlider key={plot.id} photos={photos} alt={plotName} t={t}>
         {/* Top-left, opposite the status badge. */}
@@ -174,7 +178,9 @@ export function PlotDetailPanel({
         </span>
       </PlotPhotoSlider>
 
-      <div className="px-4 pb-6 pt-4">
+      {/* Short screens (laptops ~690px tall): tighter spacing, so the price, cart progress
+          and the button all show without scrolling. */}
+      <div className="px-4 pb-6 pt-4 sm:[@media(max-height:760px)]:pb-3 sm:[@media(max-height:760px)]:pt-3">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <span className="text-[13px] font-semibold text-[#0b1f33]">
@@ -188,10 +194,10 @@ export function PlotDetailPanel({
           </div>
         </div>
         {/* The full name, wrapping over as many lines as it needs. */}
-        <h2 className="mt-1.5 break-words text-[18px] font-semibold leading-[26px] text-[#0b1f33] text-pretty">
+        <h2 className="mt-1.5 break-words text-[18px] font-semibold leading-[26px] text-[#0b1f33] text-pretty sm:[@media(max-height:760px)]:mt-2 sm:[@media(max-height:760px)]:text-[16px] sm:[@media(max-height:760px)]:leading-6">
           {plotName}
         </h2>
-        <p className="mt-1.5 flex items-start gap-1 text-[11px] leading-4 text-[#6b7785]">
+        <p className="mt-1.5 flex items-start gap-1 text-[11px] leading-4 text-[#6b7785] sm:[@media(max-height:760px)]:mt-2">
           <svg viewBox="0 0 16 16" aria-hidden="true" className="mt-px h-3 w-3 shrink-0">
             <path
               d="M8 14.5s4.5-4.2 4.5-7.8a4.5 4.5 0 1 0-9 0c0 3.6 4.5 7.8 4.5 7.8Z"
@@ -204,7 +210,7 @@ export function PlotDetailPanel({
           </span>
         </p>
 
-        <div className="mt-3 flex items-center justify-between gap-3 border-t border-[#eef1f5] pt-3">
+        <div className="mt-3 flex items-center justify-between gap-3 border-t border-[#eef1f5] pt-3 sm:[@media(max-height:760px)]:mt-2 sm:[@media(max-height:760px)]:pt-2">
           <span className="truncate text-[10px] text-[#0b1f33]">
             {formatCoordinates(plot.coordinates)}
           </span>
@@ -218,7 +224,7 @@ export function PlotDetailPanel({
           </button>
         </div>
 
-        <dl className="mt-3 overflow-hidden rounded-[10px] border border-[#e9ecef]">
+        <dl className="mt-3 overflow-hidden rounded-[10px] border border-[#e9ecef] sm:[@media(max-height:760px)]:mt-2">
           <DetailRow label={t("Size")}>
             <span className="font-medium text-[#d64242]">{`${plot.sizeRai} ${t("Rai")}`}</span>
             {sizeSqm !== null ? (
@@ -233,7 +239,7 @@ export function PlotDetailPanel({
             </span>{" "}
             <span className="text-[#6b7785]">{`/ ${t("Per Rai")}`}</span>
           </DetailRow>
-          <DetailRow label={t("Zone Type")}>
+          <DetailRow label={t("Zone Category")}>
             {plot.zoneCategory?.name ? t(plot.zoneCategory.name) : "—"}
           </DetailRow>
           {/* "Near By" (Figma) is hidden until the API sends it. */}
@@ -248,7 +254,7 @@ export function PlotDetailPanel({
           </DetailRow>
         </dl>
 
-        <div className="mt-3 flex items-center justify-between gap-3 rounded-[12px] border border-[#e9ecef] px-4 py-4">
+        <div className="mt-3 flex items-center justify-between gap-3 rounded-[12px] border border-[#e9ecef] px-4 py-4 sm:[@media(max-height:760px)]:mt-2 sm:[@media(max-height:760px)]:py-2.5">
           <span className="text-[14px] text-[#0b1f33]">{t("Total Investment")}</span>
           <span className="text-[24px] font-semibold leading-none text-[#001f54]">
             {money(plot.totalPrice, plot.currency)}
@@ -256,7 +262,7 @@ export function PlotDetailPanel({
         </div>
 
         {/* Cart progress: the cart's Rai against the minimum purchase (`GET /cart`), live as plots are added or removed. */}
-        <div className="mt-4 flex items-center justify-between text-[11px] text-[#0b1f33]">
+        <div className="mt-4 flex items-center justify-between text-[11px] text-[#0b1f33] sm:[@media(max-height:760px)]:mt-2">
           {cart ? (
             <>
               <span>
@@ -292,20 +298,31 @@ export function PlotDetailPanel({
           />
         </div>
 
-        {/* In the cart: View Cart. Available: Add to Cart. Yours: View Deed. Otherwise its status. */}
-        <div className="mt-4">
+        {/* In the cart: View Cart and Remove. Available: Add to Cart. Yours: View Deed. Otherwise its status. */}
+        <div className="mt-4 sm:[@media(max-height:760px)]:mt-3">
           {statusKey === "inCart" ? (
-            <Link
-              href={routes.cart}
-              className="flex h-11 items-center justify-center rounded-[10px] bg-[#001f54] text-[13px] font-medium text-white hover:bg-[#0b2d6b]"
-            >
-              {`${t("View Cart")} →`}
-            </Link>
+            <div className="flex gap-2" data-tour="in-cart-actions">
+              <Link
+                href={routes.cart}
+                className="flex h-11 min-w-0 flex-1 items-center justify-center rounded-[10px] bg-[#001f54] text-[13px] font-medium text-white hover:bg-[#0b2d6b]"
+              >
+                {`${t("View Cart")} →`}
+              </Link>
+              <button
+                type="button"
+                disabled={isRemovingFromCart}
+                onClick={onRemoveFromCart}
+                className="flex h-11 shrink-0 cursor-pointer items-center justify-center rounded-[10px] border border-[#f6c4c4] bg-white px-5 text-[13px] font-medium text-[#d64242] hover:bg-[#fff5f5] disabled:cursor-wait disabled:opacity-70"
+              >
+                {t(isRemovingFromCart ? "Removing..." : "Remove")}
+              </button>
+            </div>
           ) : statusKey === "available" ? (
             <button
               type="button"
               disabled={isAddingToCart}
               onClick={onAddToCart}
+              data-tour="add-to-cart"
               className="flex h-11 w-full cursor-pointer items-center justify-center rounded-[10px] bg-[#001f54] text-[13px] font-medium text-white hover:bg-[#0b2d6b] disabled:cursor-wait disabled:opacity-70"
             >
               {t(isAddingToCart ? "Adding..." : "Add to Cart")}
@@ -341,7 +358,7 @@ export function PlotDetailSkeleton({ t }: { t: Translate }) {
       role="status"
       aria-label={t("Loading plot details...")}
     >
-      <span className={cn(bone, "h-[190px] w-full shrink-0 rounded-none")} />
+      <span className={cn(bone, "h-[190px] w-full shrink-0 rounded-none sm:[@media(max-height:760px)]:h-[160px]")} />
       <div className="px-4 pb-6 pt-4">
         <span className={cn(bone, "block h-4 w-28")} />
         <span className={cn(bone, "mt-3 block h-6 w-3/4")} />

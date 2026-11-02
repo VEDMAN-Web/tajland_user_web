@@ -34,5 +34,6 @@ export function getMainNavigation(locale: Locale) {
     { href: routes.explore, label: nav.explore },
     { href: routes.blog, label: nav.blog },
     { href: routes.contact, label: nav.contact },
+    { href: routes.publicLeaderboard, label: nav.leaderboard },
   ] as const;
 }

@@ -12,7 +12,10 @@ import { logError } from "@/lib/logging/logger";
 import { BackLink } from "@/components/ui/BackLink";
 import { PageLoader } from "@/components/ui/PageLoader";
 import { CertificateDownloadFailedDialog } from "./CertificateDownloadFailedDialog";
-import { CertificatePreview } from "./CertificatePreview";
+import { CertificatePages } from "./CertificatePreview";
+
+// Plots the backend fits on one page of the certificate PDF (5 rows x 2 columns).
+const CERTIFICATE_PLOTS_PER_PAGE = 10;
 import { useDashboardLanguage } from "./DashboardLanguageContext";
 import type { CertificateDetail } from "./schemas/certificates.schema";
 import type { OrderDetail } from "./schemas/orders.schema";
@@ -227,11 +230,13 @@ export function CertificateDetailsPage({ certificateId }: { certificateId: strin
         ) : state.status === "ready" ? (
           <div className="mt-6 grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[560px_minmax(0,1fr)] lg:gap-8">
             <div className="mx-auto flex w-full max-w-[560px] justify-center self-start bg-white p-3 shadow-[0_5px_18px_rgba(11,31,77,0.06)] sm:p-5">
-              <div className="relative aspect-[646/941] w-full max-w-[520px]">
-                <CertificatePreview
+              <div className="w-full max-w-[520px]">
+                {/* All the PDF's pages (the backend puts 10 plots on each). */}
+                <CertificatePages
                   url={state.certificate.certificateUrl}
                   alt={t("Certificate of ownership")}
                   sizes="(min-width: 1024px) 520px, 92vw"
+                  pages={Math.ceil(state.certificate.totalPlots / CERTIFICATE_PLOTS_PER_PAGE)}
                   priority
                 />
               </div>

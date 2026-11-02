@@ -120,6 +120,11 @@ function subscribe(listener: () => void) {
   };
 }
 
+/** The minimum Rai to check out (from `GET /cart`); the default until the cart has loaded. */
+export function useMinimumRai() {
+  return useCartSnapshot()?.minimumRai ?? DEFAULT_MINIMUM_RAI;
+}
+
 /** The cart's numbers, or null until the first load (and while logged out). */
 export function useCartSnapshot() {
   return useSyncExternalStore(

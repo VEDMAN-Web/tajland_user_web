@@ -10,7 +10,7 @@ export type ChromeMessages = {
   homeLinkLabel: string;
   signUp: string;
   login: string;
-  nav: { home: string; explore: string; blog: string; contact: string };
+  nav: { home: string; explore: string; blog: string; contact: string; leaderboard: string };
   languageSwitchLabel: string;
   languages: { en: string; pl: string };
   footer: {
@@ -40,7 +40,7 @@ export const chromeMessages: Record<Locale, ChromeMessages> = {
     homeLinkLabel: "Tajlandia home",
     signUp: "Sign Up",
     login: "Login",
-    nav: { home: "Home", explore: "Explore Map", blog: "Blog", contact: "Get in Touch" },
+    nav: { home: "Home", explore: "Explore Map", blog: "Blog", contact: "Get in Touch", leaderboard: "Leaderboard" },
     languageSwitchLabel: "Language",
     languages: { en: "English", pl: "Polski" },
     footer: {
@@ -71,7 +71,7 @@ export const chromeMessages: Record<Locale, ChromeMessages> = {
     homeLinkLabel: "Tajlandia – strona główna",
     signUp: "Zarejestruj się",
     login: "Zaloguj się",
-    nav: { home: "Strona główna", explore: "Mapa", blog: "Blog", contact: "Kontakt" },
+    nav: { home: "Strona główna", explore: "Mapa", blog: "Blog", contact: "Kontakt", leaderboard: "Ranking" },
     languageSwitchLabel: "Język",
     languages: { en: "English", pl: "Polski" },
     footer: {

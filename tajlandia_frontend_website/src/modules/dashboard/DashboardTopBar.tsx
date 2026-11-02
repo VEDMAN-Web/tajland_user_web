@@ -64,17 +64,19 @@ export function DashboardTopBar({ account, pathname }: { account: AccountKey | n
   return (
     <div className="sticky top-0 z-30 hidden h-0 lg:block">
       <div aria-hidden="true" className="absolute inset-x-0 top-0 h-[76px] border-b border-[#e6eaf3] bg-white/90 backdrop-blur-md" />
+      {/* On Home the trail is just "Home", which says nothing, so it is left out. */}
+      {trail.length > 1 ? (
       <nav
         aria-label={t("Breadcrumb")}
-        className="absolute left-10 top-7 max-w-[calc(100%-16rem)]"
+        className="absolute left-10 top-[26px] max-w-[calc(100%-16rem)]"
       >
-        <ol className="flex items-center gap-1.5 font-manrope text-[12px] leading-5 text-[#8b949e]">
+        <ol className="flex items-center gap-2 font-manrope text-[14px] leading-6 text-[#8b949e]">
           {trail.map((crumb, index) => {
             const isLast = index === trail.length - 1;
             return (
-              <li key={crumb.href + crumb.label} className="flex min-w-0 items-center gap-1.5">
+              <li key={crumb.href + crumb.label} className="flex min-w-0 items-center gap-2">
                 {index > 0 ? (
-                  <svg viewBox="0 0 16 16" aria-hidden="true" className="h-3 w-3 shrink-0 text-[#c0c7d0]">
+                  <svg viewBox="0 0 16 16" aria-hidden="true" className="h-3.5 w-3.5 shrink-0 text-[#c0c7d0]">
                     <path d="m6 3.5 4.5 4.5L6 12.5" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
                 ) : null}
@@ -92,6 +94,7 @@ export function DashboardTopBar({ account, pathname }: { account: AccountKey | n
           })}
         </ol>
       </nav>
+      ) : null}
     </div>
   );
 }

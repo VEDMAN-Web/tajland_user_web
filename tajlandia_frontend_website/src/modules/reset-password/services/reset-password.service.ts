@@ -4,16 +4,18 @@ import { cookies } from "next/headers";
 import { z } from "zod";
 import { apiPost, isApiError } from "@/lib/api/client";
 import { RATE_LIMITED_MESSAGE } from "@/lib/api/errors";
-import { resetPasswordResponseSchema } from "@/lib/api/auth.schemas";
+import { resetPasswordResponseSchema, verifyOtpResponseSchema } from "@/lib/api/auth.schemas";
 import { resetPasswordSchema, type ResetPasswordFormValues } from "../schemas/reset-password.schema";
 
 const RESET_VERIFIED_COOKIE = "tajlandia_password_reset";
+const RESET_TOKEN_COOKIE = "tajlandia_password_reset_token";
 const RESET_VERIFIED_MAX_AGE_SECONDS = 10 * 60;
 const emailSchema = z.string().trim().email();
 
 export type ResetPasswordActionResult =
   | { ok: true; message: string }
-  | { ok: false; message: string };
+  // `needsNewCode`: the verified session is gone, so the user must request a new OTP.
+  | { ok: false; message: string; needsNewCode?: boolean };
 
 function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
@@ -53,7 +55,7 @@ export async function verifyPasswordResetOtpAction(
     const response = await apiPost(
       "/auth/verify-otp",
       { email: email.trim(), otp: otp.trim() },
-      z.object({ success: z.boolean(), message: z.string().optional() }),
+      verifyOtpResponseSchema,
       { timeoutMs: 20_000 },
     );
 
@@ -61,14 +63,23 @@ export async function verifyPasswordResetOtpAction(
       return { ok: false, message: response.message || "Invalid OTP. Please check and try again." };
     }
 
+    // Without the one-time token the backend rejects the reset, so stop here.
+    const resetToken = response.data?.resetToken;
+
+    if (!resetToken) {
+      return { ok: false, message: "Couldn't verify this code for a password reset. Please request a new code." };
+    }
+
     const cookieStore = await cookies();
-    cookieStore.set(RESET_VERIFIED_COOKIE, normalizedEmail, {
+    const cookieOptions = {
       httpOnly: true,
-      sameSite: "lax",
+      sameSite: "lax" as const,
       secure: process.env.NODE_ENV === "production",
       path: "/",
       maxAge: RESET_VERIFIED_MAX_AGE_SECONDS,
-    });
+    };
+    cookieStore.set(RESET_VERIFIED_COOKIE, normalizedEmail, cookieOptions);
+    cookieStore.set(RESET_TOKEN_COOKIE, resetToken, cookieOptions);
 
     return { ok: true, message: response.message || "OTP verified successfully." };
   } catch (error) {
@@ -97,11 +108,13 @@ export async function resetPasswordAction(
 
   const cookieStore = await cookies();
   const verifiedEmail = cookieStore.get(RESET_VERIFIED_COOKIE)?.value;
+  const resetToken = cookieStore.get(RESET_TOKEN_COOKIE)?.value;
 
-  if (!verifiedEmail || verifiedEmail !== normalizedEmail) {
+  if (!verifiedEmail || !resetToken || verifiedEmail !== normalizedEmail) {
     return {
       ok: false,
-      message: "Verify the code sent to your email before choosing a new password.",
+      message: "Your password reset session has expired. Please request a new code.",
+      needsNewCode: true,
     };
   }
 
@@ -110,6 +123,7 @@ export async function resetPasswordAction(
       "/auth/reset-password",
       {
         email: email.trim(),
+        resetToken,
         newPassword: parsed.data.newPassword,
         confirmPassword: parsed.data.confirmPassword,
       },
@@ -122,6 +136,7 @@ export async function resetPasswordAction(
     }
 
     cookieStore.delete(RESET_VERIFIED_COOKIE);
+    cookieStore.delete(RESET_TOKEN_COOKIE);
 
     return {
       ok: true,
@@ -134,7 +149,12 @@ export async function resetPasswordAction(
 
     return {
       ok: false,
-      message: apiMessage(error, "Unable to reset password right now. Please try again."),
+      message: apiMessage(
+        error,
+        isApiError(error) && error.status === 400
+          ? "This reset session expired or was already used. Please request a new code."
+          : "Unable to reset password right now. Please try again.",
+      ),
     };
   }
 }

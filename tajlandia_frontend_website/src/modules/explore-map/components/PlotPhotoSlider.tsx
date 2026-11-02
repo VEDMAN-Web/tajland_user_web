@@ -109,7 +109,7 @@ export function PlotPhotoSlider({
     );
 
   return (
-    <div ref={frameRef} className="group relative h-[190px] w-full shrink-0 overflow-hidden bg-[#eef1f5]">
+    <div ref={frameRef} className="group relative h-[190px] w-full shrink-0 overflow-hidden bg-[#eef1f5] sm:[@media(max-height:760px)]:h-[160px]">
       <div
         className={`flex h-full motion-reduce:transition-none ${view.animate ? "transition-transform duration-500 ease-out" : ""}`}
         style={{ transform: `translateX(-${view.pos * 100}%)` }}
