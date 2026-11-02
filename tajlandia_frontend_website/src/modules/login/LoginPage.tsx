@@ -352,21 +352,14 @@ export function LoginPage() {
 
             <div className="grid grid-cols-1 gap-3">
               {GOOGLE_CLIENT_ID ? (
-                // Google's rendered button can't be restyled, so it is kept mounted and
-                // genuinely clickable but invisible, layered over a button styled to match.
-                // The click still goes through Google's real flow.
+                // Google's own button is shown as-is. It was previously hidden (opacity-0) over a
+                // look-alike button, but Google ignores clicks on an invisible button in Chrome.
                 <div
                   ref={googleButtonRef}
-                  className={`group relative h-11 overflow-hidden rounded-[14px] ${isSubmitting ? "pointer-events-none opacity-60" : ""}`}
+                  className={`flex min-h-11 items-center justify-center ${isSubmitting ? "pointer-events-none opacity-60" : ""}`}
                 >
-                  <div
-                    aria-hidden="true"
-                    className="pointer-events-none flex h-11 items-center justify-center gap-2.5 rounded-[14px] border border-[#e3e7ef] bg-white text-[13px] font-medium text-[#1c1c1c] shadow-[0_1px_2px_rgba(11,31,77,0.04)] transition group-hover:border-[#cfd6e4] group-hover:bg-[#f9fafc] group-focus-within:outline-2 group-focus-within:outline-offset-2 group-focus-within:outline-navy"
-                  >
-                    <GoogleIcon /> Continue with Google
-                  </div>
                   {googleButtonWidth ? (
-                    <div className="absolute inset-0 flex items-center justify-center opacity-0" aria-busy={isSubmitting}>
+                    <div aria-busy={isSubmitting}>
                       <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
                         <GoogleLogin
                           onSuccess={handleGoogleSuccess}
