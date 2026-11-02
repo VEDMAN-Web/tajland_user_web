@@ -128,7 +128,17 @@ export type MapRegion = {
 };
 
 /** What the camera shows, reported after each move. */
-export type MapView = { zoom: number; bounds: LngLatBounds };
+export type MapView = { zoom: number; center: [number, number]; bounds: LngLatBounds };
+
+/** Cursor over plot(s): position in the map, and the map's size. */
+export type MapPlotHover = {
+  plotId: string;
+  plotIds: string[];
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+};
 
 function regionMarkerElement(region: MapRegion, onClick: () => void) {
   const button = document.createElement("button");
@@ -373,6 +383,13 @@ type MapboxMapProps = {
   plots?: MapPlot[];
   /** Called with a plot's id when its dot, shape or label is clicked. */
   onPlotClick?: (plotId: string) => void;
+  /**
+   * Called while the cursor is over a plot's dot, shape or label, with the cursor's
+   * pixel position in the map; `null` once it leaves. `plotIds` is every plot under
+   * the cursor (the top one is `plotId`). `width` / `height` is the map's size, so a
+   * popup can stay inside it.
+   */
+  onPlotHover?: (hover: MapPlotHover | null) => void;
   /** Regions drawn as photo pills while zoomed out (below `regionsMaxZoom`). */
   regions?: MapRegion[];
   regionsMaxZoom?: number;
@@ -401,6 +418,7 @@ export const MapboxMap = forwardRef<MapboxMapHandle, MapboxMapProps>(function Ma
     },
     plots,
     onPlotClick,
+    onPlotHover,
     regions,
     regionsMaxZoom = 8,
     onRegionClick,
@@ -426,9 +444,11 @@ export const MapboxMap = forwardRef<MapboxMapHandle, MapboxMapProps>(function Ma
   const plotsRef = useRef(plots);
   // Latest handler, so the map listeners (added once) never call a stale one.
   const onPlotClickRef = useRef(onPlotClick);
+  const onPlotHoverRef = useRef(onPlotHover);
   useEffect(() => {
     onPlotClickRef.current = onPlotClick;
-  }, [onPlotClick]);
+    onPlotHoverRef.current = onPlotHover;
+  }, [onPlotClick, onPlotHover]);
   const onRegionClickRef = useRef(onRegionClick);
   const onViewChangeRef = useRef(onViewChange);
   useEffect(() => {
@@ -527,8 +547,23 @@ export const MapboxMap = forwardRef<MapboxMapHandle, MapboxMapProps>(function Ma
         map.on("mouseenter", layer, () => {
           if (onPlotClickRef.current) map.getCanvas().style.cursor = "pointer";
         });
+        map.on("mousemove", layer, (event) => {
+          // Every plot under the cursor (shapes can overlap), the top one first.
+          const plotIds: string[] = [];
+          const layers = CLICKABLE_PLOT_LAYERS.filter((id) => map.getLayer(id));
+          for (const feature of map.queryRenderedFeatures(event.point, { layers })) {
+            const id = (feature as { properties?: { id?: unknown } }).properties?.id;
+            if (typeof id === "string" && !plotIds.includes(id)) plotIds.push(id);
+          }
+          const [plotId] = plotIds;
+          if (plotId) {
+            const { clientWidth: width, clientHeight: height } = map.getContainer();
+            onPlotHoverRef.current?.({ plotId, plotIds, x: event.point.x, y: event.point.y, width, height });
+          }
+        });
         map.on("mouseleave", layer, () => {
           map.getCanvas().style.cursor = "";
+          onPlotHoverRef.current?.(null);
         });
       }
     });
@@ -545,8 +580,10 @@ export const MapboxMap = forwardRef<MapboxMapHandle, MapboxMapProps>(function Ma
     function reportView() {
       const bounds = map.getBounds();
       if (!bounds) return;
+      const center = map.getCenter();
       onViewChangeRef.current?.({
         zoom: map.getZoom(),
+        center: [center.lng, center.lat],
         bounds: {
           west: bounds.getWest(),
           south: bounds.getSouth(),

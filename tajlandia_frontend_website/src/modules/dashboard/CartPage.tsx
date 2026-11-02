@@ -47,7 +47,10 @@ const EXPIRY_NOTICE_MS = 5000;
 
 // What the page shows: the items (`GET /cart`) with their totals (`GET /cart/order-summary`)
 // and when each plot's lock ends (`GET /reservations/active`; null when that failed).
-type CartView = CartSummary & { items: CartItem[]; deadlines: Record<string, number> | null };
+type CartView = CartSummary & {
+  items: CartItem[];
+  deadlines: Record<string, number> | null;
+};
 
 const titleCase = (value: string) => value.charAt(0) + value.slice(1).toLowerCase();
 
@@ -243,7 +246,10 @@ export function CartPage() {
     try {
       await removeCartItem(plotId);
       // The badge (and the Explore Map's cart progress) drop at once; the reload confirms.
-      const removed = cart.status === "ready" ? cart.data.items.find((item) => item.plotId === plotId) : undefined;
+      const removed =
+        cart.status === "ready"
+          ? cart.data.items.find((item) => item.plotId === plotId)
+          : undefined;
       if (removed) applyCartChange(-1, { rai: removed.sizeRai, total: removed.subtotal });
       cartChanged();
     } catch (error) {
@@ -405,64 +411,97 @@ const SUMMARY_SKELETON_GROUPS = [
 
 function CartSkeleton({ t }: { t: Translate }) {
   return (
-    <div
-      aria-busy="true"
-      className="mt-6 grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_360px]"
-    >
-      <section>
-        <h2 className="font-manrope text-[18px] font-semibold text-navy sm:text-[20px]">
-          {t("Selected Plots")}
-        </h2>
-        <div className="mt-3 space-y-3">
-          {Array.from({ length: 4 }, (_, index) => (
-            <div
-              key={index}
-              className="flex items-center gap-3 rounded-[16px] bg-white px-3 py-3 shadow-[0_2px_8px_rgba(0,0,0,0.08)] sm:px-4 sm:py-[14px]"
-            >
-              <span
-                className={cn(
-                  bone,
-                  "h-20 w-20 shrink-0 rounded-[12px] sm:h-[100px] sm:w-[100px]",
-                )}
-              />
-              <div className="min-w-0 flex-1 space-y-2">
-                <div className="flex gap-2">
-                  <span className={cn(bone, "block h-3 w-8")} />
-                  <span className={cn(bone, "block h-3 w-16")} />
-                </div>
-                <span className={cn(bone, "block h-4 w-3/5 max-w-[160px]")} />
-                <span className={cn(bone, "block h-3 w-1/2 max-w-[140px]")} />
-                <span className={cn(bone, "block h-3 w-1/2 max-w-[140px]")} />
-              </div>
-              <div className="flex shrink-0 flex-col items-end gap-3">
-                <span className={cn(bone, "block h-8 w-20 sm:w-[110px]")} />
-                <span className={cn(bone, "block h-4 w-14 sm:w-[70px]")} />
+    <div aria-busy="true">
+      {/* Same shape as ProgressBanner: text + bar + one stats line on the left, "add more places" box on the right. */}
+      <div className="mt-6 rounded-[20px] bg-white p-5 shadow-[0_2px_20px_rgba(0,0,0,0.08)] sm:mt-4 sm:px-6 sm:py-5">
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] lg:gap-6">
+          <div className="min-w-0 lg:flex lg:flex-col lg:justify-center">
+            <span className={cn(bone, "block h-5 w-48")} />
+            <span className={cn(bone, "mt-2 block h-3.5 w-full max-w-[420px]")} />
+            <span className={cn(bone, "mt-4 block h-1.5 w-full rounded-full")} />
+            <div className="mt-2 flex items-center justify-between gap-4">
+              <span className={cn(bone, "block h-3.5 w-64 max-w-[60%]")} />
+              <span className={cn(bone, "block h-3.5 w-40")} />
+            </div>
+          </div>
+          <div className="space-y-4 rounded-[14px] bg-[#f7f9fc] px-5 py-4">
+            <div className="flex items-start gap-3">
+              <span className={cn(bone, "h-10 w-10 shrink-0 rounded-[10px]")} />
+              <div className="flex-1 space-y-2">
+                <span className={cn(bone, "block h-3.5 w-4/5")} />
+                <span className={cn(bone, "block h-3 w-full")} />
               </div>
             </div>
-          ))}
+            <span className={cn(bone, "block h-10 w-full rounded-[10px]")} />
+          </div>
         </div>
-      </section>
-      <aside className="rounded-[16px] border border-[#eef1f4] bg-white px-5 py-5 shadow-[0_8px_24px_rgba(11,31,77,0.05)] sm:px-6">
-        <h2 className="font-manrope text-[18px] font-semibold text-navy sm:text-[20px]">
-          {t("Order Summary")}
-        </h2>
-        <div className="mt-4 divide-y divide-[#eef1f4]">
-          {SUMMARY_SKELETON_GROUPS.map((rows, groupIndex) => (
-            <div key={groupIndex} className="space-y-2.5 py-3 first:pt-0">
-              {rows.map(([label, value], rowIndex) => (
-                <div key={rowIndex} className="flex items-center justify-between">
-                  <span className={cn(bone, "block h-3.5", label)} />
-                  <span className={cn(bone, "block h-3.5", value)} />
+      </div>
+      <div className="mt-6 grid items-start gap-6 sm:mt-4 lg:grid-cols-[minmax(0,1fr)_360px]">
+        <section>
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="font-manrope text-[18px] font-semibold text-navy sm:text-[20px]">
+              {t("Selected Plots")}
+            </h2>
+            <span className={cn(bone, "block h-3.5 w-14")} />
+          </div>
+          <span className={cn(bone, "mt-2 block h-3 w-64 max-w-full")} />
+          <div className="mt-3 space-y-3">
+            {Array.from({ length: 3 }, (_, index) => (
+              <div
+                key={index}
+                className="flex items-center gap-3 rounded-[16px] bg-white px-3 py-3 shadow-[0_2px_8px_rgba(0,0,0,0.08)] sm:px-4 sm:py-[14px]"
+              >
+                <span
+                  className={cn(
+                    bone,
+                    "h-20 w-20 shrink-0 rounded-[12px] sm:h-[100px] sm:w-[100px]",
+                  )}
+                />
+                <div className="min-w-0 flex-1 space-y-2">
+                  <div className="flex gap-2">
+                    <span className={cn(bone, "block h-3 w-8")} />
+                    <span className={cn(bone, "block h-3 w-16")} />
+                  </div>
+                  <span className={cn(bone, "block h-4 w-3/5 max-w-[160px]")} />
+                  <span className={cn(bone, "block h-3 w-1/2 max-w-[140px]")} />
+                  <span className={cn(bone, "block h-3 w-1/2 max-w-[140px]")} />
+                </div>
+                <div className="flex shrink-0 flex-col items-end gap-3">
+                  <span className={cn(bone, "block h-8 w-20 sm:w-[110px]")} />
+                  <span className={cn(bone, "block h-4 w-14 sm:w-[70px]")} />
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+        <aside>
+          <div className="flex gap-3">
+            <span className={cn(bone, "block h-14 flex-1 rounded-[16px]")} />
+            <span className={cn(bone, "block h-14 w-24 rounded-[16px]")} />
+          </div>
+          <div className="mt-3 rounded-[16px] border border-[#eef1f4] bg-white px-5 py-5 shadow-[0_8px_24px_rgba(11,31,77,0.05)] sm:px-6">
+            <h2 className="font-manrope text-[18px] font-semibold text-navy sm:text-[20px]">
+              {t("Order Summary")}
+            </h2>
+            <div className="mt-4 divide-y divide-[#eef1f4]">
+              {SUMMARY_SKELETON_GROUPS.map((rows, groupIndex) => (
+                <div key={groupIndex} className="space-y-2.5 py-3 first:pt-0">
+                  {rows.map(([label, value], rowIndex) => (
+                    <div key={rowIndex} className="flex items-center justify-between">
+                      <span className={cn(bone, "block h-3.5", label)} />
+                      <span className={cn(bone, "block h-3.5", value)} />
+                    </div>
+                  ))}
                 </div>
               ))}
             </div>
-          ))}
-        </div>
-        <div className="mt-4 space-y-3 border-t border-[#eef1f4] pt-5">
-          <span className={cn(bone, "block h-11 rounded-[12px]")} />
-          <span className={cn(bone, "block h-11 rounded-[12px]")} />
-        </div>
-      </aside>
+            <div className="mt-4 space-y-3 border-t border-[#eef1f4] pt-5">
+              <span className={cn(bone, "block h-11 rounded-[12px]")} />
+              <span className={cn(bone, "block h-11 rounded-[12px]")} />
+            </div>
+          </div>
+        </aside>
+      </div>
     </div>
   );
 }
@@ -493,12 +532,11 @@ function FilledCart({
   t,
 }: FilledCartProps) {
   const remainingRai = Math.max(cart.remainingRai, 0);
-  const minimumReached = remainingRai === 0;
 
   return (
     <>
       <ProgressBanner cart={cart} t={t} />
-      <div className="mt-6 grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
+      <div className="mt-6 grid items-start gap-6 sm:mt-4 lg:grid-cols-[minmax(0,1fr)_360px]">
         <section>
           <div className="flex items-center justify-between gap-3">
             <h2 className="font-manrope text-[18px] font-semibold text-navy sm:text-[20px]">
@@ -547,38 +585,6 @@ function FilledCart({
               />
             ))}
           </div>
-          <div className="mt-3 flex flex-col items-start justify-between gap-4 rounded-[16px] border border-dashed border-[#d5deea] bg-white px-4 py-4 sm:flex-row sm:items-center sm:px-5">
-            <div className="flex items-start gap-3">
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] bg-[#f1f4f9] text-navy">
-                <PinPlusIcon />
-              </span>
-              <div>
-                <h3 className="font-manrope text-[14px] font-semibold leading-5 text-navy">
-                  {minimumReached
-                    ? t("Want more land? Add more places to your collection.")
-                    : fill(t("Add more places to reach the {min} Rai threshold"), {
-                        min: cart.minimumRai,
-                      })}
-                </h3>
-                <p className="mt-1 max-w-[420px] font-manrope font-medium text-[12px] leading-5 text-[#8b939e]">
-                  {minimumReached
-                    ? t("Unlock deed certification and blockchain cadastral inscription.")
-                    : fill(
-                        t(
-                          "Unlock deed certification and blockchain cadastral inscription by selecting {rai} additional Rai.",
-                        ),
-                        { rai: remainingRai },
-                      )}
-                </p>
-              </div>
-            </div>
-            <Link
-              href={routes.dashboardExplore}
-              className="inline-flex h-11 w-full shrink-0 items-center justify-center rounded-[10px] bg-navy px-4 font-manrope text-[13px] font-medium text-white hover:bg-navy-deep sm:w-auto"
-            >
-              {t("Explore Thailand →")}
-            </Link>
-          </div>
         </section>
 
         <OrderSummary cart={cart} coupon={coupon} remainingRai={remainingRai} t={t} />
@@ -598,10 +604,12 @@ function ProgressBanner({ cart, t }: { cart: CartView; t: Translate }) {
   return (
     <section
       aria-label={t("Minimum order progress")}
-      className="mt-6 rounded-[20px] bg-white p-5 shadow-[0_2px_20px_rgba(0,0,0,0.08)] sm:rounded-[24px] sm:p-8"
+      data-tour="cart-progress"
+      className="mt-6 rounded-[20px] bg-white p-5 shadow-[0_2px_20px_rgba(0,0,0,0.08)] sm:mt-4 sm:px-6 sm:py-5"
     >
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0">
+      {/* Progress on the left; the "add more places" call to action fills the right (lg up). */}
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] lg:gap-6">
+        <div className="min-w-0 lg:flex lg:flex-col lg:justify-center">
           <h2 className="flex items-center gap-2 font-manrope text-[16px] font-semibold text-navy sm:text-[18px]">
             <CheckCircleIcon />
             {t(reached ? "Minimum order completed!" : "Complete your selection")}
@@ -616,57 +624,85 @@ function ProgressBanner({ cart, t }: { cart: CartView; t: Translate }) {
               { min: cart.minimumRai },
             )}
           </p>
-        </div>
-        <div className="flex shrink-0 items-center gap-2 sm:flex-col sm:items-end sm:gap-1">
-          <p className="font-manrope font-medium">
-            <span className="text-[20px] font-semibold text-navy">{cart.totalRai}</span>
-            <span className="text-[13px] text-[#8b939e]">{` / ${cart.minimumRai} ${t("Rai")}`}</span>
-          </p>
-          {reached ? (
-            <span className="rounded-full bg-[#dcfce7] px-2 py-0.5 font-manrope text-[11px] font-semibold text-[#16a34a]">
-              {t("Minimum Reached")}
-            </span>
-          ) : null}
-        </div>
-      </div>
 
-      <div className="mt-4 flex items-center justify-between gap-3 font-manrope font-medium text-[14px] text-navy">
-        <span>
-          {`${plotCount} ${t(plotCount === 1 ? "Plot" : "Plots")} · ${cart.totalRai} ${t("Rai")}`}
-        </span>
-        <span className="font-semibold">{`${t("Total")}: ${money(cart.total)}`}</span>
-      </div>
-      <div
-        role="progressbar"
-        aria-valuemin={0}
-        aria-valuemax={cart.minimumRai}
-        aria-valuenow={Math.min(cart.totalRai, cart.minimumRai)}
-        className="mt-2 h-1.5 overflow-hidden rounded-full bg-[#eef1f5]"
-      >
-        <span
-          className={cn(
-            "block h-full rounded-full transition-[width] duration-500",
-            reached ? "bg-[#22c55e]" : "bg-[#e11d2e]",
-          )}
-          style={{ width: `${progress}%` }}
-        />
-      </div>
-      <div className="mt-2 flex flex-col gap-1 font-manrope font-medium text-[13px] leading-5 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
-        {reached ? (
-          <span />
-        ) : (
-          <span className="text-[#5c6770]">
-            {fill(t("{rai} Rai more to reach minimum"), { rai: remainingRai })}
-          </span>
-        )}
-        <span className="text-[#8b939e] sm:text-right">
-          <strong className="font-semibold text-navy">{t("NEXT STEP : ")}</strong>{" "}
-          {t(
-            reached
-              ? "Continue to checkout to complete your purchase."
-              : "Select parcels from any province zone to unlock settlement.",
-          )}
-        </span>
+          <div
+            role="progressbar"
+            aria-valuemin={0}
+            aria-valuemax={cart.minimumRai}
+            aria-valuenow={Math.min(cart.totalRai, cart.minimumRai)}
+            className="mt-4 h-1.5 overflow-hidden rounded-full bg-[#eef1f5]"
+          >
+            <span
+              className={cn(
+                "block h-full rounded-full transition-[width] duration-500",
+                reached ? "bg-[#22c55e]" : "bg-[#e11d2e]",
+              )}
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+
+          {/* One line under the bar: the numbers on the left, what is still missing on the right. */}
+          <div className="mt-2 flex flex-wrap items-center justify-between gap-x-6 gap-y-1 font-manrope font-medium text-[13px] leading-5">
+            <p className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-[#8b939e]">
+              <span>
+                <strong className="text-[15px] font-semibold text-navy">
+                  {cart.totalRai}
+                </strong>
+                {` / ${cart.minimumRai} ${t("Rai")}`}
+              </span>
+              <span aria-hidden="true">·</span>
+              <span>{`${plotCount} ${t(plotCount === 1 ? "Plot" : "Plots")}`}</span>
+              <span aria-hidden="true">·</span>
+              <span>
+                {`${t("Total")}: `}
+                <strong className="font-semibold text-navy">{money(cart.total)}</strong>
+              </span>
+              {reached ? (
+                <span className="rounded-full bg-[#dcfce7] px-2 py-0.5 text-[11px] font-semibold text-[#16a34a]">
+                  {t("Minimum Reached")}
+                </span>
+              ) : null}
+            </p>
+            {reached ? null : (
+              <span className="text-[#5c6770]">
+                {fill(t("{rai} Rai more to reach minimum"), { rai: remainingRai })}
+              </span>
+            )}
+          </div>
+        </div>
+
+        <div className="flex flex-col justify-center gap-3 rounded-[14px] bg-[#f7f9fc] px-4 py-3">
+          <div className="flex items-start gap-3">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] bg-white text-navy">
+              <PinPlusIcon />
+            </span>
+            <div className="min-w-0">
+              <h3 className="font-manrope text-[13px] font-semibold leading-5 text-navy">
+                {reached
+                  ? t("Want more land? Add more places to your collection.")
+                  : fill(t("Add more places to reach the {min} Rai threshold"), {
+                      min: cart.minimumRai,
+                    })}
+              </h3>
+              <p className="mt-0.5 font-manrope font-medium text-[11px] leading-4 text-[#8b939e]">
+                {reached
+                  ? t("Unlock deed certification and blockchain cadastral inscription.")
+                  : fill(
+                      t(
+                        "Unlock deed certification and blockchain cadastral inscription by selecting {rai} additional Rai.",
+                      ),
+                      { rai: remainingRai },
+                    )}
+              </p>
+            </div>
+          </div>
+          <Link
+            href={routes.dashboardExplore}
+            className="inline-flex h-10 w-full items-center justify-center rounded-[10px] bg-navy px-5 font-manrope text-[13px] font-medium text-white hover:bg-navy-deep"
+          >
+            {t("Explore Thailand →")}
+          </Link>
+        </div>
       </div>
     </section>
   );
@@ -692,6 +728,7 @@ function OrderSummary({
           {cart.checkoutEligible ? (
             <Link
               href={checkoutHref(cart.coupon?.id)}
+              data-tour="checkout"
               className="mt-6 flex h-12 w-full items-center justify-center rounded-[12px] bg-navy font-manrope text-[15px] font-medium text-white hover:bg-navy-deep"
             >
               {t("Proceed to checkout →")}
@@ -700,6 +737,7 @@ function OrderSummary({
             <button
               type="button"
               disabled
+              data-tour="checkout"
               className="mt-6 h-12 w-full cursor-not-allowed rounded-[12px] bg-[#d9dde3] font-manrope text-[15px] font-medium text-[#9aa3ad]"
             >
               {t("Proceed to checkout →")}
@@ -783,7 +821,8 @@ function CartItemCard({
   t: Translate;
 }) {
   const location = item.city ?? item.region?.name;
-  const title = item.plotName?.trim() || item.name || item.plotNumber || item.zoneCategory?.name;
+  const title =
+    item.plotName?.trim() || item.name || item.plotNumber || item.zoneCategory?.name;
   const tier = item.zoneCategory?.type;
 
   return (
@@ -804,7 +843,7 @@ function CartItemCard({
               </span>
             ) : null}
             {item.plotNumber ? (
-              <span className="rounded-[4px] border border-[#9ca3af] bg-[#f3f4f6] px-1.5 py-px font-manrope font-medium text-[10px] leading-4 text-[#6b7280]">
+              <span className="rounded-[4px] border border-[#9ca3af] bg-[#f3f4f6] px-1.5 py-px font-manrope font-medium text-[9px] leading-4 text-[#6b7280]">
                 {item.plotNumber}
               </span>
             ) : null}
@@ -816,7 +855,7 @@ function CartItemCard({
           </h3>
         ) : null}
         {location ? (
-          <p className="mt-0.5 inline-flex max-w-full items-center gap-1 rounded-[4px] border border-[#9ca3af] bg-[#f3f4f6] px-1.5 py-px font-manrope font-medium text-[10px] leading-4 text-[#6b7280]">
+          <p className="mt-0.5 inline-flex max-w-full items-center gap-1 rounded-[4px] border border-[#9ca3af] bg-[#f3f4f6] px-1.5 py-px font-manrope font-medium text-[9px] leading-4 text-[#6b7280]">
             <PinIcon />
             <span className="truncate">{location}</span>
           </p>
@@ -836,7 +875,7 @@ function CartItemCard({
         ) : null}
       </div>
       <div className="flex shrink-0 flex-col items-end justify-center gap-3 self-stretch sm:gap-4">
-        <strong className="font-manrope text-[22px] font-semibold leading-7 text-[#111111] sm:text-[30px] sm:leading-9">
+        <strong className="font-manrope text-[18px] font-semibold leading-6 text-[#111111] sm:text-[24px] sm:leading-8">
           {money(item.subtotal)}
         </strong>
         <button
@@ -963,7 +1002,12 @@ function RemovePlotDialog({
   t: Translate;
 }) {
   const titleId = "remove-plot-title";
-  const title = item.plotName?.trim() || item.name || item.plotNumber || item.zoneCategory?.name || t("this plot");
+  const title =
+    item.plotName?.trim() ||
+    item.name ||
+    item.plotNumber ||
+    item.zoneCategory?.name ||
+    t("this plot");
   const image = item.images?.[0] ?? item.imageUrl;
   const location = item.city ?? item.region?.name;
   const tier = item.zoneCategory?.type;

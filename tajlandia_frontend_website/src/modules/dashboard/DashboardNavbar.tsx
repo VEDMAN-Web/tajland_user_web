@@ -68,6 +68,7 @@ function CartLink({ count, isActive, label }: { count: number; isActive: boolean
     <Link
       href={routes.cart}
       aria-label={count > 0 ? `Cart, ${count} items` : "Cart"}
+      data-tour="cart-button"
       className="group inline-flex rounded-full outline-none focus-visible:ring-2 focus-visible:ring-navy/40"
     >
       <Icon active={isActive} badge={count} label={label}>
@@ -163,6 +164,7 @@ export function DashboardNavbar({ active, account = null, overlay = false }: Das
               type="button"
               aria-label={t("Open dashboard menu")}
               aria-expanded={isMobileMenuOpen}
+              data-tour="nav-menu"
               onClick={() => setIsMobileMenuOpen((open) => !open)}
               className={`flex ${controlHeight} w-11 flex-col items-center justify-center gap-1.5 rounded-full bg-white ${controlShadow}`}
             >

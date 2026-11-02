@@ -10,20 +10,22 @@ pdfjs.GlobalWorkerOptions.workerSrc = new URL("pdfjs-dist/build/pdf.worker.min.m
 const DEFAULT_PAGE_RATIO = 646 / 941;
 
 /**
- * Renders page 1 of a certificate PDF, fitted inside its (relative) parent.
- * Loaded through `next/dynamic` with `ssr: false` (pdf.js is browser-only).
+ * Renders one page (the first by default) of a certificate PDF, fitted inside its
+ * (relative) parent. Loaded through `next/dynamic` with `ssr: false` (pdf.js is browser-only).
  */
 export function CertificatePdf({
   url,
   alt,
   loading,
   fallback,
+  page = 1,
 }: {
   url: string;
   alt: string;
   loading: ReactNode;
   /** Shown instead when the PDF can't be fetched or rendered. */
   fallback: ReactNode;
+  page?: number;
 }) {
   const boxRef = useRef<HTMLDivElement>(null);
   const [box, setBox] = useState({ width: 0, height: 0 });
@@ -49,7 +51,7 @@ export function CertificatePdf({
       {pageWidth > 0 ? (
         <Document file={url} suspense={false} loading={loading} error={null} onLoadError={() => setFailed(true)}>
           <Page
-            pageNumber={1}
+            pageNumber={page}
             width={pageWidth}
             suspense={false}
             loading={loading}

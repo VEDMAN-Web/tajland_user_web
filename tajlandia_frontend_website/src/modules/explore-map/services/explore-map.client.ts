@@ -27,7 +27,7 @@ import type {
 import type {
   ExploreMap,
   RecentSearch,
-  SearchResult,
+  SearchHit,
   SearchSuggestion,
 } from "../types/explore-map.types";
 
@@ -56,18 +56,19 @@ export async function getSearchSuggestions(
 }
 
 /**
- * Full search for the results list. The backend saves every call to the user's
- * recent searches, so only call this when the user submits, not per keystroke.
+ * Full search for the results list: regions, then cities, then plots (found by
+ * plot number or name). The backend saves every call to the user's recent
+ * searches, so only call this when the user submits, not per keystroke.
  */
 export async function searchPlaces(
   query: string,
   signal?: AbortSignal,
-): Promise<SearchResult[]> {
+): Promise<SearchHit[]> {
   const data = await authedGet("/explore/search", searchResultsSchema, {
     query: { q: query, limit: SEARCH_LIMIT },
     signal,
   });
-  return data.results;
+  return [...data.regions, ...data.cities, ...data.plots];
 }
 
 /**
@@ -244,6 +245,11 @@ export function getFilterOptions(regionId: string, signal?: AbortSignal): Promis
  */
 export async function addPlotToCart(plotId: string): Promise<void> {
   await authedPost("/cart/items", { plotId }, ignoredResultSchema);
+}
+
+/** Takes a plot out of the cart; the backend releases its reservation. */
+export async function removePlotFromCart(plotId: string): Promise<void> {
+  await authedDelete(`/cart/items/${encodeURIComponent(plotId)}`, ignoredResultSchema);
 }
 
 const OWNED_PLOTS_PAGE_SIZE = 100;

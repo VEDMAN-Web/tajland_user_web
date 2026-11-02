@@ -7,6 +7,8 @@ import { MAIN_MENU_ACCOUNT_PAGES, type AccountKey } from "./AccountMenu";
 import { DashboardTopBar } from "./DashboardTopBar";
 import { DashboardNavbar } from "./DashboardNavbar";
 import { DashboardSidebar, type NavbarActive } from "./DashboardSidebar";
+import { OnboardingTour } from "./OnboardingTour";
+import { TutorialTour } from "./tutorial/TutorialTour";
 
 const RAIL_STORAGE_KEY = "tajlandia_sidebar";
 const RAIL_CHANGED_EVENT = "tajlandia:sidebar-changed";
@@ -127,6 +129,8 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         onToggleRail={menuAccount ? undefined : toggleRail}
       />
       <DashboardNavbar active={active} account={menuAccount} overlay={overlay} />
+      <OnboardingTour />
+      <TutorialTour />
       <div
         className={`lg:transition-[padding-left] lg:duration-300 motion-reduce:lg:transition-none ${rail ? "lg:pl-[76px]" : "lg:pl-[220px]"}`}
       >

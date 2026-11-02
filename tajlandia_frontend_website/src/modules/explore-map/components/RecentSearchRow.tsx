@@ -22,12 +22,12 @@ export function RecentSearchRow({ item, onSelect, onRemove, t }: RecentSearchRow
         onClick={() => onSelect(item)}
         className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 p-2 text-left"
       >
-        <PlaceThumbnail src={item.imageUrl} />
+        <PlaceThumbnail src={item.imageUrl ?? item.images?.[0]} />
         <span className="min-w-0 flex-1">
           <strong className="block truncate text-[12px] font-medium text-navy">
             {label}
           </strong>
-          <PlaceCounts zone={item.zone} plots={item.plots} t={t} />
+          <PlaceCounts zone={item.zone} plots={item.plots} showZones={false} t={t} />
         </span>
       </button>
       <button

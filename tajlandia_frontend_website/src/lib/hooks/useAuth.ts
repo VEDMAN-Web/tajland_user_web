@@ -10,6 +10,8 @@ export interface AuthUser {
   role?: string;
   isActive?: boolean;
   isEmailVerified?: boolean;
+  /** True when the login that created this session was the account's first one. */
+  isFirstLogin?: boolean;
   phone?: string;
   avatarUrl?: string;
   createdAt?: string;

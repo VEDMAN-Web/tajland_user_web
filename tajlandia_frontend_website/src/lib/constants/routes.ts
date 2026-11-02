@@ -20,6 +20,7 @@ export const routes = {
   contact: "/contact",
   login: "/login",
   signup: "/signup",
+  forgotPassword: "/forgot-password",
   privacy: "/privacy",
   terms: "/terms",
   dashboardPrivacy: "/dashboard/privacy",

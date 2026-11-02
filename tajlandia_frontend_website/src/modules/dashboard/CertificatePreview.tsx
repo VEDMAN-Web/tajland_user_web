@@ -36,14 +36,17 @@ export function CertificatePreview({
   alt,
   sizes,
   priority = false,
+  page = 1,
 }: {
   url: string | null | undefined;
   alt: string;
   sizes: string;
   priority?: boolean;
+  /** Which page of a PDF to show (1 by default). */
+  page?: number;
 }) {
   const [imageError, setImageError] = useState(false);
-  const image = certificatePreviewUrl(url);
+  const image = certificatePreviewUrl(url, page);
   const fallback = <CertificateUnavailable url={isPdfUrl(url) ? url : null} />;
 
   if (image && !imageError) {
@@ -60,9 +63,43 @@ export function CertificatePreview({
     );
   }
   if (isPdfUrl(url)) {
-    return <CertificatePdf url={url} alt={alt} loading={loadingSkeleton} fallback={fallback} />;
+    return <CertificatePdf url={url} alt={alt} loading={loadingSkeleton} fallback={fallback} page={page} />;
   }
   return fallback;
+}
+
+/**
+ * Every page of a certificate, one under the other (each in its own certificate-shaped
+ * box). A single-page certificate is just the one box.
+ */
+export function CertificatePages({
+  url,
+  alt,
+  sizes,
+  pages,
+  priority = false,
+}: {
+  url: string | null | undefined;
+  alt: string;
+  sizes: string;
+  pages: number;
+  priority?: boolean;
+}) {
+  return (
+    <div className="flex w-full flex-col gap-3">
+      {Array.from({ length: Math.max(1, pages) }, (_, index) => (
+        <div key={index} className="relative aspect-[646/941] w-full">
+          <CertificatePreview
+            url={url}
+            alt={pages > 1 ? `${alt} (${index + 1}/${pages})` : alt}
+            sizes={sizes}
+            priority={priority && index === 0}
+            page={index + 1}
+          />
+        </div>
+      ))}
+    </div>
+  );
 }
 
 function CertificateUnavailable({ url }: { url: string | null }) {

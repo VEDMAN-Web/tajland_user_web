@@ -54,6 +54,7 @@ export function ResetPasswordForm() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
   const [apiError, setApiError] = useState("");
+  const [needsNewCode, setNeedsNewCode] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const strength = getStrength(values.newPassword);
 
@@ -91,6 +92,7 @@ export function ResetPasswordForm() {
     setErrors({});
     setSuccessMessage("");
     setApiError("");
+    setNeedsNewCode(false);
     setIsSubmitting(true);
 
     try {
@@ -105,6 +107,7 @@ export function ResetPasswordForm() {
         }, 2000);
       } else {
         setApiError(actionResult.message || "Failed to reset password. Please try again.");
+        setNeedsNewCode(Boolean(actionResult.needsNewCode));
         setSuccessMessage("");
       }
     } catch {
@@ -151,7 +154,17 @@ export function ResetPasswordForm() {
           </div>
 
           {successMessage ? <p role="status" className="mt-4 rounded-[12px] border border-[#c8ecd3] bg-[#f1fbf4] px-3.5 py-2.5 text-center text-[13px] font-medium text-green-700">{successMessage}</p> : null}
-          {apiError ? <p role="alert" className="mt-4 rounded-[12px] border border-[#f6c9cd] bg-[#fff4f5] px-3.5 py-2.5 text-center text-[13px] text-[#d52b35]">{apiError}</p> : null}
+          {apiError ? (
+            <p role="alert" className="mt-4 rounded-[12px] border border-[#f6c9cd] bg-[#fff4f5] px-3.5 py-2.5 text-center text-[13px] text-[#d52b35]">
+              {apiError}
+              {needsNewCode ? (
+                <>
+                  {" "}
+                  <Link href={routes.forgotPassword} className="font-semibold underline">Request a new code</Link>
+                </>
+              ) : null}
+            </p>
+          ) : null}
           <button type="submit" disabled={isSubmitting} className="mt-5 lg:mt-4 inline-flex h-12 lg:h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-[14px] bg-linear-to-b from-[#12307a] to-navy text-[15px] font-medium text-white shadow-[0_10px_24px_-10px_rgba(11,31,77,0.7)] transition hover:-translate-y-px hover:shadow-[0_14px_28px_-10px_rgba(11,31,77,0.75)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0 motion-reduce:transition-none">
             {isSubmitting ? (
               <>

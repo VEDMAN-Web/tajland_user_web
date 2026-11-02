@@ -15,6 +15,9 @@ type PlotCardProps = {
   /** True while this plot's Add to Cart request runs. */
   isAddingToCart: boolean;
   onAddToCart: (plot: ExplorePlot) => void;
+  /** True while this plot's Remove from cart request runs. */
+  isRemovingFromCart: boolean;
+  onRemoveFromCart: (plot: ExplorePlot) => void;
   /** True while this plot's deed (certificate) is being looked up. */
   isOpeningDeed: boolean;
   onViewDeed: (plot: ExplorePlot) => void;
@@ -116,6 +119,8 @@ export function PlotCard({
   onSelect,
   isAddingToCart,
   onAddToCart,
+  isRemovingFromCart,
+  onRemoveFromCart,
   isOpeningDeed,
   onViewDeed,
   t,
@@ -131,9 +136,14 @@ export function PlotCard({
 
   return (
     <article
+      // The whole card selects the plot; its own buttons and links keep their own action.
+      onClick={(event) => {
+        if ((event.target as HTMLElement).closest("a, button")) return;
+        onSelect(plot);
+      }}
       className={cn(
-        // Content height on phones; Figma's fixed 184px from sm up.
-        "group relative isolate flex shrink-0 flex-col gap-3 rounded-[16px] border p-[14px] shadow-[0_1px_2px_rgba(0,0,0,0.05),inset_0_1px_0_rgba(255,255,255,0.9)] transition-[border-color,box-shadow] duration-200 hover:shadow-[0_8px_20px_-12px_rgba(11,31,77,0.3),inset_0_1px_0_rgba(255,255,255,0.9)] sm:h-[184px]",
+        // Content height on phones; a fixed 164px from sm up.
+        "group relative isolate flex shrink-0 cursor-pointer flex-col gap-3 rounded-[16px] border p-[14px] shadow-[0_1px_2px_rgba(0,0,0,0.05),inset_0_1px_0_rgba(255,255,255,0.9)] transition-[border-color,box-shadow] duration-200 hover:shadow-[0_8px_20px_-12px_rgba(11,31,77,0.3),inset_0_1px_0_rgba(255,255,255,0.9)] sm:h-[164px]",
         theme ? theme.card : "bg-white",
         selected
           ? "border-[#001f54]"
@@ -167,13 +177,15 @@ export function PlotCard({
         type="button"
         onClick={() => onSelect(plot)}
         aria-pressed={selected}
+        // The tutorial points at the first plot that can still be bought.
+        data-tour={status === "available" ? "plot-card" : undefined}
         className="flex min-w-0 cursor-pointer gap-3 text-left"
       >
         <span className="relative shrink-0">
           <PlaceThumbnail
             src={plot.images?.[0] ?? plot.imageUrl}
             size={99}
-            className="h-[84px] w-[84px] rounded-[12px] sm:h-[99px] sm:w-[99px]"
+            className="h-[84px] w-[84px] rounded-[12px]"
           />
           {tier ? (
             <span
@@ -265,15 +277,29 @@ export function PlotCard({
             {t(isAddingToCart ? "Adding..." : "Add to Cart")}
           </button>
         ) : status === "inCart" ? (
-          <Link
-            href={routes.cart}
-            className={cn(
-              actionClass,
-              "cursor-pointer bg-[#eef2f7] text-[#001f54] hover:bg-[#e2e8f1]",
-            )}
-          >
-            {t("View Cart")}
-          </Link>
+          // Two buttons beside the price, so both are narrower than the single one.
+          <div className="flex shrink-0 items-center gap-2">
+            <Link
+              href={routes.cart}
+              className={cn(
+                actionClass,
+                "min-w-0 cursor-pointer bg-[#eef2f7] px-3 text-[#001f54] hover:bg-[#e2e8f1]",
+              )}
+            >
+              {t("View Cart")}
+            </Link>
+            <button
+              type="button"
+              disabled={isRemovingFromCart}
+              onClick={() => onRemoveFromCart(plot)}
+              className={cn(
+                actionClass,
+                "min-w-0 cursor-pointer border border-[#f6c4c4] bg-white px-3 text-[#d64242] hover:bg-[#fff5f5] disabled:cursor-wait disabled:opacity-70",
+              )}
+            >
+              {t(isRemovingFromCart ? "Removing..." : "Remove")}
+            </button>
+          </div>
         ) : status === "owned" ? (
           <button
             type="button"
@@ -290,7 +316,8 @@ export function PlotCard({
           <button
             type="button"
             disabled
-            className={cn(actionClass, "cursor-not-allowed bg-[#eef1f5] text-[#a0aab6]")}
+            // Clicks pass through to the card (a disabled button swallows them).
+            className={cn(actionClass, "pointer-events-none bg-[#eef1f5] text-[#a0aab6]")}
           >
             <LockIcon />
             {t(status === "locked" ? "Locked" : "Taken")}
@@ -308,13 +335,13 @@ export function PlotCardSkeleton() {
   return (
     <div
       aria-hidden="true"
-      className="flex shrink-0 flex-col gap-3 rounded-[12px] border border-[#e9ecef] bg-white p-[14px] sm:h-[184px]"
+      className="flex shrink-0 flex-col gap-3 rounded-[12px] border border-[#e9ecef] bg-white p-[14px] sm:h-[164px]"
     >
       <div className="flex gap-3">
         <span
           className={cn(
             bone,
-            "h-[84px] w-[84px] shrink-0 rounded-[12px] sm:h-[99px] sm:w-[99px]",
+            "h-[84px] w-[84px] shrink-0 rounded-[12px]",
           )}
         />
         <div className="flex min-w-0 flex-1 flex-col">

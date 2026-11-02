@@ -49,21 +49,26 @@ export function PlaceThumbnail({
   );
 }
 
-/** "1 Zone · 4 Plots", or nothing until the backend sends both counts. */
+/**
+ * "1 Zone · 4 Plots", or nothing until the backend sends both counts. With
+ * `showZones` off (recent searches) only the plot count: "4 Plots".
+ */
 export function PlaceCounts({
   zone,
   plots,
+  showZones = true,
   t,
 }: {
   zone: number | null | undefined;
   plots: number | null | undefined;
+  showZones?: boolean;
   t: (source: string) => string;
 }) {
   if (zone == null || plots == null) return null;
 
   return (
     <span className="block text-[10px] text-[#8d97a3]">
-      {`${zone} ${t(zone === 1 ? "Zone" : "Zones")} · `}
+      {showZones ? `${zone} ${t(zone === 1 ? "Zone" : "Zones")} · ` : null}
       {/* Navy while its row is hovered (Figma "Selected"). */}
       <span className="group-hover/place:text-[#001f54] group-focus-visible/place:text-[#001f54]">
         {`${plots} ${t(plots === 1 ? "Plot" : "Plots")}`}
