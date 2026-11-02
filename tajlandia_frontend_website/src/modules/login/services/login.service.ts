@@ -62,7 +62,8 @@ export async function googleLoginAction(credential: string): Promise<LoginAction
 
   try {
     // The backend verifies the Google ID token and issues our own JWTs (same response as /auth/login)
-    const response = await apiPost("/auth/google", { credential }, loginResponseSchema);
+    // The API host can be asleep on the first request, so allow longer than the default timeout
+    const response = await apiPost("/auth/google", { credential }, loginResponseSchema, { timeoutMs: 20_000 });
 
     if (!response.success) {
       return { ok: false, message: response.message || "Google sign-in failed. Please try again." };
