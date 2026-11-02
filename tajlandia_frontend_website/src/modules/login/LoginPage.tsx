@@ -375,6 +375,9 @@ export function LoginPage() {
                           shape="rectangular"
                           size="large"
                           width={googleButtonWidth}
+                          // Chrome's FedCM dialog does nothing once dismissed or blocked for the site;
+                          // the classic popup flow always opens.
+                          use_fedcm_for_button={false}
                         />
                       </GoogleOAuthProvider>
                     </div>
