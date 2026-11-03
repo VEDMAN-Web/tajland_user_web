@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { authedDelete, authedGet, authedPost } from "@/lib/api/browser-client";
+import { authedDelete, authedGet, authedPost, publicGet } from "@/lib/api/browser-client";
 import { SORT_QUERY_BY_NAME } from "../constants/explore-filters";
 import {
   filterOptionsSchema,
@@ -193,6 +193,20 @@ export function getPlotDetail(
       signal,
     },
   );
+}
+
+/** Every plot in a region for signed-out visitors (`GET /public/explore/plots`), following pagination. */
+export async function getPublicRegionPlots(regionId: string, signal?: AbortSignal): Promise<ExplorePlot[]> {
+  const plots: ExplorePlot[] = [];
+  for (let page = 1; page <= MAX_PLOT_PAGES; page += 1) {
+    const data = await publicGet("/public/explore/plots", explorePlotsPageSchema, {
+      query: { regionId, page, limit: PLOTS_PAGE_SIZE },
+      signal,
+    });
+    plots.push(...data.items);
+    if (page >= data.pagination.totalPages) break;
+  }
+  return plots;
 }
 
 /**

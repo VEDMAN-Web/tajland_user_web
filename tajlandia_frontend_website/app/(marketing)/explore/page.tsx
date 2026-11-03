@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { ExploreMapPage, fetchPublicMapRegions } from "@/modules/explore-map";
+import { ExploreMapPage, fetchExploreRegions, fetchPublicMapRegions } from "@/modules/explore-map";
 import { getPageMetadata } from "@/lib/seo/metadata";
 import { routes } from "@/lib/constants/routes";
 
@@ -13,6 +13,6 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function Page() {
-  const regions = await fetchPublicMapRegions();
-  return <ExploreMapPage regions={regions} />;
+  const [regions, destinations] = await Promise.all([fetchPublicMapRegions(), fetchExploreRegions()]);
+  return <ExploreMapPage regions={regions} destinations={destinations} />;
 }

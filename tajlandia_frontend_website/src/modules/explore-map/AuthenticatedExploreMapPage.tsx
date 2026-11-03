@@ -2077,7 +2077,7 @@ function ExploreMapContent() {
         </span>
         <span className="flex items-center gap-1.5">
           <i className="h-2 w-2 rounded-full bg-[#d64242]" />
-          {t("Taken")}
+          {t("Claimed")}
         </span>
         <span className="hidden items-center gap-1.5 sm:flex">
           <i className="h-2 w-2 rounded-full bg-navy" />

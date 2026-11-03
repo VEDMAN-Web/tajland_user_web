@@ -18,6 +18,11 @@ const exploreRegionSchema = z.object({
   displayOrder: z.number(),
 });
 
+/** `GET /explore/regions` `data`. */
+export const exploreRegionsSchema = z.object({
+  regions: z.array(exploreRegionSchema),
+});
+
 /** `GET /explore/map` `data`. */
 export const exploreMapSchema = z.object({
   map: z.object({

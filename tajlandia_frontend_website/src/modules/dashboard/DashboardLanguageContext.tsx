@@ -1208,6 +1208,7 @@ const translations: Record<string, Record<Exclude<DashboardLanguage, "EN">, stri
   "Plot Status": { PL: "Status działki", TH: "สถานะแปลงที่ดิน" },
   Locked: { PL: "Zablokowane", TH: "ล็อกแล้ว" },
   Taken: { PL: "Zajęte", TH: "ถูกจองแล้ว" },
+  Claimed: { PL: "Zajęte", TH: "ถูกจองแล้ว" },
   "Your plots": { PL: "Twoje działki", TH: "แปลงของคุณ" },
   "All plots": { PL: "Wszystkie działki", TH: "แปลงทั้งหมด" },
   "Recently viewed": { PL: "Ostatnio oglądane", TH: "ดูล่าสุด" },
@@ -1360,10 +1361,13 @@ const translations: Record<string, Record<Exclude<DashboardLanguage, "EN">, stri
     PL: "Kliknij Mapę, aby zobaczyć działki na mapie.",
     TH: "คลิกแผนที่สำรวจเพื่อดูแปลงที่ดินบนแผนที่",
   },
-  "Search a region": { PL: "Wyszukaj region", TH: "ค้นหาภูมิภาค" },
-  "Type a region such as Phuket or Pattaya and pick it from the list. Its plots will appear.": {
-    PL: "Wpisz region, np. Phuket lub Pattaya, i wybierz go z listy. Pojawią się jego działki.",
-    TH: "พิมพ์ชื่อภูมิภาค เช่น ภูเก็ตหรือพัทยา แล้วเลือกจากรายการ แปลงที่ดินจะปรากฏขึ้น",
+  "Search a region, city or plot": {
+    PL: "Wyszukaj region, miasto lub działkę",
+    TH: "ค้นหาภูมิภาค เมือง หรือแปลงที่ดิน",
+  },
+  "Type a region, city or plot number (for example Phuket or PH-0001) and pick it from the list.": {
+    PL: "Wpisz region, miasto lub numer działki (np. Phuket lub PH-0001) i wybierz go z listy.",
+    TH: "พิมพ์ภูมิภาค เมือง หรือเลขแปลง (เช่น ภูเก็ตหรือ PH-0001) แล้วเลือกจากรายการ",
   },
   "Pick a plot": { PL: "Wybierz działkę", TH: "เลือกแปลงที่ดิน" },
   "Click an available plot to see its details: price, size and photos.": {
@@ -1406,9 +1410,9 @@ const translations: Record<string, Record<Exclude<DashboardLanguage, "EN">, stri
     TH: "เป็นเจ้าของที่ดินส่วนหนึ่งในประเทศไทย มาดูวิธีการใช้งานแบบสั้นๆ กัน",
   },
   "Explore the map": { PL: "Przeglądaj mapę", TH: "สำรวจแผนที่" },
-  "Search a region, open any plot and see its price, size and photos.": {
-    PL: "Wyszukaj region, otwórz dowolną działkę i zobacz jej cenę, rozmiar i zdjęcia.",
-    TH: "ค้นหาภูมิภาค เปิดแปลงที่ดินใดก็ได้ แล้วดูราคา ขนาด และรูปภาพ",
+  "Search a region, city or plot number, open any plot and see its price, size and photos.": {
+    PL: "Wyszukaj region, miasto lub numer działki, otwórz dowolną działkę i zobacz jej cenę, rozmiar i zdjęcia.",
+    TH: "ค้นหาภูมิภาค เมือง หรือเลขแปลง เปิดแปลงที่ดินใดก็ได้ แล้วดูราคา ขนาด และรูปภาพ",
   },
   "Add plots to your cart": { PL: "Dodaj działki do koszyka", TH: "เพิ่มแปลงที่ดินลงในตะกร้า" },
   "Pick plots worth at least {min} Rai. Each plot is held for you for 10 minutes after you add it.": {

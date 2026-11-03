@@ -56,8 +56,8 @@ export const TUTORIALS: Tutorial[] = [
       {
         target: "explore-search",
         path: routes.dashboardExplore,
-        title: "Search a region",
-        body: "Type a region such as Phuket or Pattaya and pick it from the list. Its plots will appear.",
+        title: "Search a region, city or plot",
+        body: "Type a region, city or plot number (for example Phuket or PH-0001) and pick it from the list.",
         advance: { when: () => has("plot-card") || has("plot-detail") },
         skipIf: () => has("plot-card") || has("plot-detail"),
         free: true,

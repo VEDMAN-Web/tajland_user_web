@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { fetchPublicMapRegions } from "@/modules/explore-map";
+import { fetchPublicMapRegions, PublicRegionMap } from "@/modules/explore-map";
 import { HomePage } from "@/modules/home";
 import { HomeEntryRedirect } from "@/modules/home/HomeEntryRedirect";
 import { createPageMetadata } from "@/lib/seo/metadata";
@@ -24,7 +24,16 @@ export default async function Page() {
 
   return (
     <HomeEntryRedirect>
-      <HomePage mapRegions={mapRegions} />
+      <HomePage
+        mapRegions={mapRegions}
+        renderMap={(legend) => (
+          <PublicRegionMap
+            regions={mapRegions}
+            legendLabels={legend}
+            frameClassName="h-[clamp(300px,48vw,580px)] min-h-0 rounded-[1.5rem]"
+          />
+        )}
+      />
     </HomeEntryRedirect>
   );
 }

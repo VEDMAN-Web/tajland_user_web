@@ -15,8 +15,8 @@ const STATUS_LABEL = {
   available: { label: "Available", color: "#2cbf65" },
   inCart: { label: "Locked", color: "#e7b52c" },
   locked: { label: "Locked", color: "#e7b52c" },
-  taken: { label: "Taken", color: "#d64242" },
-  owned: { label: "Taken", color: "#d64242" },
+  taken: { label: "Claimed", color: "#d64242" },
+  owned: { label: "Claimed", color: "#d64242" },
 } as const;
 
 /** A plot found by its number or name: "PH-0001 · Plot name", where it is, and its status. */

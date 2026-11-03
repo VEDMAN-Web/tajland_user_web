@@ -8,66 +8,17 @@ import { Button } from "@/components/ui/Button";
 import { Container } from "@/components/ui/Container";
 import type { MapboxMapHandle, MapRegion } from "@/components/maps/MapboxMap";
 import { isAuthenticated } from "@/lib/api/auth.utils";
+import { isAllowedRemoteImage } from "@/lib/config/remote-images";
 import { exploreRegionPath, routes } from "@/lib/constants/routes";
 import { useAuth } from "@/lib/hooks/useAuth";
-import { ExploreThailandMap } from "./components/ExploreThailandMap";
+import { PublicRegionMap, type PublicRegionMapControl } from "./components/PublicRegionMap";
+import type { ExploreRegion } from "./schemas/explore-map.schema";
 
 function exploreMapDestination(signedIn: boolean) {
   return signedIn
     ? routes.dashboardExplore
     : `${routes.login}?next=${encodeURIComponent(routes.dashboardExplore)}`;
 }
-
-export const destinations = [
-  {
-    name: "Phuket",
-    badge: "ICON",
-    detail: "Island life, reimagined.",
-    locations: "24 locations",
-    image: "/images/explore/phuket.jpg",
-    coordinates: [98.3381, 7.8804] as [number, number],
-  },
-  {
-    name: "Krabi",
-    badge: "POPULAR",
-    detail: "Where limestone meets the sea.",
-    locations: "16 locations",
-    image: "/images/explore/krabi.jpg",
-    coordinates: [98.9063, 8.0863] as [number, number],
-  },
-  {
-    name: "Chiang Mai",
-    badge: "STANDARD",
-    detail: "Mountains, culture and quiet.",
-    locations: "12 locations",
-    image: "/images/explore/chiang-mai.jpg",
-    coordinates: [98.9853, 18.7883] as [number, number],
-  },
-  {
-    name: "Bangkok",
-    badge: "POPULAR",
-    detail: "Thailand's vibrant capital.",
-    locations: "18 locations",
-    image: "/images/explore/featured-thailand.jpg",
-    coordinates: [100.5018, 13.7563] as [number, number],
-  },
-  {
-    name: "Pattaya",
-    badge: "STANDARD",
-    detail: "Coastal energy and city life.",
-    locations: "10 locations",
-    image: "/images/explore/featured-thailand.jpg",
-    coordinates: [100.8825, 12.9236] as [number, number],
-  },
-  {
-    name: "Ayutthaya",
-    badge: "STANDARD",
-    detail: "History among ancient temples.",
-    locations: "8 locations",
-    image: "/images/explore/featured-thailand.jpg",
-    coordinates: [100.5684, 14.3532] as [number, number],
-  },
-] as const;
 
 function SearchIcon() {
   return (
@@ -78,6 +29,21 @@ function SearchIcon() {
   );
 }
 
+function ArrowButton({ direction, onClick }: { direction: "prev" | "next"; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      aria-label={direction === "prev" ? "Previous regions" : "Next regions"}
+      onClick={onClick}
+      className="group flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border border-[#e6e8ef] bg-white text-navy shadow-[0_1px_2px_rgba(11,31,77,0.06)] transition hover:border-navy hover:bg-navy hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy motion-reduce:transition-none"
+    >
+      <svg viewBox="0 0 16 16" aria-hidden="true" className={`h-4 w-4 ${direction === "prev" ? "rotate-180" : ""}`}>
+        <path d="M3 8h10m-4-4 4 4-4 4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    </button>
+  );
+}
+
 function MapControlIcon({ type }: { type: "plus" | "minus" }) {
   return <span aria-hidden="true" className="text-lg leading-none">{type === "plus" ? "+" : "−"}</span>;
 }
@@ -85,13 +51,22 @@ function MapControlIcon({ type }: { type: "plus" | "minus" }) {
 type ExploreMapPageProps = {
   /** Region pills from `GET /explore/public/map` (empty hides them). */
   regions?: MapRegion[];
+  /** Cards from `GET /explore/regions` (empty hides the section). */
+  destinations?: ExploreRegion[];
 };
 
-export function ExploreMapPage({ regions = [] }: ExploreMapPageProps) {
+export function ExploreMapPage({ regions = [], destinations: allDestinations = [] }: ExploreMapPageProps) {
+  // A region without a usable image is not shown at all, including when its image fails to load.
+  const [brokenImageIds, setBrokenImageIds] = useState<string[]>([]);
+  const regionCount = allDestinations.length || regions.length;
+  const destinations = allDestinations.filter(
+    (destination) => isAllowedRemoteImage(destination.imageUrl) && !brokenImageIds.includes(destination.id),
+  );
   const router = useRouter();
   const { isAuthenticated: signedIn } = useAuth();
   const mapRef = useRef<MapboxMapHandle>(null);
   const mapSectionRef = useRef<HTMLElement>(null);
+  const regionMapRef = useRef<PublicRegionMapControl>(null);
   const destinationRowRef = useRef<HTMLDivElement>(null);
   const [query, setQuery] = useState("");
   const [message, setMessage] = useState("");
@@ -99,7 +74,7 @@ export function ExploreMapPage({ regions = [] }: ExploreMapPageProps) {
 
   useEffect(() => {
     const row = destinationRowRef.current;
-    if (!row || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (!row) return;
 
     let paused = false;
     const pause = () => {
@@ -114,16 +89,8 @@ export function ExploreMapPage({ regions = [] }: ExploreMapPageProps) {
     row.addEventListener("focusout", resume);
 
     const id = window.setInterval(() => {
-      if (paused) return;
-      const card = row.querySelector("a");
-      if (!card) return;
-      const gap = parseFloat(getComputedStyle(row).columnGap) || 0;
-      const step = (card.getBoundingClientRect().width + gap) * 3;
-      const max = row.scrollWidth - row.clientWidth;
-      if (max < 8) return;
-      const next = row.scrollLeft >= max - 8 ? 0 : Math.min(row.scrollLeft + step, max);
-      row.scrollTo({ left: next, behavior: "smooth" });
-    }, 4000);
+      if (!paused) scrollDestinations(1);
+    }, 3000);
 
     return () => {
       window.clearInterval(id);
@@ -133,6 +100,21 @@ export function ExploreMapPage({ regions = [] }: ExploreMapPageProps) {
       row.removeEventListener("focusout", resume);
     };
   }, []);
+
+  // One card per step, wrapping around at both ends so the slider loops.
+  function scrollDestinations(direction: 1 | -1) {
+    const row = destinationRowRef.current;
+    const card = row?.querySelector("a");
+    if (!row || !card) return;
+    const gap = parseFloat(getComputedStyle(row).columnGap) || 0;
+    const max = row.scrollWidth - row.clientWidth;
+    if (max < 8) return;
+    const behavior = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
+    let left = row.scrollLeft + direction * (card.getBoundingClientRect().width + gap);
+    if (row.scrollLeft >= max - 8 && direction === 1) left = 0;
+    else if (row.scrollLeft <= 8 && direction === -1) left = max;
+    row.scrollTo({ left: Math.max(0, Math.min(left, max)), behavior });
+  }
 
   async function searchDestination(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -163,10 +145,14 @@ export function ExploreMapPage({ regions = [] }: ExploreMapPageProps) {
     router.push(destination);
   }
 
-  // Region pill: open its plots on the Explore Map, logging in first if needed.
-  function handleRegionClick(regionId: string) {
-    const region = regions.find((item) => item.id === regionId);
-    if (region) router.push(exploreRegionPath(region, isAuthenticated()));
+  // A destination card shows that region's plots on the map above (no login needed to browse).
+  function handleDestinationClick(destination: ExploreRegion) {
+    mapSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    regionMapRef.current?.openRegion({
+      id: destination.id,
+      name: destination.name,
+      center: [destination.longitude, destination.latitude],
+    });
   }
 
   return (
@@ -211,7 +197,7 @@ export function ExploreMapPage({ regions = [] }: ExploreMapPageProps) {
       <section ref={mapSectionRef} className="bg-white px-4 sm:px-8">
         <Container>
           <div className="relative overflow-hidden rounded-[1.75rem] border border-[#dbe8ed] bg-white p-2 shadow-[0_15px_40px_rgba(11,31,77,0.1)] sm:p-3">
-            <ExploreThailandMap mapRef={mapRef} regions={regions} onRegionClick={handleRegionClick} />
+            <PublicRegionMap mapRef={mapRef} controlRef={regionMapRef} regions={regions} />
             <div className="absolute bottom-7 right-7 flex flex-col overflow-hidden rounded-full border border-[#dfe7ef] bg-white text-navy shadow-[0_4px_12px_rgba(11,31,77,0.12)] sm:bottom-8 sm:right-8">
               <button type="button" aria-label="Zoom in" onClick={() => mapRef.current?.zoomIn()} className="flex h-8 w-8 items-center justify-center hover:bg-[#f4f7fa]"><MapControlIcon type="plus" /></button>
               <span className="mx-auto h-px w-4 bg-line" />
@@ -221,6 +207,7 @@ export function ExploreMapPage({ regions = [] }: ExploreMapPageProps) {
         </Container>
       </section>
 
+      {destinations.length > 0 ? (
       <section className="bg-white px-4 pt-14 sm:px-8 md:pt-20">
         <Container>
           <div className="mb-8 flex items-end justify-between gap-6">
@@ -232,9 +219,10 @@ export function ExploreMapPage({ regions = [] }: ExploreMapPageProps) {
                 Explore by <span className="italic text-brand-red">Destination</span>
               </h2>
             </div>
-            <Link href={routes.contact} className="mb-2 hidden shrink-0 text-[15px] font-medium text-navy sm:inline">
-              Explore More →
-            </Link>
+            <div className="mb-2 hidden shrink-0 gap-2 sm:flex">
+              <ArrowButton direction="prev" onClick={() => scrollDestinations(-1)} />
+              <ArrowButton direction="next" onClick={() => scrollDestinations(1)} />
+            </div>
           </div>
           <div
             ref={destinationRowRef}
@@ -242,32 +230,31 @@ export function ExploreMapPage({ regions = [] }: ExploreMapPageProps) {
           >
             {destinations.map((destination) => (
               <Link
-                key={destination.name}
-                href={routes.contact}
+                key={destination.id}
+                href={exploreRegionPath(destination, signedIn)}
+                onClick={(event) => {
+                  event.preventDefault();
+                  handleDestinationClick(destination);
+                }}
                 className="group relative block h-[418px] w-[calc((100%-1.5rem)/3)] shrink-0 snap-start overflow-hidden rounded-[22px] border border-[#e4eaf2] bg-navy shadow-[0_10px_28px_rgba(11,31,77,0.12)]"
               >
-                <Image
-                  src={destination.image}
-                  alt={destination.name}
-                  fill
-                  sizes="(max-width: 1024px) 80vw, 33vw"
-                  className="object-cover transition duration-500 group-hover:scale-105"
-                />
+                {isAllowedRemoteImage(destination.imageUrl) ? (
+                  <Image
+                    src={destination.imageUrl}
+                    alt={destination.name}
+                    fill
+                    sizes="(max-width: 1024px) 80vw, 33vw"
+                    className="object-cover transition duration-500 group-hover:scale-105"
+                    onError={() => setBrokenImageIds((ids) => [...ids, destination.id])}
+                  />
+                ) : null}
                 <div className="absolute inset-0 bg-gradient-to-t from-[#071536] via-[#071536]/20 to-transparent" />
-                <span
-                  className={`absolute left-4 top-4 rounded-md px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] ${
-                    destination.badge === "ICON" ? "bg-[#f4e7a8] text-[#3a3218]" : "bg-white/90 text-navy"
-                  }`}
-                >
-                  {destination.badge}
-                </span>
                 <div className="absolute inset-x-0 bottom-0 p-5 text-white sm:p-6">
                   <h3 className="text-[28px] font-semibold uppercase leading-none tracking-[0.04em] sm:text-[32px]">
                     {destination.name}
                   </h3>
-                  <p className="mt-2 max-w-[240px] text-[13px] leading-5 text-white/85">{destination.detail}</p>
-                  <div className="mt-5 flex items-center justify-between border-t border-white/35 pt-3 text-[12px] text-white/90">
-                    <span>{destination.locations}</span>
+                  <p title={destination.description} className="mt-2 truncate text-[13px] leading-5 text-white/85">{destination.description}</p>
+                  <div className="mt-5 flex items-center justify-end border-t border-white/35 pt-3 text-[12px] text-white/90">
                     <span>Discover Plots →</span>
                   </div>
                 </div>
@@ -276,6 +263,7 @@ export function ExploreMapPage({ regions = [] }: ExploreMapPageProps) {
           </div>
         </Container>
       </section>
+      ) : null}
 
       <section className="bg-white px-4 pt-14 sm:px-8 md:pt-20">
         <Container>
@@ -308,11 +296,7 @@ export function ExploreMapPage({ regions = [] }: ExploreMapPageProps) {
               <div className="mt-7 grid max-w-[520px] grid-cols-2 gap-x-8 gap-y-6 border-t border-[#e6ebf2] pt-6">
                 <div>
                   <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-[#64748b]">Destinations</p>
-                  <p className="mt-1.5 text-[18px] font-semibold text-navy">03 Regions</p>
-                </div>
-                <div>
-                  <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-[#64748b]">Zones</p>
-                  <p className="mt-1.5 text-[18px] font-semibold text-navy">03 Zones</p>
+                  <p className="mt-1.5 text-[18px] font-semibold text-navy">{String(regionCount).padStart(2, "0")} {regionCount === 1 ? "Region" : "Regions"}</p>
                 </div>
                 <div>
                   <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-[#64748b]">Plots to explore</p>

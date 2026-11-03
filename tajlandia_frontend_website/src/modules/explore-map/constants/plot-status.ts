@@ -2,7 +2,7 @@
 export const PLOT_STATUS_COLORS = {
   AVAILABLE: "#2cbf65",
   LOCKED: "#e7b52c",
-  // CLAIMED and SOLD both show as "Taken" in the legend.
+  // CLAIMED and SOLD both show as "Claimed" in the legend.
   TAKEN: "#d64242",
   // Figma "Theme 2 Logo/Blue" (the My Plot outline).
   OWNED: "#001f54",

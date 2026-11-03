@@ -67,6 +67,36 @@ describe("proxyToBackend", () => {
     expect(new Headers(init.headers).get("content-type")).toBe("application/json");
   });
 
+  it("serves public explore reads without a token, and nothing else under public", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(jsonResponse({ success: true, data: {} }));
+
+    const response = await proxyToBackend(
+      makeRequest("/api/backend/public/explore/plots?regionId=r1", { token: null }),
+      ["public", "explore", "plots"],
+      { fetchImpl },
+    );
+    const [url, init] = fetchImpl.mock.calls[0] as [URL, RequestInit];
+
+    expect(response.status).toBe(200);
+    expect(url.toString()).toBe(`${API_URL}/public/explore/plots?regionId=r1`);
+    expect(new Headers(init.headers).has("authorization")).toBe(false);
+
+    const other = await proxyToBackend(
+      makeRequest("/api/backend/public/users", { token: null }),
+      ["public", "users"],
+      { fetchImpl },
+    );
+    const post = await proxyToBackend(
+      makeRequest("/api/backend/public/explore/plots", { method: "POST", body: "{}", token: null }),
+      ["public", "explore", "plots"],
+      { fetchImpl },
+    );
+
+    expect(other.status).toBe(404);
+    expect(post.status).toBe(404);
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+  });
+
   it("rejects paths outside the allowlist", async () => {
     const fetchImpl = vi.fn();
 
