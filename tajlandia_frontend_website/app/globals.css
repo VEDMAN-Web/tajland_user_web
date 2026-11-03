@@ -659,6 +659,10 @@ nextjs-portal {
   opacity: 1;
 }
 
+.brand-logo-reverse {
+  display: none;
+}
+
 /* Site header over the hero film (lg+). While the film plays only the logo
    and Sign Up / Login float over it; once it ends (`data-hero-film="done"`,
    set by HeroFilm.tsx) the header flips in: the white panel unfolds down from
@@ -776,6 +780,15 @@ nextjs-portal {
     border-color: #ffffff;
     background-color: #ffffff;
     color: var(--navy);
+  }
+
+  /* The film is dark, so the logo switches to its white (reversed) wordmark. */
+  html:not([data-hero-film="done"]) body:has(.hero-film) .site-header-brand .brand-logo-color {
+    display: none;
+  }
+
+  html:not([data-hero-film="done"]) body:has(.hero-film) .site-header-brand .brand-logo-reverse {
+    display: block;
   }
 
   /* EN | PL switch: white over the film, like the account buttons. */

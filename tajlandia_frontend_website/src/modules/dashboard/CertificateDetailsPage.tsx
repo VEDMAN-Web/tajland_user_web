@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { isAbortError } from "@/lib/api/browser-client";
 import { isApiError } from "@/lib/api/errors";
+import { brand } from "@/lib/constants/brand";
 import { routes } from "@/lib/constants/routes";
 import { useAuth } from "@/lib/hooks/useAuth";
 import { logError } from "@/lib/logging/logger";
@@ -537,11 +538,11 @@ function ShareDialog({
         </svg>
       </button>
       <Image
-        src="/images/brand/tajlandia-logo.svg"
+        src={brand.logoStacked.taglineSrc}
         alt="Tajlandia"
-        width={150}
-        height={97}
-        className="mx-auto mt-2 h-auto w-[112px] object-contain"
+        width={brand.logoStacked.taglineWidth}
+        height={brand.logoStacked.taglineHeight}
+        className="mx-auto mt-2 h-auto w-[200px] object-contain"
       />
       <h2 className="mt-6 text-[24px] font-semibold leading-8 text-[#171717]">{t("Share your Certificate")}</h2>
       <p className="mx-auto mt-2 max-w-[340px] text-[14px] leading-5 text-[#6b7280]">

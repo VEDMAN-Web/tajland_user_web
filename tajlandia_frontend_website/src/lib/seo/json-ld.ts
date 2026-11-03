@@ -46,7 +46,7 @@ export function createOrganizationJsonLd() {
     "@type": "Organization",
     name: NEXT_PUBLIC_SITE_NAME,
     url: NEXT_PUBLIC_SITE_URL,
-    logo: absoluteUrl(brand.logo.src),
+    logo: absoluteUrl(brand.logoStacked.png),
     ...contactPoint,
   };
 }
@@ -122,6 +122,6 @@ export function createBlogPostingJsonLd(post: BlogPostInput) {
     ...(image ? { image } : {}),
     ...(post.publishedAt ? { datePublished: post.publishedAt } : {}),
     author: { "@type": post.authorName ? "Person" : "Organization", name: post.authorName || NEXT_PUBLIC_SITE_NAME },
-    publisher: { "@type": "Organization", name: NEXT_PUBLIC_SITE_NAME, logo: { "@type": "ImageObject", url: absoluteUrl(brand.logo.src) } },
+    publisher: { "@type": "Organization", name: NEXT_PUBLIC_SITE_NAME, logo: { "@type": "ImageObject", url: absoluteUrl(brand.logoStacked.png) } },
   };
 }

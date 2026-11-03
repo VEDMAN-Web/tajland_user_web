@@ -18,7 +18,7 @@ export function MainNav({ className, locale = "en" }: MainNavProps) {
   return (
     <nav
       aria-label={chromeMessages[locale].primaryNavLabel}
-      className={cn("hidden items-center gap-6 lg:flex xl:gap-10", className)}
+      className={cn("hidden items-center gap-6 lg:flex lg:gap-5 xl:gap-10", className)}
     >
       {getMainNavigation(locale).map((item) => {
         const isActive = pathname === item.href.split("?")[0];

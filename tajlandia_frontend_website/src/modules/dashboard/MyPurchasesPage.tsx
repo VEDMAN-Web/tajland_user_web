@@ -15,7 +15,7 @@ import { PageLoader } from "@/components/ui/PageLoader";
 import type { LandOverview, LandPlot } from "./schemas/lands.schema";
 import type { OrderListEntry } from "./schemas/orders.schema";
 import { getLandOverview, getLandPlots, type LandPlotsQuery } from "./services/lands.client";
-import { getOrders } from "./services/orders.client";
+import { getOrders, type OrdersQuery, type OrdersSortBy } from "./services/orders.client";
 import { OwnedPlotCard } from "./OwnedPlotCard";
 
 type PurchaseSort =
@@ -99,42 +99,53 @@ function orderPlotNames(order: OrderListEntry) {
   return names.length > 2 ? `${shown} +${names.length - 2}` : shown;
 }
 
-const purchaseDate = (order: OrderListEntry) => Date.parse(order.paidAt ?? order.createdAt) || 0;
+/** Purchase type is a filter `GET /orders` has no param for, so it is applied here. */
+function filterOrders(orders: OrderListEntry[], filters: LandFilters) {
+  return orders.filter((order) => (order.purchaseType === "gift" ? filters.gifted : filters.myPlots));
+}
 
 /**
- * My Purchases filters, done here because `GET /orders` takes no params.
- * Zone matches when any plot in the order is in a ticked zone.
+ * The filter panel's "N purchases found" preview, counted over the orders already loaded so typing
+ * makes no request. The list itself comes from the API when Apply is pressed.
  */
-function filterOrders(orders: OrderListEntry[], filters: LandFilters) {
+function countOrders(orders: OrderListEntry[], filters: LandFilters) {
   const minRai = toBound(filters.minRai);
   const maxRai = toBound(filters.maxRai);
   const minPrice = toBound(filters.minPrice);
   const maxPrice = toBound(filters.maxPrice);
-  const zones = filters.zones.map((zone) => zone.toUpperCase());
-  return orders.filter(
+  return filterOrders(orders, filters).filter(
     (order) =>
-      (order.purchaseType === "gift" ? filters.gifted : filters.myPlots) &&
-      (!zones.length || order.items.some((item) => zones.includes(item.zoneCategory?.type?.toUpperCase() ?? ""))) &&
       (minRai === undefined || order.totalRai >= minRai) &&
       (maxRai === undefined || order.totalRai <= maxRai) &&
       (minPrice === undefined || order.total >= minPrice) &&
       (maxPrice === undefined || order.total <= maxPrice),
-  );
+  ).length;
 }
 
-// "recommended" keeps the API order (newest first).
-function sortOrders(orders: OrderListEntry[], sort: PurchaseSort) {
-  const compare: Record<PurchaseSort, ((a: OrderListEntry, b: OrderListEntry) => number) | null> = {
-    recommended: null,
-    "price-low": (a, b) => a.total - b.total,
-    "price-high": (a, b) => b.total - a.total,
-    "area-small": (a, b) => a.totalRai - b.totalRai,
-    "area-large": (a, b) => b.totalRai - a.totalRai,
-    newest: (a, b) => purchaseDate(b) - purchaseDate(a),
+// Sort panel option -> `GET /orders` sortBy ("recommended" is the API's default order).
+const ORDER_SORTS: Record<PurchaseSort, OrdersSortBy> = {
+  recommended: "recommended",
+  "price-low": "price_low_to_high",
+  "price-high": "price_high_to_low",
+  "area-small": "area_low_to_high",
+  "area-large": "area_high_to_low",
+  newest: "newest",
+};
+
+/** Rai and price bounds plus the sort as the `GET /orders` query (none for the default list). */
+function ordersQuery(filters: LandFilters, sort: PurchaseSort): OrdersQuery {
+  return {
+    minRai: toBound(filters.minRai),
+    maxRai: toBound(filters.maxRai),
+    minPrice: toBound(filters.minPrice),
+    maxPrice: toBound(filters.maxPrice),
+    sortBy: sort === "recommended" ? undefined : ORDER_SORTS[sort],
   };
-  const by = compare[sort];
-  return by ? [...orders].sort(by) : orders;
 }
+
+const ordersQueryKey = (filters: LandFilters, sort: PurchaseSort) =>
+  JSON.stringify(ordersQuery(filters, sort));
+const NO_ORDERS_QUERY_KEY = "{}";
 
 function LayersIcon() {
   return (
@@ -753,6 +764,8 @@ type OrdersState =
   | { status: "loading" }
   | { status: "ready"; orders: OrderListEntry[] }
   | { status: "error" };
+// The list for the applied Rai/price filters and sort, tagged with the query it answers.
+type FilteredOrdersState = { key: string; status: "ready" | "error"; orders: OrderListEntry[] };
 
 export function MyPurchasesPage() {
   const router = useRouter();
@@ -766,6 +779,7 @@ export function MyPurchasesPage() {
   // `GET /lands/overview` for the totals (same as My Land), `GET /orders` for the list.
   const [overview, setOverview] = useState<LandOverviewState>({ status: "loading" });
   const [ordersState, setOrdersState] = useState<OrdersState>({ status: "loading" });
+  const [filteredState, setFilteredState] = useState<FilteredOrdersState | null>(null);
   // All owned plots (`GET /lands/plots` `pagination.total`), for the Regions card badge.
   const [plotCount, setPlotCount] = useState<number | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
@@ -789,7 +803,7 @@ export function MyPurchasesPage() {
       .catch((error: unknown) => {
         if (!isQuietError(error)) logError(error, "Failed to count land plots");
       });
-    getOrders(controller.signal)
+    getOrders({}, controller.signal)
       .then((orders) => setOrdersState({ status: "ready", orders }))
       .catch((error: unknown) => {
         if (isQuietError(error)) return;
@@ -799,12 +813,37 @@ export function MyPurchasesPage() {
     return () => controller.abort();
   }, [isAuthenticated, reloadKey]);
 
+  const queryKey = ordersQueryKey(filters, sort);
+  const queryActive = queryKey !== NO_ORDERS_QUERY_KEY;
+  const draftErrors = landFilterErrors(draftFilters);
+  const draftValid = !draftErrors.rai && !draftErrors.price;
+
+  // Rai/price filters and the sort are done by the API; without them the full list above is used.
+  useEffect(() => {
+    if (!isAuthenticated || !queryActive) return;
+    const controller = new AbortController();
+    const query: OrdersQuery = JSON.parse(queryKey);
+    getOrders(query, controller.signal)
+      .then((orders) => setFilteredState({ key: queryKey, status: "ready", orders }))
+      .catch((error: unknown) => {
+        if (isQuietError(error)) return;
+        logError(error, "Failed to load filtered orders");
+        setFilteredState({ key: queryKey, status: "error", orders: [] });
+      });
+    return () => controller.abort();
+  }, [isAuthenticated, queryActive, queryKey, reloadKey]);
+
   if (isLoading || !isAuthenticated) return <PageLoader label={t("Loading purchases...")} />;
 
   // Only completed purchases; pending, failed, cancelled and expired orders stay out.
   const paidOrders =
     ordersState.status === "ready" ? ordersState.orders.filter((order) => order.status === "paid") : [];
-  const visibleOrders = sortOrders(filterOrders(paidOrders, filters), sort);
+  const filtered = filteredState?.key === queryKey ? filteredState : null;
+  // Applied Rai/price filters or a sort wait for the API's answer; the list below is its result.
+  const listLoading = queryActive && ordersState.status === "ready" && !filtered;
+  const listFailed = queryActive && filtered?.status === "error";
+  const listOrders = queryActive ? (filtered?.orders ?? []).filter((order) => order.status === "paid") : paidOrders;
+  const visibleOrders = filterOrders(listOrders, filters);
   const filtersActive = JSON.stringify(filters) !== JSON.stringify(NO_LAND_FILTERS);
   const chips = filterChips(filters, t);
   const sortActive = sort !== "recommended";
@@ -814,14 +853,13 @@ export function MyPurchasesPage() {
     setFilters(NO_LAND_FILTERS);
     setSort("recommended");
   }
-  const draftErrors = landFilterErrors(draftFilters);
-  const draftValid = !draftErrors.rai && !draftErrors.price;
   const totals = overview.status === "ready" ? overview.data : null;
   const statValue = (value: string) => (totals ? value : overview.status === "error" ? "—" : null);
 
   function retry() {
     setOverview({ status: "loading" });
     setOrdersState({ status: "loading" });
+    setFilteredState(null);
     setReloadKey((key) => key + 1);
   }
 
@@ -929,7 +967,7 @@ export function MyPurchasesPage() {
               ))}
             </ul>
           ) : null}
-          {ordersState.status === "loading" ? (
+          {ordersState.status === "loading" || listLoading ? (
             <div aria-busy="true" className="mt-3 space-y-3">
               <span className="sr-only" role="status">
                 {t("Loading purchases...")}
@@ -942,7 +980,7 @@ export function MyPurchasesPage() {
                 />
               ))}
             </div>
-          ) : ordersState.status === "error" ? (
+          ) : ordersState.status === "error" || listFailed ? (
             <div role="alert" className="mt-3 rounded-[16px] bg-white px-6 py-10 text-center">
               <p className="font-manrope text-[15px] font-semibold text-[#1a1a1a]">{t("We couldn't load your purchases.")}</p>
               <p className="mt-1 font-manrope text-[13px] text-[#8b939e]">{t("Please check your connection and try again.")}</p>
@@ -1006,8 +1044,9 @@ export function MyPurchasesPage() {
       {dialog === "filter" ? (
         <PurchaseFilterPanel
           subtitle={t("Narrow down your purchases")}
+          showZones={false}
           priceDetail={t("Amount paid")}
-          resultCount={draftValid ? filterOrders(paidOrders, draftFilters).length : null}
+          resultCount={draftValid ? countOrders(paidOrders, draftFilters) : null}
           resultLabel={t("purchases found")}
           raiError={draftErrors.rai ? t(draftErrors.rai) : undefined}
           priceError={draftErrors.price ? t(draftErrors.price) : undefined}
@@ -1277,6 +1316,7 @@ function PurchaseFilterPanel({
   myPlots,
   gifted,
   zones,
+  showZones = true,
   minRai,
   maxRai,
   minPrice,
@@ -1303,6 +1343,8 @@ function PurchaseFilterPanel({
   myPlots: boolean;
   gifted: boolean;
   zones: string[];
+  /** False hides the zone group (My Purchases: `GET /orders` has no zone filter). */
+  showZones?: boolean;
   minRai: string;
   maxRai: string;
   minPrice: string;
@@ -1334,14 +1376,16 @@ function PurchaseFilterPanel({
             <Check label={t("Gifted Plots")} checked={gifted} onChange={onGiftedChange} />
           </div>
         </FilterGroup>
-        <FilterGroup title={t("Zone Category")}>
-          <div className="grid grid-cols-2 gap-2">
-            <Check label={t("All Zones")} checked={zones.length === 0} onChange={() => onZoneToggle("all")} />
-            <Check label="Icon" checked={zones.includes("Icon")} onChange={() => onZoneToggle("Icon")} />
-            <Check label={t("Popular")} checked={zones.includes("Popular")} onChange={() => onZoneToggle("Popular")} />
-            <Check label={t("Standard")} checked={zones.includes("Standard")} onChange={() => onZoneToggle("Standard")} />
-          </div>
-        </FilterGroup>
+        {showZones ? (
+          <FilterGroup title={t("Zone Category")}>
+            <div className="grid grid-cols-2 gap-2">
+              <Check label={t("All Zones")} checked={zones.length === 0} onChange={() => onZoneToggle("all")} />
+              <Check label="Icon" checked={zones.includes("Icon")} onChange={() => onZoneToggle("Icon")} />
+              <Check label={t("Popular")} checked={zones.includes("Popular")} onChange={() => onZoneToggle("Popular")} />
+              <Check label={t("Standard")} checked={zones.includes("Standard")} onChange={() => onZoneToggle("Standard")} />
+            </div>
+          </FilterGroup>
+        ) : null}
         <FilterGroup title={t("Land Area (Rai)")} detail={t("1 Rai = 1,600 m²")}>
           <div className="grid grid-cols-2 gap-2">
             <Field value={minRai} onChange={setMinRai} suffix="RAI" placeholder={t("Min")} invalid={Boolean(raiError)} />
