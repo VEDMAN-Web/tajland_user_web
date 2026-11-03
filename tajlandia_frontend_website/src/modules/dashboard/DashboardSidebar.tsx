@@ -311,13 +311,13 @@ export function SidebarContent({
           // Rail: logo, with the expand button under it (no room beside it).
           <div className="flex shrink-0 flex-col items-center gap-1 pt-3">
             <Link href={routes.dashboard} aria-label={`${brand.name} home`}>
-              <Image src={brand.logo.src} alt="" width={brand.logo.width} height={brand.logo.height} priority className="h-auto w-[52px]" />
+              <Image src={brand.icon.src} alt="" width={brand.icon.width} height={brand.icon.height} priority className="h-auto w-[40px]" />
             </Link>
             {toggleButton}
           </div>
         ) : (
           <div className="relative flex h-16 shrink-0 items-center justify-center">
-            <BrandLogo compact href={routes.dashboard} />
+            <BrandLogo compact tagline href={routes.dashboard} />
             {onToggleRail ? <div className="absolute right-3 top-1/2 -translate-y-1/2">{toggleButton}</div> : null}
           </div>
         )

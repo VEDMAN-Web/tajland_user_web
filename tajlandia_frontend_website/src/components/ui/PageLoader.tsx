@@ -39,12 +39,12 @@ export function PageLoader({ label, overlay = false, className }: PageLoaderProp
           <span className="page-loader-ring absolute inset-0 rounded-[28px] border border-navy/20" />
           <span className="page-loader-ring absolute inset-0 rounded-[28px] border border-navy/20 [animation-delay:1.1s]" />
           <Image
-            src={brand.logo.src}
+            src={brand.logoTagline.src}
             alt=""
-            width={brand.logo.width}
-            height={brand.logo.height}
+            width={brand.logoTagline.width}
+            height={brand.logoTagline.height}
             priority
-            className="h-[68px] w-auto object-contain"
+            className="h-auto w-[200px] object-contain"
           />
         </div>
         <span className="page-loader-shadow mt-5 h-2.5 w-36 rounded-full bg-navy/15 blur-[6px]" />

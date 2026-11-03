@@ -244,25 +244,13 @@ export function OrderConfirmedDialog({
             <ShareIcon />
             {t(shareState === "copied" ? "Link copied" : "Share Link")}
           </button>
-          {certificateUrl ? (
-            <a
-              data-autofocus
-              href={certificateUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex h-11 items-center justify-center rounded-[10px] bg-navy font-manrope text-[13px] font-medium text-white hover:bg-navy-deep"
-            >
-              {t(isGift ? "View Details" : "View Ownership")}
-            </a>
-          ) : (
-            <Link
-              data-autofocus
-              href={routes.land}
-              className="flex h-11 items-center justify-center rounded-[10px] bg-navy font-manrope text-[13px] font-medium text-white hover:bg-navy-deep"
-            >
-              {t(isGift ? "View Details" : "View Ownership")}
-            </Link>
-          )}
+          <Link
+            data-autofocus
+            href={`${routes.purchases}/${encodeURIComponent(order.id)}`}
+            className="flex h-11 items-center justify-center rounded-[10px] bg-navy font-manrope text-[13px] font-medium text-white hover:bg-navy-deep"
+          >
+            {t(isGift ? "View Details" : "View Ownership")}
+          </Link>
         </div>
         {shareState === "failed" ? (
           <p
