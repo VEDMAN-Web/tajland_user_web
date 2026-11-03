@@ -41,8 +41,9 @@ export function PlaceThumbnail({
         if (usable) setFailedSrc(src);
       }}
       className={cn(
-        "shrink-0 object-cover",
-        loading && "animate-pulse bg-[#eef1f5] motion-reduce:animate-none",
+        "shrink-0 bg-[#eef1f5] object-cover transition-opacity duration-300 motion-reduce:transition-none",
+        // A slow remote photo shows a pulsing placeholder, then fades in once it has loaded.
+        loading && "animate-pulse opacity-0 motion-reduce:animate-none",
         className,
       )}
     />

@@ -28,7 +28,7 @@ const STATUS_BADGE: Record<PlotCardStatus, { label: string; className: string }>
   available: { label: "Available", className: "border-[#bbf0d0] text-[#18a957]" },
   inCart: { label: "In Cart", className: "border-[#c9d3e6] text-[#001f54]" },
   locked: { label: "Locked", className: "border-[#f6df9c] text-[#c8941a]" },
-  taken: { label: "Taken", className: "border-[#f6c4c4] text-[#d64242]" },
+  taken: { label: "Claimed", className: "border-[#f6c4c4] text-[#d64242]" },
   owned: { label: "Your plot", className: "border-[#c9d3e6] text-[#001f54]" },
 };
 
@@ -320,7 +320,7 @@ export function PlotCard({
             className={cn(actionClass, "pointer-events-none bg-[#eef1f5] text-[#a0aab6]")}
           >
             <LockIcon />
-            {t(status === "locked" ? "Locked" : "Taken")}
+            {t(status === "locked" ? "Locked" : "Claimed")}
           </button>
         )}
       </div>

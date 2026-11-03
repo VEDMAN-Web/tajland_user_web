@@ -32,7 +32,7 @@ const STATUS_STYLE = {
   available: { label: "Available", text: "text-[#18a957]", dot: "bg-[#18a957]" },
   inCart: { label: "In Cart", text: "text-[#001f54]", dot: "bg-[#001f54]" },
   locked: { label: "Locked", text: "text-[#c8941a]", dot: "bg-[#c8941a]" },
-  taken: { label: "Taken", text: "text-[#d64242]", dot: "bg-[#d64242]" },
+  taken: { label: "Claimed", text: "text-[#d64242]", dot: "bg-[#d64242]" },
   owned: { label: "Your plot", text: "text-[#001f54]", dot: "bg-[#001f54]" },
 } as const;
 

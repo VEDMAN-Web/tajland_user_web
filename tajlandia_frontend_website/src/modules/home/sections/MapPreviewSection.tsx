@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import Link from "next/link";
 import type { MapRegion } from "@/components/maps/MapboxMap";
 import { Container } from "@/components/ui/Container";
@@ -12,6 +13,8 @@ type MapPreviewSectionProps = {
   content: HomePageContent["map"];
   regions?: MapRegion[];
   locale?: Locale;
+  /** Replaces the preview map, e.g. with one that opens a region's plots. Gets the localized legend. */
+  renderMap?: (legend: { claimed: string; available: string; restricted: string }) => ReactNode;
 };
 
 const descriptionBreakAfter = "resonates";
@@ -28,7 +31,7 @@ function mapDescriptionLines(description: string) {
   );
 }
 
-export function MapPreviewSection({ content, regions = [], locale = "en" }: MapPreviewSectionProps) {
+export function MapPreviewSection({ content, regions = [], locale = "en", renderMap }: MapPreviewSectionProps) {
   const strings = homeStrings[locale];
   // The last word of the heading ("experience") sits on its own line before the accent.
   const headingWords = content.headingBefore.trim().split(/\s+/);
@@ -36,7 +39,7 @@ export function MapPreviewSection({ content, regions = [], locale = "en" }: MapP
   const headingLead = headingWords.join(" ");
   const description = content.description ?? strings.mapDescription;
   const descriptionLines = mapDescriptionLines(description);
-  const map = <ThailandMap pins={content.pins} regions={regions} locale={locale} />;
+  const map = renderMap ? renderMap(strings.legend) : <ThailandMap pins={content.pins} regions={regions} locale={locale} />;
 
   return (
     <section id="map" className="bg-white py-[60px]">
@@ -77,7 +80,7 @@ export function MapPreviewSection({ content, regions = [], locale = "en" }: MapP
           className="relative overflow-hidden rounded-[2rem] bg-[#eaf8f8] p-2 shadow-[0_16px_50px_rgba(11,31,77,0.08)] sm:p-3"
         >
           <div className="overflow-hidden rounded-[1.5rem]">
-            {content.cta ? (
+            {content.cta && !renderMap ? (
               <Link
                 href={content.cta.href}
                 className="block rounded-[1.5rem] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-navy"

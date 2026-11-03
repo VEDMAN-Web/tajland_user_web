@@ -4,7 +4,7 @@ import type { MapRegion } from "@/components/maps/MapboxMap";
 import { apiGet } from "@/lib/api/client";
 import { apiEnvelope } from "@/lib/api/envelope";
 import { regionImageSrc } from "@/lib/config/remote-images";
-import { exploreMapSchema } from "../schemas/explore-map.schema";
+import { exploreMapSchema, exploreRegionsSchema, type ExploreRegion } from "../schemas/explore-map.schema";
 
 // Regions change rarely; serve them from the cache for a few minutes.
 const PUBLIC_MAP_REVALIDATE_SECONDS = 300;
@@ -26,6 +26,22 @@ export async function fetchPublicMapRegions(): Promise<MapRegion[]> {
       center: [region.longitude, region.latitude],
       imageSrc: regionImageSrc(region.imageUrl),
     }));
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Cards for "Explore by Destination", from `GET /explore/regions` (no token).
+ * Empty on failure, so the section is hidden.
+ */
+export async function fetchExploreRegions(): Promise<ExploreRegion[]> {
+  try {
+    const response = await apiGet("/explore/regions", apiEnvelope(exploreRegionsSchema), {
+      revalidate: PUBLIC_MAP_REVALIDATE_SECONDS,
+      timeoutMs: PUBLIC_MAP_TIMEOUT_MS,
+    });
+    return [...response.data.regions].sort((a, b) => a.displayOrder - b.displayOrder);
   } catch {
     return [];
   }

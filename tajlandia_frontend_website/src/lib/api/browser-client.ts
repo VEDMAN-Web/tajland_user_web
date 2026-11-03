@@ -19,6 +19,8 @@ export type AuthedRequestOptions = {
   /** Abort from the caller, e.g. when the map moves before the last request finished. */
   signal?: AbortSignal;
   timeoutMs?: number;
+  /** Public endpoint: sends no token and never ends the session. */
+  anonymous?: boolean;
   /** On 401, clear the session and send the user to login. Defaults to true. */
   redirectOnUnauthorized?: boolean;
   fetchImpl?: typeof fetch;
@@ -68,9 +70,10 @@ async function request<T>(
   options: AuthedRequestOptions = {},
 ): Promise<T> {
   const redirect = options.redirectOnUnauthorized ?? true;
-  const token = getStoredToken();
+  const anonymous = options.anonymous ?? false;
+  const token = anonymous ? null : getStoredToken();
 
-  if (!token) {
+  if (!anonymous && !token) {
     endSession(redirect);
     throw new ApiError(SESSION_EXPIRED_MESSAGE, 401, "API_SESSION_EXPIRED");
   }
@@ -90,10 +93,8 @@ async function request<T>(
     options.signal?.addEventListener("abort", abortFromCaller, { once: true });
   }
 
-  const headers = new Headers({
-    Accept: "application/json",
-    Authorization: `Bearer ${token}`,
-  });
+  const headers = new Headers({ Accept: "application/json" });
+  if (token) headers.set("Authorization", `Bearer ${token}`);
   if (body !== undefined) {
     headers.set("Content-Type", "application/json");
   }
@@ -129,7 +130,7 @@ async function request<T>(
 
   const json: unknown = await response.json().catch(() => undefined);
 
-  if (response.status === 401) {
+  if (response.status === 401 && !anonymous) {
     endSession(redirect);
     throw new ApiError(SESSION_EXPIRED_MESSAGE, 401, "API_SESSION_EXPIRED");
   }
@@ -173,6 +174,15 @@ export function authedGet<T>(
   options?: AuthedRequestOptions,
 ) {
   return request("GET", path, undefined, schema, options);
+}
+
+/** GET to a `public/...` endpoint: no token needed, so it works signed out. */
+export function publicGet<T>(
+  path: string,
+  schema: ZodType<T>,
+  options?: Omit<AuthedRequestOptions, "anonymous">,
+) {
+  return request("GET", path, undefined, schema, { ...options, anonymous: true });
 }
 
 export function authedPost<T>(

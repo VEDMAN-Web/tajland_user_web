@@ -184,7 +184,7 @@ const STEPS: { icon: ReactNode; title: string; body: string }[] = [
   {
     icon: <MapIcon />,
     title: "Explore the map",
-    body: "Search a region, open any plot and see its price, size and photos.",
+    body: "Search a region, city or plot number, open any plot and see its price, size and photos.",
   },
   {
     icon: <CartIcon />,

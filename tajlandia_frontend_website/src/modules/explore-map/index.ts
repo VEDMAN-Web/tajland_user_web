@@ -1,2 +1,3 @@
 export { ExploreMapPage } from "./ExploreMapPage";
-export { fetchPublicMapRegions } from "./services/explore-map.api";
+export { fetchExploreRegions, fetchPublicMapRegions } from "./services/explore-map.api";
+export { PublicRegionMap } from "./components/PublicRegionMap";

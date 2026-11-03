@@ -43,11 +43,16 @@ function jsonError(message: string, status: number) {
   );
 }
 
-function isAllowedPath(segments: string[]) {
+// The Explore Map's public reads (`public/explore/*`) need no token, so signed-out visitors can browse plots.
+function isPublicExploreRead(request: Request, segments: string[]) {
+  return request.method === "GET" && segments[0] === "public" && segments[1] === "explore";
+}
+
+function isAllowedPath(segments: string[], publicRead: boolean) {
   const [prefix] = segments;
   return (
     prefix !== undefined &&
-    (ALLOWED_PREFIXES.has(prefix) || ALLOWED_EXACT_PATHS.has(segments.join("/"))) &&
+    (publicRead || ALLOWED_PREFIXES.has(prefix) || ALLOWED_EXACT_PATHS.has(segments.join("/"))) &&
     segments.every((segment) => SAFE_SEGMENT.test(segment))
   );
 }
@@ -80,12 +85,13 @@ export async function proxyToBackend(
     return jsonError("Method not allowed", 405);
   }
 
-  if (!isAllowedPath(segments)) {
+  const publicRead = isPublicExploreRead(request, segments);
+  if (!isAllowedPath(segments, publicRead)) {
     return jsonError("Not found", 404);
   }
 
-  const authorization = request.headers.get("authorization");
-  if (!authorization?.startsWith("Bearer ")) {
+  const authorization = publicRead ? null : request.headers.get("authorization");
+  if (!publicRead && !authorization?.startsWith("Bearer ")) {
     return jsonError("Authentication is required.", 401);
   }
 
@@ -105,10 +111,8 @@ export async function proxyToBackend(
     return jsonError("Validation failed", 400);
   }
 
-  const headers = new Headers({
-    Accept: "application/json",
-    Authorization: authorization,
-  });
+  const headers = new Headers({ Accept: "application/json" });
+  if (authorization) headers.set("Authorization", authorization);
   if (body !== undefined) {
     headers.set("Content-Type", "application/json");
   }

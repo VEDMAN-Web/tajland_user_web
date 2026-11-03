@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { headers } from "next/headers";
 import type { MapRegion } from "@/components/maps/MapboxMap";
 import { JsonLd } from "@/components/shared/JsonLd";
@@ -15,9 +16,11 @@ import { CtaSection } from "./sections/CtaSection";
 type HomePageProps = {
   /** Region pills for the map preview (empty hides them). */
   mapRegions?: MapRegion[];
+  /** Replaces the map preview (see `MapPreviewSection`). */
+  renderMap?: (legend: { claimed: string; available: string; restricted: string }) => ReactNode;
 };
 
-export async function HomePage({ mapRegions = [] }: HomePageProps) {
+export async function HomePage({ mapRegions = [], renderMap }: HomePageProps) {
   const locale = await getRequestLocale();
   const content = await getHomePageContent(locale);
   const nonce = (await headers()).get("x-nonce") ?? undefined;
@@ -29,7 +32,7 @@ export async function HomePage({ mapRegions = [] }: HomePageProps) {
       <HeroSection content={content.hero} locale={locale} />
       <FeatureSection content={content.features} />
       <WorldSection content={content.world} />
-      <MapPreviewSection content={content.map} regions={mapRegions} locale={locale} />
+      <MapPreviewSection content={content.map} regions={mapRegions} locale={locale} renderMap={renderMap} />
       <HowItWorksSection content={content.howItWorks} locale={locale} />
       <TestimonialsSection content={content.testimonials} locale={locale} />
       <CtaSection content={content.cta} locale={locale} />

@@ -7,10 +7,18 @@ import {
 import { getStaticSecurityHeaders } from "./src/lib/security/headers";
 
 const backendHost = backendImageHost();
+const isDev = process.env.NODE_ENV === "development";
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
-  allowedDevOrigins: ["127.0.0.1"],
+  // Dev only: lets the app be opened through a dev tunnel (VS Code "Forwarded Ports" / Dev Tunnels).
+  allowedDevOrigins: ["127.0.0.1", "*.devtunnels.ms"],
+  experimental: {
+    // A Server Action (login, signup...) is rejected when its `Origin` differs from the host the
+    // request was forwarded for, which is what a tunnel does. Allow the local and tunnel origins in
+    // development only; production keeps the default same-origin check.
+    serverActions: isDev ? { allowedOrigins: ["localhost:3000", "localhost:3001", "*.devtunnels.ms"] } : undefined,
+  },
   logging: {
     // Dev logs print server action arguments, including signup passwords
     serverFunctions: false,
