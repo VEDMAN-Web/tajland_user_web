@@ -8,6 +8,8 @@ export const publicEnvSchema = z.object({
 
 export const serverEnvSchema = publicEnvSchema.extend({
   API_SECRET: z.string().min(16).optional(),
+  // Shared with the admin panel, which calls `/api/revalidate/blog` after a blog change.
+  REVALIDATE_SECRET: z.string().min(32).optional(),
 });
 
 export type PublicEnv = z.infer<typeof publicEnvSchema>;

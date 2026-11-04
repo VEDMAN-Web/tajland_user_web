@@ -18,6 +18,8 @@ export type ApiPostOptions = {
 export type ApiGetOptions = ApiPostOptions & {
   /** Cache the response for this many seconds (public content only); default is no-store. */
   revalidate?: number;
+  /** Cache tags, so the entry can be dropped on demand with `revalidateTag`. */
+  tags?: string[];
 };
 
 function resolveApiUrl(baseUrl: string, path: string): URL {
@@ -69,7 +71,7 @@ export async function apiGet<T>(
       headers,
       ...(options.revalidate === undefined
         ? { cache: "no-store" as const }
-        : { next: { revalidate: options.revalidate } }),
+        : { next: { revalidate: options.revalidate, ...(options.tags && { tags: options.tags }) } }),
       signal: controller.signal,
     });
   } catch (error) {

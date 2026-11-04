@@ -18,6 +18,7 @@ export function getServerEnv(): ServerEnv {
     NEXT_PUBLIC_SITE_NAME: process.env.NEXT_PUBLIC_SITE_NAME,
     NEXT_PUBLIC_API_URL: emptyToUndefined(process.env.NEXT_PUBLIC_API_URL),
     API_SECRET: emptyToUndefined(process.env.API_SECRET),
+    REVALIDATE_SECRET: emptyToUndefined(process.env.REVALIDATE_SECRET),
   });
 
   if (!parsed.success) {

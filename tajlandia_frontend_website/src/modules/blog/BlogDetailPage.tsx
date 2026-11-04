@@ -5,6 +5,7 @@ import { useEffect, useRef } from "react";
 import { Container } from "@/components/ui/Container";
 import { ScrollAnimatedElement } from "@/components/animations/ScrollAnimatedElement";
 import { Markdown } from "@/components/ui/Markdown";
+import { isAllowedRemoteImage } from "@/lib/config/remote-images";
 import { routes } from "@/lib/constants/routes";
 import { BlogCoverImage } from "./components/BlogCoverImage";
 import type { BlogDetail } from "./schemas/blog.schema";
@@ -191,15 +192,17 @@ export function BlogDetailPage({ post }: BlogDetailPageProps) {
               ) : null}
             </header>
 
-            <div className="relative mx-auto mt-10 aspect-[2/1] w-full max-w-[820px] overflow-hidden rounded-[24px] bg-[#eef2f4] shadow-[0_30px_70px_-30px_rgba(11,31,77,0.45)] ring-1 ring-navy/10 sm:mt-12 sm:rounded-[32px]">
-              <BlogCoverImage
-                src={post.coverImage}
-                alt={post.title}
-                priority
-                sizes="(max-width: 860px) 100vw, 820px"
-                className="object-cover"
-              />
-            </div>
+            {isAllowedRemoteImage(post.coverImage) ? (
+              <div className="relative mx-auto mt-10 aspect-[2/1] w-full max-w-[820px] overflow-hidden rounded-[24px] bg-[#eef2f4] shadow-[0_30px_70px_-30px_rgba(11,31,77,0.45)] ring-1 ring-navy/10 sm:mt-12 sm:rounded-[32px]">
+                <BlogCoverImage
+                  src={post.coverImage}
+                  alt={post.title}
+                  priority
+                  sizes="(max-width: 860px) 100vw, 820px"
+                  className="object-cover"
+                />
+              </div>
+            ) : null}
 
             {hasContent ? (
               <Markdown className={`mx-auto max-w-[720px] ${articleBodyClass}`}>

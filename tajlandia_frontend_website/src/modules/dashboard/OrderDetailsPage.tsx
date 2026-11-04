@@ -14,6 +14,7 @@ import { PageLoader } from "@/components/ui/PageLoader";
 import { useDashboardLanguage } from "./DashboardLanguageContext";
 import type { OrderDetail, OrderDetailItem } from "./schemas/orders.schema";
 import { getOrderDetail } from "./services/orders.client";
+import { formatCount } from "@/lib/utils/format-count";
 import { BackLink } from "@/components/ui/BackLink";
 
 type OrderState =
@@ -208,7 +209,7 @@ function OrderBody({ order }: { order: OrderDetail }) {
         <OrderStat
           icon={<PinIcon />}
           label={t("Acquired Deeds")}
-          value={`${String(order.totalPlots).padStart(2, "0")} ${t(order.totalPlots === 1 ? "Plot" : "Plots")}`}
+          value={`${formatCount(order.totalPlots)} ${t(order.totalPlots === 1 ? "Plot" : "Plots")}`}
         />
         <OrderStat icon={<LayersIcon />} label={t("Cumulative Surface")} value={`${number.format(order.totalRai)} ${t("Rai")}`} />
       </div>

@@ -13,6 +13,7 @@ import { exploreRegionPath, routes } from "@/lib/constants/routes";
 import { useAuth } from "@/lib/hooks/useAuth";
 import { PublicRegionMap, type PublicRegionMapControl } from "./components/PublicRegionMap";
 import type { ExploreRegion } from "./schemas/explore-map.schema";
+import { formatCount } from "@/lib/utils/format-count";
 
 function exploreMapDestination(signedIn: boolean) {
   return signedIn
@@ -296,7 +297,7 @@ export function ExploreMapPage({ regions = [], destinations: allDestinations = [
               <div className="mt-7 grid max-w-[520px] grid-cols-2 gap-x-8 gap-y-6 border-t border-[#e6ebf2] pt-6">
                 <div>
                   <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-[#64748b]">Destinations</p>
-                  <p className="mt-1.5 text-[18px] font-semibold text-navy">{String(regionCount).padStart(2, "0")} {regionCount === 1 ? "Region" : "Regions"}</p>
+                  <p className="mt-1.5 text-[18px] font-semibold text-navy">{formatCount(regionCount)} {regionCount === 1 ? "Region" : "Regions"}</p>
                 </div>
                 <div>
                   <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-[#64748b]">Plots to explore</p>
