@@ -18,6 +18,8 @@ const signupFieldsSchema = z.object({
     .email("Please enter a valid email address"),
   newPassword: passwordSchema,
   confirmPassword: z.string().min(1, "Confirm password is required"),
+  // Optional; the backend silently ignores an unknown code, so it never blocks signup.
+  referralCode: z.string().trim().max(32, "Referral code is too long").optional(),
   termsAccepted: z.boolean().refine((accepted) => accepted, {
     message: "You must agree to the Terms of Service and Privacy Policy",
   }),

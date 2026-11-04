@@ -29,6 +29,42 @@ const mediaAssetSchema = z.object({
   height: z.number().int().positive(),
 });
 
+const filmFrameSetSchema = z.object({
+  // Same-origin path with a `{frame}` token, replaced by the 4-digit frame number.
+  framePath: z
+    .string()
+    .min(1)
+    .refine((value) => value.startsWith("/images/") && value.includes("{frame}"), {
+      message: "Film frames must be a same-origin /images path containing {frame}",
+    }),
+  frameCount: z.number().int().positive(),
+});
+
+const heroFilmSchema = z.object({
+  desktop: filmFrameSetSchema,
+  mobile: filmFrameSetSchema,
+  poster: mediaAssetSchema,
+  // Sharp still that the film settles into over its last few percent.
+  finale: mediaAssetSchema.optional(),
+});
+
+const heroStoryBlockSchema = z
+  .object({
+    id: z.string().min(1),
+    eyebrow: z.string().optional(),
+    title: z.string().min(1),
+    titleAccent: z.string().optional(),
+    body: z.string().optional(),
+    align: z.enum(["left", "right", "center"]),
+    cta: ctaSchema.optional(),
+    // Scroll progress (0..1) through the film where the block is on screen.
+    from: z.number().min(0).max(1),
+    to: z.number().min(0).max(1),
+  })
+  .refine((block) => block.from < block.to, {
+    message: "Story block must start before it ends",
+  });
+
 const featureIconSchema = z.enum(["pointer", "bag", "gift"]);
 const howItWorksIconSchema = z.enum(["discover", "explore", "connect", "secure"]);
 
@@ -40,6 +76,8 @@ export const homePageContentSchema = z.object({
     subtitle: z.string().optional(),
     cta: ctaSchema.optional(),
     image: mediaAssetSchema.optional(),
+    film: heroFilmSchema.optional(),
+    story: z.array(heroStoryBlockSchema).optional(),
   }),
   features: z.object({
     heading: z.string().min(1),
@@ -143,3 +181,5 @@ export type HomeMediaAsset = z.infer<typeof mediaAssetSchema>;
 export type HomeFeatureCard = HomePageContent["features"]["items"][number];
 export type HomeHowItWorksStep = HomePageContent["howItWorks"]["steps"][number];
 export type HomeTestimonial = HomePageContent["testimonials"]["items"][number];
+export type HomeHeroFilm = z.infer<typeof heroFilmSchema>;
+export type HomeHeroStoryBlock = z.infer<typeof heroStoryBlockSchema>;

@@ -3,28 +3,22 @@ import "server-only";
 import type { ZodType } from "zod";
 import { getServerEnv } from "@/lib/config/server-env";
 import { joinSameOriginUrl } from "@/lib/security/urls";
+import { ApiError, readSafeApiMessage } from "./errors";
+
+export { ApiError, isApiError } from "./errors";
 
 const DEFAULT_TIMEOUT_MS = 8_000;
 const MAX_RESPONSE_BYTES = 1_000_000;
 
-export class ApiError extends Error {
-  readonly status: number;
-  readonly code: string;
-
-  constructor(message: string, status: number, code = "API_ERROR") {
-    super(message);
-    this.name = "ApiError";
-    this.status = status;
-    this.code = code;
-  }
-}
-
-export type ApiGetOptions = {
+export type ApiPostOptions = {
   fetchImpl?: typeof fetch;
   timeoutMs?: number;
 };
 
-export type ApiPostOptions = ApiGetOptions;
+export type ApiGetOptions = ApiPostOptions & {
+  /** Cache the response for this many seconds (public content only); default is no-store. */
+  revalidate?: number;
+};
 
 function resolveApiUrl(baseUrl: string, path: string): URL {
   const url = joinSameOriginUrl(baseUrl, path);
@@ -34,6 +28,14 @@ function resolveApiUrl(baseUrl: string, path: string): URL {
   }
 
   return url;
+}
+
+async function readSafeErrorMessage(response: Response): Promise<string> {
+  try {
+    return readSafeApiMessage(await response.json(), "The request failed");
+  } catch {
+    return "The request failed";
+  }
 }
 
 export async function apiGet<T>(
@@ -65,7 +67,9 @@ export async function apiGet<T>(
     response = await fetchImpl(url, {
       method: "GET",
       headers,
-      cache: "no-store",
+      ...(options.revalidate === undefined
+        ? { cache: "no-store" as const }
+        : { next: { revalidate: options.revalidate } }),
       signal: controller.signal,
     });
   } catch (error) {
@@ -152,7 +156,7 @@ export async function apiPost<T>(
   }
 
   if (!response.ok) {
-    throw new ApiError("The request failed", response.status, "API_REQUEST_FAILED");
+    throw new ApiError(await readSafeErrorMessage(response), response.status, "API_REQUEST_FAILED");
   }
 
   const json: unknown = await response.json();
@@ -163,8 +167,4 @@ export async function apiPost<T>(
   }
 
   return parsed.data;
-}
-
-export function isApiError(error: unknown): error is ApiError {
-  return error instanceof ApiError;
 }

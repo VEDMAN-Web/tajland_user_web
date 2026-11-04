@@ -18,6 +18,60 @@ export const homePageContent: HomePageContent = {
       width: 800,
       height: 600,
     },
+    // Demo only: third-party reference frames, git-ignored. Swap for our own
+    // film (same folder layout) before anything ships.
+    film: {
+      desktop: {
+        framePath: "/images/home/hero-film-demo/desktop/frame-{frame}.webp",
+        frameCount: 383,
+      },
+      mobile: {
+        framePath: "/images/home/hero-film-demo/mobile/frame-{frame}.webp",
+        frameCount: 383,
+      },
+      poster: {
+        src: "/images/home/hero-film-demo/desktop/frame-0001.webp",
+        alt: "Aerial view through the clouds over a tropical coastline and bay",
+        width: 1600,
+        height: 900,
+      },
+    },
+    story: [
+      {
+        id: "discover",
+        eyebrow: "01 — Discover",
+        title: "From above the clouds,",
+        titleAccent: "find your plot.",
+        body: "Explore an interactive map and spot the piece of land that speaks to you.",
+        align: "left",
+        from: 0.11,
+        to: 0.29,
+      },
+      {
+        id: "build",
+        eyebrow: "02 — Build",
+        title: "Watch your collection",
+        titleAccent: "take shape.",
+        body: "Choose plots, add them to your collection and see your digital estate grow.",
+        align: "right",
+        from: 0.36,
+        to: 0.62,
+      },
+      {
+        id: "own",
+        eyebrow: "03 — Own",
+        title: "A digital legacy,",
+        titleAccent: "forever yours.",
+        body: "Every plot comes with a certificate of authenticity you can keep, share or gift.",
+        align: "left",
+        cta: {
+          label: "Explore the Map →",
+          href: routes.explore,
+        },
+        from: 0.72,
+        to: 1,
+      },
+    ],
   },
   features: {
     heading: "What would you like to do?",
@@ -61,7 +115,7 @@ export const homePageContent: HomePageContent = {
   },
   world: {
     alt: "Earth from space with a glowing blue atmosphere",
-    playerUrl: "tajlandia.com",
+    playerUrl: "tajlandia.pl",
     image: {
       src: "/images/home/earth.jpg",
       alt: "Earth from space with a glowing blue atmosphere",
@@ -85,39 +139,36 @@ export const homePageContent: HomePageContent = {
     },
   },
   howItWorks: {
-    heading: "How it Works",
+    heading: "How It Works",
     steps: [
       {
         id: "discover",
-        title: "Discover the map",
-        description:
-          "Start with a national view of Thailand and find the regions that interest you.",
+        title: "Navigate the Map",
+        description: "Browse available sectors across premium Thai locations.",
         icon: "discover",
         order: 1,
         isActive: true,
       },
       {
         id: "explore",
-        title: "Explore destinations",
-        description:
-          "Open a destination to understand lifestyle, access, and nearby opportunities.",
+        title: "Select Your Plot",
+        description: "Pick the exact digital coordinate that resonates with you.",
         icon: "explore",
         order: 2,
         isActive: true,
       },
       {
         id: "connect",
-        title: "Talk to the team",
-        description: "Share what you are looking for and get a clear, human response.",
+        title: "Secure Ownership",
+        description: "Complete the transaction to lock your unique digital asset.",
         icon: "connect",
         order: 3,
         isActive: true,
       },
       {
         id: "secure",
-        title: "Secure your piece",
-        description:
-          "Move forward with the right land, project, or next step at your own pace.",
+        title: "Receive Certificate",
+        description: "Access your immutable digital certificate of authenticity.",
         icon: "secure",
         order: 4,
         isActive: true,
@@ -137,8 +188,8 @@ export const homePageContent: HomePageContent = {
         image: {
           src: "/images/home/certificate.png",
           alt: "Tajlandia certificate of symbolic ownership",
-          width: 484,
-          height: 608,
+          width: 435,
+          height: 593,
         },
         order: 1,
         isActive: true,

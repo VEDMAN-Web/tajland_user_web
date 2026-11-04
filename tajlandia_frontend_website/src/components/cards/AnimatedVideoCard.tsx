@@ -10,6 +10,27 @@ interface AnimatedVideoCardProps {
   interactionTargetRef?: React.RefObject<HTMLElement | null>;
 }
 
+const MAX_TILT_DEG = 20;
+const HOVER_SCALE = 1.08;
+// The video is fetched, and keeps playing, only within half a screen of the viewport.
+const VIDEO_MARGIN = "50% 0px";
+
+function tiltTransform(x: number, y: number, scale: number) {
+  return `rotateX(${x}deg) rotateY(${y}deg) scale(${scale})`;
+}
+
+function shineOpacity(x: number, y: number) {
+  return String(Math.sqrt(Math.abs(x) + Math.abs(y)) / 30);
+}
+
+/** Sets up (or, with `false`, clears) the 3D stage the tilt is written to. */
+function setTiltStage(target: HTMLElement, on: boolean) {
+  target.style.transform = on ? tiltTransform(0, 0, 1) : "";
+  target.style.transformOrigin = on ? "center center" : "";
+  target.style.transformStyle = on ? "preserve-3d" : "";
+  target.style.transition = on ? "transform 0.1s ease-out" : "";
+}
+
 export function AnimatedVideoCard({
   videoSrc,
   posterSrc,
@@ -19,8 +40,8 @@ export function AnimatedVideoCard({
 }: AnimatedVideoCardProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
-  const [rotation, setRotation] = useState({ x: 0, y: 0 });
-  const [scale, setScale] = useState(1);
+  const shineRef = useRef<HTMLDivElement>(null);
+  const [loadVideo, setLoadVideo] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -37,25 +58,44 @@ export function AnimatedVideoCard({
     video.volume = 0.7;
     video.muted = true;
 
-    const handleMouseMove = (e: MouseEvent) => {
+    // The tilt is written straight to the DOM once per frame, so moving the
+    // mouse never re-renders the card.
+    let frameId = 0;
+    let pointerX = 0;
+    let pointerY = 0;
+
+    const writeTilt = (x: number, y: number, scale: number) => {
+      const target = interactionTargetRef?.current ?? containerRef.current;
+      if (target) target.style.transform = tiltTransform(x, y, scale);
+      if (shineRef.current) shineRef.current.style.opacity = shineOpacity(x, y);
+    };
+
+    const applyTilt = () => {
+      frameId = 0;
       const rect = container.getBoundingClientRect();
       const centerX = rect.width / 2;
       const centerY = rect.height / 2;
-      const mouseX = e.clientX - rect.left;
-      const mouseY = e.clientY - rect.top;
+      const mouseX = pointerX - rect.left;
+      const mouseY = pointerY - rect.top;
 
       // Calculate rotation based on mouse position (directional on all sides)
-      const rotationX = ((mouseY - centerY) / centerY) * 20;
-      const rotationY = ((mouseX - centerX) / centerX) * -20;
+      const rotationX = ((mouseY - centerY) / centerY) * MAX_TILT_DEG;
+      const rotationY = ((mouseX - centerX) / centerX) * -MAX_TILT_DEG;
 
-      setRotation({ x: rotationX, y: rotationY });
-      setScale(1.08);
+      writeTilt(rotationX, rotationY, HOVER_SCALE);
+    };
+
+    const handleMouseMove = (e: MouseEvent) => {
+      pointerX = e.clientX;
+      pointerY = e.clientY;
+      if (!frameId) frameId = requestAnimationFrame(applyTilt);
       setShowControls(true);
     };
 
     const handleMouseLeave = () => {
-      setRotation({ x: 0, y: 0 });
-      setScale(1);
+      cancelAnimationFrame(frameId);
+      frameId = 0;
+      writeTilt(0, 0, 1);
       setShowControls(false);
     };
 
@@ -85,6 +125,7 @@ export function AnimatedVideoCard({
     container.addEventListener("touchstart", handleTouchStart, { passive: true });
 
     return () => {
+      cancelAnimationFrame(frameId);
       container.removeEventListener("mousemove", handleMouseMove);
       container.removeEventListener("mouseleave", handleMouseLeave);
       container.removeEventListener("mouseenter", handleMouseEnter);
@@ -96,18 +137,38 @@ export function AnimatedVideoCard({
     const animationTarget = interactionTargetRef?.current ?? containerRef.current;
     if (!animationTarget) return;
 
-    animationTarget.style.transform = `rotateX(${rotation.x}deg) rotateY(${rotation.y}deg) scale(${scale})`;
-    animationTarget.style.transformOrigin = "center center";
-    animationTarget.style.transformStyle = "preserve-3d";
-    animationTarget.style.transition = "transform 0.1s ease-out";
+    setTiltStage(animationTarget, true);
+    return () => setTiltStage(animationTarget, false);
+  }, [interactionTargetRef]);
 
-    return () => {
-      animationTarget.style.transform = "";
-      animationTarget.style.transformOrigin = "";
-      animationTarget.style.transformStyle = "";
-      animationTarget.style.transition = "";
-    };
-  }, [interactionTargetRef, rotation, scale]);
+  // Fetch the video only once the card nears the viewport, and pause it while
+  // it is far off screen (resuming only what we paused, not a user's pause).
+  useEffect(() => {
+    const container = containerRef.current;
+    const video = videoRef.current;
+    if (!container || !video) return;
+
+    let autoPaused = false;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        if (!entry) return;
+        if (entry.isIntersecting) {
+          setLoadVideo(true);
+          if (autoPaused) {
+            autoPaused = false;
+            void video.play().catch(() => {});
+          }
+        } else if (!video.paused) {
+          autoPaused = true;
+          video.pause();
+        }
+      },
+      { rootMargin: VIDEO_MARGIN },
+    );
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, []);
 
   const handlePlayPause = () => {
     if (videoRef.current) {
@@ -172,8 +233,9 @@ export function AnimatedVideoCard({
         <video
           ref={videoRef}
           className="w-full h-full object-cover"
-          src={videoSrc}
+          src={loadVideo ? videoSrc : undefined}
           poster={posterSrc}
+          preload="none"
           autoPlay
           muted
           loop
@@ -197,11 +259,12 @@ export function AnimatedVideoCard({
 
       {/* Shine effect overlay */}
       <div
+        ref={shineRef}
         className="absolute inset-0 pointer-events-none"
         style={{
           background:
             "radial-gradient(circle at 50% 50%, rgba(255,255,255,0.1) 0%, transparent 70%)",
-          opacity: Math.sqrt(Math.abs(rotation.x) + Math.abs(rotation.y)) / 30,
+          opacity: 0,
           transition: "opacity 0.1s ease-out",
         }}
       />

@@ -32,7 +32,8 @@ export const registerResponseSchema = authResponseBaseSchema.extend({
     .object({
       id: z.string(),
       email: z.string().email(),
-      name: z.string(),
+      firstName: z.string().optional(),
+      lastName: z.string().optional(),
       role: authRoleSchema,
       isActive: z.boolean().optional(),
       isEmailVerified: z.boolean().optional(),
@@ -52,6 +53,8 @@ export const verifyOtpResponseSchema = authResponseBaseSchema.extend({
     .object({
       accessToken: z.string().optional(),
       refreshToken: z.string().optional(),
+      // Only sent for a forgot-password OTP; `/auth/reset-password` needs it.
+      resetToken: z.string().optional(),
       user: z
         .object({
           id: z.string(),

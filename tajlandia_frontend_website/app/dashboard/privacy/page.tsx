@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
+import { connection } from "next/server";
+import { notFound } from "next/navigation";
 import { createPageMetadata } from "@/lib/seo/metadata";
-import { LegalDocumentPage } from "@/modules/dashboard";
+import { DashboardLegalPage } from "@/modules/dashboard";
+import { fetchLegalPageByKind } from "@/modules/legal";
 
 export const metadata: Metadata = createPageMetadata({
   title: "Privacy Policy",
@@ -9,6 +12,11 @@ export const metadata: Metadata = createPageMetadata({
   index: false,
 });
 
-export default function DashboardPrivacyPage() {
-  return <LegalDocumentPage kind="privacy" />;
+export default async function DashboardPrivacyPage() {
+  // Read at request time, not during the build (the legal pages API is live content).
+  await connection();
+  const page = await fetchLegalPageByKind("privacy");
+  if (!page) notFound();
+
+  return <DashboardLegalPage page={page} />;
 }

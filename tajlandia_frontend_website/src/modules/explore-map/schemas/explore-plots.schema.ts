@@ -1,0 +1,85 @@
+import { z } from "zod";
+
+// The plot's pricing category (`ICON`, `POPULAR` or `STANDARD`). The zone object
+// is going away from the API, so name, id and tier all come from this.
+const zoneCategorySchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  type: z.string(),
+  pricePerRai: z.number().nullish(),
+});
+
+// Real `GET /explore/plots` shape. Swagger's example (`data.plots`, `raiSize`,
+// `basePrice`) is out of date; the API returns `data.items` with these fields.
+const explorePlotSchema = z.object({
+  id: z.string().min(1),
+  plotNumber: z.string(),
+  // AVAILABLE | LOCKED | CLAIMED | SOLD
+  status: z.string(),
+  coordinates: z.object({ lat: z.number(), lng: z.number() }),
+  geometry: z
+    .object({
+      type: z.literal("Polygon"),
+      coordinates: z.array(z.array(z.array(z.number()).min(2))),
+    })
+    .nullish(),
+  sizeRai: z.number(),
+  pricePerRai: z.number(),
+  totalPrice: z.number(),
+  currency: z.string(),
+  imageUrl: z.string().nullish(),
+  // Plot photos (Cloudinary); `imageUrl` is the older single image, now usually null.
+  images: z.array(z.string()).nullish(),
+  isOwned: z.boolean().optional(),
+  isInCart: z.boolean().optional(),
+  // The plot's name (card title and detail heading); the number is shown when it has none.
+  plotName: z.string().nullish(),
+  // In the Figma card but not in the list response yet; shown once the backend sends them.
+  name: z.string().min(1).optional(),
+  isGifted: z.boolean().optional(),
+  zoneCategory: zoneCategorySchema.nullish(),
+  region: z.object({ id: z.string(), name: z.string(), slug: z.string() }).optional(),
+});
+
+/** `GET /explore/plots` `data` (one page). */
+export const explorePlotsPageSchema = z.object({
+  items: z.array(explorePlotSchema),
+  pagination: z.object({
+    page: z.number().int(),
+    limit: z.number().int(),
+    total: z.number().int().nonnegative(),
+    totalPages: z.number().int().nonnegative(),
+  }),
+});
+
+export type ExplorePlot = z.infer<typeof explorePlotSchema>;
+
+const placeRefSchema = z.object({ id: z.string(), name: z.string(), slug: z.string() });
+
+// Real `GET /explore/plots/{plotId}` `data`. Swagger only lists the topics
+// (no schema), so this follows the actual response.
+export const explorePlotDetailSchema = explorePlotSchema.extend({
+  name: z.string().min(1),
+  region: placeRefSchema,
+  // The plot's city.
+  location: placeRefSchema.nullish(),
+  description: z.string().nullish(),
+  // The API sends square feet, not square metres.
+  sizeSquareFeet: z.number().nullish(),
+  purchase: z
+    .object({
+      available: z.boolean(),
+      minimumRequired: z.boolean(),
+      reason: z.string(),
+    })
+    .partial()
+    .nullish(),
+});
+
+export type ExplorePlotDetail = z.infer<typeof explorePlotDetailSchema>;
+
+// `GET /lands/plots`: the user's paid plots; only what View Deed needs (which order holds the plot).
+export const ownedPlotOrdersPageSchema = z.object({
+  plots: z.array(z.object({ plotId: z.string(), orderId: z.string().nullish() })),
+  pagination: z.object({ page: z.number().int().positive(), totalPages: z.number().int().nonnegative() }),
+});

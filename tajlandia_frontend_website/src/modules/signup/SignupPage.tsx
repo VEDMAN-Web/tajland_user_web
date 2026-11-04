@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import React, { useState } from "react";
@@ -7,6 +8,7 @@ import { routes } from "@/lib/constants/routes";
 import { ScrollAnimatedElement } from "@/components/animations/ScrollAnimatedElement";
 import { signupSchema, type SignupFormValues } from "./schemas/signup.schema";
 import { requestSignupOtpAction } from "./services/signup.service";
+import { BackLink } from "@/components/ui/BackLink";
 
 type SignupErrors = Partial<Record<keyof SignupFormValues, string>>;
 
@@ -37,24 +39,70 @@ function EyeIcon({ hidden }: { hidden: boolean }) {
   );
 }
 
+function UserIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className={className}>
+      <circle cx="12" cy="8.5" r="3.5" fill="none" stroke="currentColor" strokeWidth="1.5" />
+      <path d="M5 19.5c.8-3.3 3.6-5 7-5s6.2 1.7 7 5" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="1.5" />
+    </svg>
+  );
+}
+
+function MailIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className={className}>
+      <rect x="3" y="5" width="18" height="14" rx="3" fill="none" stroke="currentColor" strokeWidth="1.5" />
+      <path d="m4 7.5 8 5.5 8-5.5" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" />
+    </svg>
+  );
+}
+
+function LockIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className={className}>
+      <rect x="4.5" y="10.5" width="15" height="9.5" rx="2.5" fill="none" stroke="currentColor" strokeWidth="1.5" />
+      <path d="M8 10.5V8a4 4 0 0 1 8 0v2.5" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="1.5" />
+    </svg>
+  );
+}
+
+function GiftIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className={className}>
+      <rect x="3.5" y="9" width="17" height="11" rx="2" fill="none" stroke="currentColor" strokeWidth="1.5" />
+      <path d="M12 9v11M3.5 13h17M12 9c-1.5-3.5-5-4-5-1.8C7 8.4 8.6 9 12 9Zm0 0c1.5-3.5 5-4 5-1.8C17 8.4 15.4 9 12 9Z" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" />
+    </svg>
+  );
+}
+
 const initialValues: SignupFormValues = {
   firstName: "",
   lastName: "",
   email: "",
   newPassword: "",
   confirmPassword: "",
+  referralCode: "",
   termsAccepted: false,
 };
 
-export function SignupPage() {
+type SignupPageProps = {
+  /** `?ref=` from a shared referral link; filled into the optional code field. */
+  referralCode?: string;
+  /** First name of the person who owns that code, when the backend recognised it. */
+  referrerName?: string | null;
+};
+
+export function SignupPage({ referralCode = "", referrerName = null }: SignupPageProps) {
   const router = useRouter();
-  const [values, setValues] = useState<SignupFormValues>(initialValues);
+  const [values, setValues] = useState<SignupFormValues>({ ...initialValues, referralCode });
   const [errors, setErrors] = useState<SignupErrors>({});
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
   const [apiError, setApiError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // Skeleton until the (large) side photo has loaded.
+  const [imageLoaded, setImageLoaded] = useState(false);
 
   function updateField(field: keyof SignupFormValues, value: string | boolean) {
     setValues((current) => ({ ...current, [field]: value }));
@@ -101,12 +149,11 @@ export function SignupPage() {
       // Store signup form data in sessionStorage for OTP verification
       sessionStorage.setItem("signupFormData", JSON.stringify(result.data));
 
-      // Prepare for OTP verification and redirect to OTP page
+      // Create the account and email the OTP, then go to the OTP page
       const actionResult = await requestSignupOtpAction(result.data);
 
       if (actionResult.ok && actionResult.redirectUrl) {
         setSuccessMessage("Redirecting to OTP verification...");
-        // Redirect to OTP page with default 123456 for testing
         setTimeout(() => {
           router.push(actionResult.redirectUrl!);
         }, 800);
@@ -123,132 +170,212 @@ export function SignupPage() {
   }
 
   function fieldClass(hasError: boolean) {
-    return `mt-2 h-10 w-full rounded-[9px] border px-3 text-[12px] text-foreground outline-none transition placeholder:text-[#c6c7ca] focus:border-navy focus:ring-2 focus:ring-navy/10 ${hasError ? "border-[#d52b35]" : "border-[#e5e7eb]"}`;
+    return `h-12 lg:h-11 w-full rounded-[14px] border bg-white pl-11 pr-3.5 text-[14px] text-[#1c1c1c] shadow-[0_1px_2px_rgba(11,31,77,0.04)] outline-none transition placeholder:text-[#b4bbc8] focus:border-navy focus:ring-4 focus:ring-navy/10 ${hasError ? "border-[#d52b35] focus:ring-[#d52b35]/10" : "border-[#e3e7ef] hover:border-[#cfd6e4]"}`;
   }
 
+  const iconClass = "pointer-events-none absolute left-3.5 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-[#9aa5b8]";
+  const labelClass = "text-[13px] font-medium text-[#1c1c1c]";
+  const eyeButtonClass = "absolute right-3.5 top-1/2 -translate-y-1/2 cursor-pointer rounded-sm text-[#9aa5b8] transition hover:text-navy focus-visible:outline-2 focus-visible:outline-navy";
+
   return (
-    <section className="flex flex-1 items-center bg-white px-4 py-8 sm:px-8 lg:px-10 lg:py-10">
-      <div className="mx-auto grid w-full max-w-[1155px] overflow-hidden rounded-[1.75rem] bg-white shadow-[0_18px_55px_rgba(11,31,77,0.06)] lg:min-h-[700px] lg:grid-cols-[1.02fr_1fr] lg:shadow-none">
-        <div className="relative min-h-[330px] overflow-hidden rounded-[1.75rem] bg-[#071d52] px-8 py-10 text-white sm:px-10 lg:min-h-0 lg:px-10 lg:py-11">
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_12%_72%,rgba(212,232,246,0.95)_0%,rgba(125,177,225,0.8)_18%,transparent_43%),radial-gradient(ellipse_at_88%_76%,rgba(255,146,147,0.95)_0%,rgba(241,105,126,0.7)_18%,transparent_43%),linear-gradient(180deg,#061b4d_0%,#0d397e_36%,#5b95d0_67%,#e9bfd1_100%)]" />
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_100%,rgba(255,255,255,0.24),transparent_42%)] opacity-80" />
-          <div className="relative z-10 max-w-[330px]">
-            <h1 className="text-[25px] leading-[1.18] tracking-[-0.03em] sm:text-[27px]">
-              Your Portal to Paradise.
+    <section className="flex min-h-[100svh] flex-1 flex-col overflow-x-clip bg-white lg:grid lg:grid-cols-[1.08fr_1fr]">
+      <aside className="relative isolate h-[300px] shrink-0 overflow-hidden bg-[#0b1f4d] text-white sm:h-[360px] lg:sticky lg:top-0 lg:h-[100svh]">
+        {!imageLoaded ? (
+          <span aria-hidden="true" className="absolute inset-0 animate-pulse bg-[#1a2f63] motion-reduce:animate-none" />
+        ) : null}
+        <Image
+          src="/images/auth/img_signup.png"
+          alt=""
+          fill
+          priority
+          sizes="(max-width: 1024px) 100vw, 55vw"
+          onLoad={() => setImageLoaded(true)}
+          className={`object-cover object-center transition-opacity duration-700 ${imageLoaded ? "auth-hero-zoom opacity-100" : "opacity-0"}`}
+        />
+        <div aria-hidden="true" className="absolute inset-0 bg-linear-to-b from-black/30 via-transparent to-[#071536]/85" />
+        <div aria-hidden="true" className="absolute inset-0 bg-linear-to-r from-[#071536]/30 to-transparent" />
+
+        <div className="relative z-10 flex h-full flex-col justify-between px-6 pb-12 pt-6 sm:px-10 sm:pt-8 lg:px-14 lg:pb-14 lg:pt-12">
+          <span className="inline-flex w-fit items-center gap-2 rounded-full border border-white/25 bg-black/25 px-3.5 py-1.5 text-[11px] font-medium uppercase tracking-[0.16em] text-white/90">
+            <span className="h-1.5 w-1.5 rounded-full bg-[#ff4b5c]" />
+            Tajlandia
+          </span>
+
+          <div>
+            <h1 className="text-[30px] font-semibold leading-[1.08] tracking-[-0.035em] text-white [text-shadow:0_2px_20px_rgba(0,0,0,0.35)] sm:text-[40px] lg:text-[54px]">
+              <span className="block">Your Portal to</span>
+              <span className="block font-display text-[1.1em] font-medium italic">Paradise.</span>
             </h1>
-            <p className="mt-3 text-[13px] leading-5 text-white/80">
-              Join our exclusive community of travelers and collectors. Experience Thailand through a refined digital lens.
+            <p className="mt-4 max-w-[34rem] rounded-[20px] border border-white/25 bg-black/25 px-4 py-3 text-[12px] leading-[1.55] text-white/95 sm:text-[14px]">
+              <span className="block">Join our exclusive community of travelers and collectors.</span>
+              <span className="block">Experience Thailand through a refined digital lens.</span>
             </p>
           </div>
         </div>
+      </aside>
 
-        <div className="flex items-center px-4 py-12 sm:px-12 lg:px-[80px] lg:py-16">
-          <ScrollAnimatedElement animation="slide-in-right" duration={600} className="w-full max-w-[422px] lg:mx-auto">
-            <Link href="/" className="mb-4 inline-flex text-[12px] font-medium text-muted transition hover:text-navy">
-              ← Back to Home
-            </Link>
-            <h2 className="text-[27px] font-semibold tracking-[-0.03em] text-navy">Create your account</h2>
-            <p className="mt-2 text-[12px] text-muted">start your journey and claim your little piece of Thailand.</p>
+      <div className="relative z-10 -mt-8 flex flex-1 items-center justify-center rounded-t-[32px] bg-white px-5 pb-10 pt-8 sm:px-10 lg:mt-0 lg:rounded-none lg:bg-[#f6f8fc] lg:px-12 lg:py-4">
+        <div aria-hidden="true" className="pointer-events-none absolute inset-0 hidden overflow-hidden lg:block">
+          <div className="absolute -right-24 -top-24 h-72 w-72 rounded-full bg-[#e11d2e]/[0.05] blur-3xl" />
+          <div className="absolute -bottom-24 -left-16 h-72 w-72 rounded-full bg-navy/[0.07] blur-3xl" />
+          <svg viewBox="0 0 800 300" preserveAspectRatio="xMidYMax slice" className="absolute inset-x-0 bottom-0 h-[42%] w-full text-navy">
+            <path d="M0 215 L80 150 L140 185 L235 100 L325 195 L415 135 L515 205 L620 120 L715 185 L800 150 V300 H0 Z" fill="currentColor" fillOpacity="0.035" />
+            <path d="M0 245 L70 200 L130 228 L210 170 L300 235 L400 190 L500 240 L600 180 L700 232 L800 205 V300 H0 Z" fill="currentColor" fillOpacity="0.045" />
+            <path d="M0 262 C110 232 190 282 310 258 S530 228 650 258 S760 250 800 244 V300 H0 Z" fill="currentColor" fillOpacity="0.06" />
+            <path d="M0 262 C110 232 190 282 310 258 S530 228 650 258 S760 250 800 244" fill="none" stroke="currentColor" strokeOpacity="0.12" strokeWidth="1.2" />
+          </svg>
+          <svg viewBox="0 0 800 300" preserveAspectRatio="xMidYMax slice" className="absolute inset-x-0 top-0 h-[42%] w-full rotate-180 text-navy">
+            <path d="M0 215 L80 150 L140 185 L235 100 L325 195 L415 135 L515 205 L620 120 L715 185 L800 150 V300 H0 Z" fill="currentColor" fillOpacity="0.035" />
+            <path d="M0 245 L70 200 L130 228 L210 170 L300 235 L400 190 L500 240 L600 180 L700 232 L800 205 V300 H0 Z" fill="currentColor" fillOpacity="0.045" />
+            <path d="M0 262 C110 232 190 282 310 258 S530 228 650 258 S760 250 800 244 V300 H0 Z" fill="currentColor" fillOpacity="0.06" />
+            <path d="M0 262 C110 232 190 282 310 258 S530 228 650 258 S760 250 800 244" fill="none" stroke="currentColor" strokeOpacity="0.12" strokeWidth="1.2" />
+          </svg>
+        </div>
 
-            <form className="mt-8" noValidate onSubmit={handleSubmit}>
-              <div className="grid gap-4 sm:grid-cols-2 sm:gap-5">
+        <ScrollAnimatedElement animation="slide-in-right" duration={600} className="relative mx-auto w-full max-w-[480px]">
+          <div className="rounded-[28px] bg-white lg:p-6 lg:shadow-[0_24px_60px_-24px_rgba(11,31,77,0.22)] lg:ring-1 lg:ring-[#e6eaf3]">
+            <BackLink href={routes.home}>Back to Home</BackLink>
+            <h2 className="mt-6 lg:mt-4 text-[24px] font-semibold tracking-[-0.03em] text-navy sm:text-[26px]">Create your account</h2>
+            <p className="mt-2 text-[14px] leading-6 text-[#64748b]">Start your journey and claim your little piece of Thailand.</p>
+
+            <form className="mt-7 lg:mt-4" noValidate onSubmit={handleSubmit}>
+              <div className="grid gap-4 lg:gap-3 sm:grid-cols-2">
                 <div>
-                  <label htmlFor="signup-first-name" className="text-[12px] font-medium text-foreground">First name</label>
-                  <input
-                    id="signup-first-name"
-                    name="firstName"
-                    type="text"
-                    autoComplete="given-name"
-                    placeholder="e.g. Rachel"
-                    value={values.firstName}
-                    onChange={(event) => updateField("firstName", event.target.value)}
-                    aria-invalid={Boolean(errors.firstName)}
-                    aria-describedby={errors.firstName ? "signup-first-name-error" : undefined}
-                    className={fieldClass(Boolean(errors.firstName))}
-                  />
-                  {errors.firstName ? <p id="signup-first-name-error" className="mt-1.5 text-[11px] text-[#d52b35]">{errors.firstName}</p> : null}
+                  <label htmlFor="signup-first-name" className={labelClass}>First name</label>
+                  <div className="relative mt-2">
+                    <UserIcon className={iconClass} />
+                    <input
+                      id="signup-first-name"
+                      name="firstName"
+                      type="text"
+                      autoComplete="given-name"
+                      placeholder="e.g. Rachel"
+                      value={values.firstName}
+                      onChange={(event) => updateField("firstName", event.target.value)}
+                      aria-invalid={Boolean(errors.firstName)}
+                      aria-describedby={errors.firstName ? "signup-first-name-error" : undefined}
+                      className={fieldClass(Boolean(errors.firstName))}
+                    />
+                  </div>
+                  {errors.firstName ? <p id="signup-first-name-error" className="mt-1.5 text-[12px] text-[#d52b35]">{errors.firstName}</p> : null}
                 </div>
                 <div>
-                  <label htmlFor="signup-last-name" className="text-[12px] font-medium text-foreground">Last name</label>
-                  <input
-                    id="signup-last-name"
-                    name="lastName"
-                    type="text"
-                    autoComplete="family-name"
-                    placeholder="e.g. Criston"
-                    value={values.lastName}
-                    onChange={(event) => updateField("lastName", event.target.value)}
-                    aria-invalid={Boolean(errors.lastName)}
-                    aria-describedby={errors.lastName ? "signup-last-name-error" : undefined}
-                    className={fieldClass(Boolean(errors.lastName))}
-                  />
-                  {errors.lastName ? <p id="signup-last-name-error" className="mt-1.5 text-[11px] text-[#d52b35]">{errors.lastName}</p> : null}
+                  <label htmlFor="signup-last-name" className={labelClass}>Last name</label>
+                  <div className="relative mt-2">
+                    <UserIcon className={iconClass} />
+                    <input
+                      id="signup-last-name"
+                      name="lastName"
+                      type="text"
+                      autoComplete="family-name"
+                      placeholder="e.g. Criston"
+                      value={values.lastName}
+                      onChange={(event) => updateField("lastName", event.target.value)}
+                      aria-invalid={Boolean(errors.lastName)}
+                      aria-describedby={errors.lastName ? "signup-last-name-error" : undefined}
+                      className={fieldClass(Boolean(errors.lastName))}
+                    />
+                  </div>
+                  {errors.lastName ? <p id="signup-last-name-error" className="mt-1.5 text-[12px] text-[#d52b35]">{errors.lastName}</p> : null}
                 </div>
               </div>
 
-              <div className="mt-4">
-                <label htmlFor="signup-email" className="text-[12px] font-medium text-foreground">Email</label>
-                <input
-                  id="signup-email"
-                  name="email"
-                  type="email"
-                  autoComplete="email"
-                  placeholder="Enter your email"
-                  value={values.email}
-                  onChange={(event) => updateField("email", event.target.value)}
-                  aria-invalid={Boolean(errors.email)}
-                  aria-describedby={errors.email ? "signup-email-error" : undefined}
-                  className={fieldClass(Boolean(errors.email))}
-                />
-                {errors.email ? <p id="signup-email-error" className="mt-1.5 text-[11px] text-[#d52b35]">{errors.email}</p> : null}
-              </div>
-
-              <div className="mt-4">
-                <label htmlFor="signup-new-password" className="text-[12px] font-medium text-foreground">New password</label>
+              <div className="mt-4 lg:mt-3">
+                <label htmlFor="signup-email" className={labelClass}>Email</label>
                 <div className="relative mt-2">
+                  <MailIcon className={iconClass} />
+                  <input
+                    id="signup-email"
+                    name="email"
+                    type="email"
+                    autoComplete="email"
+                    placeholder="Enter your email"
+                    value={values.email}
+                    onChange={(event) => updateField("email", event.target.value)}
+                    aria-invalid={Boolean(errors.email)}
+                    aria-describedby={errors.email ? "signup-email-error" : undefined}
+                    className={fieldClass(Boolean(errors.email))}
+                  />
+                </div>
+                {errors.email ? <p id="signup-email-error" className="mt-1.5 text-[12px] text-[#d52b35]">{errors.email}</p> : null}
+              </div>
+
+              <div className="mt-4 lg:mt-3">
+                <label htmlFor="signup-new-password" className={labelClass}>New password</label>
+                <div className="relative mt-2">
+                  <LockIcon className={iconClass} />
                   <input
                     id="signup-new-password"
                     name="newPassword"
                     type={showNewPassword ? "text" : "password"}
                     autoComplete="new-password"
-                    placeholder="hello@example.com"
+                    placeholder="Create a password"
                     value={values.newPassword}
                     onChange={(event) => updateField("newPassword", event.target.value)}
                     aria-invalid={Boolean(errors.newPassword)}
                     aria-describedby={errors.newPassword ? "signup-new-password-error" : undefined}
-                    className={`${fieldClass(Boolean(errors.newPassword))} pr-10`}
+                    className={`${fieldClass(Boolean(errors.newPassword))} pr-11`}
                   />
-                  <button type="button" aria-label={showNewPassword ? "Hide new password" : "Show new password"} onMouseDown={(event) => event.preventDefault()} onClick={() => setShowNewPassword((current) => !current)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#b7b8bb] focus-visible:rounded focus-visible:outline-2 focus-visible:outline-navy">
+                  <button type="button" aria-label={showNewPassword ? "Hide new password" : "Show new password"} onMouseDown={(event) => event.preventDefault()} onClick={() => setShowNewPassword((current) => !current)} className={eyeButtonClass}>
                     <EyeIcon hidden={!showNewPassword} />
                   </button>
                 </div>
-                {errors.newPassword ? <p id="signup-new-password-error" className="mt-1.5 text-[11px] text-[#d52b35]">{errors.newPassword}</p> : null}
+                {errors.newPassword ? <p id="signup-new-password-error" className="mt-1.5 text-[12px] text-[#d52b35]">{errors.newPassword}</p> : null}
               </div>
 
-              <div className="mt-4">
-                <label htmlFor="signup-confirm-password" className="text-[12px] font-medium text-foreground">Confirm password</label>
+              <div className="mt-4 lg:mt-3">
+                <label htmlFor="signup-confirm-password" className={labelClass}>Confirm password</label>
                 <div className="relative mt-2">
+                  <LockIcon className={iconClass} />
                   <input
                     id="signup-confirm-password"
                     name="confirmPassword"
                     type={showConfirmPassword ? "text" : "password"}
                     autoComplete="new-password"
-                    placeholder="hello@example.com"
+                    placeholder="Re-enter your password"
                     value={values.confirmPassword}
                     onChange={(event) => updateField("confirmPassword", event.target.value)}
                     aria-invalid={Boolean(errors.confirmPassword)}
                     aria-describedby={errors.confirmPassword ? "signup-confirm-password-error" : undefined}
-                    className={`${fieldClass(Boolean(errors.confirmPassword))} pr-10`}
+                    className={`${fieldClass(Boolean(errors.confirmPassword))} pr-11`}
                   />
-                  <button type="button" aria-label={showConfirmPassword ? "Hide confirm password" : "Show confirm password"} onMouseDown={(event) => event.preventDefault()} onClick={() => setShowConfirmPassword((current) => !current)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#b7b8bb] focus-visible:rounded focus-visible:outline-2 focus-visible:outline-navy">
+                  <button type="button" aria-label={showConfirmPassword ? "Hide confirm password" : "Show confirm password"} onMouseDown={(event) => event.preventDefault()} onClick={() => setShowConfirmPassword((current) => !current)} className={eyeButtonClass}>
                     <EyeIcon hidden={!showConfirmPassword} />
                   </button>
                 </div>
-                {errors.confirmPassword ? <p id="signup-confirm-password-error" className="mt-1.5 text-[11px] text-[#d52b35]">{errors.confirmPassword}</p> : null}
+                {errors.confirmPassword ? <p id="signup-confirm-password-error" className="mt-1.5 text-[12px] text-[#d52b35]">{errors.confirmPassword}</p> : null}
               </div>
 
-              <div className="mt-4">
-                <label className="flex items-start gap-2 text-[11px] leading-5 text-[#b8b9bd]">
+              <div className="mt-4 lg:mt-3">
+                <label htmlFor="signup-referral-code" className={labelClass}>
+                  Referral code <span className="font-normal text-[#9aa5b8]">(optional)</span>
+                </label>
+                <div className="relative mt-2">
+                  <GiftIcon className={iconClass} />
+                  <input
+                    id="signup-referral-code"
+                    name="referralCode"
+                    type="text"
+                    autoComplete="off"
+                    autoCapitalize="characters"
+                    spellCheck={false}
+                    maxLength={32}
+                    placeholder="Enter a friend's code"
+                    value={values.referralCode ?? ""}
+                    onChange={(event) => updateField("referralCode", event.target.value.toUpperCase())}
+                    className={`${fieldClass(false)} font-medium tracking-[0.04em]`}
+                  />
+                </div>
+                {referrerName && values.referralCode === referralCode ? (
+                  <p className="mt-1.5 flex items-center gap-1.5 text-[12px] font-medium text-[#168a56]">
+                    <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-[#168a56]" />
+                    You were invited by {referrerName}
+                  </p>
+                ) : null}
+              </div>
+
+              <div className="mt-5 lg:mt-4">
+                <label className="flex cursor-pointer items-start gap-2.5 text-[13px] leading-5 text-[#64748b]">
                   <input
                     type="checkbox"
                     name="termsAccepted"
@@ -256,35 +383,47 @@ export function SignupPage() {
                     onChange={(event) => updateField("termsAccepted", event.target.checked)}
                     aria-invalid={Boolean(errors.termsAccepted)}
                     aria-describedby={errors.termsAccepted ? "signup-terms-error" : undefined}
-                    className="mt-0.5 h-3.5 w-3.5 shrink-0 rounded border-[#d7d8da] accent-navy"
+                    className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer rounded border-[#d7d8da] accent-navy"
                   />
                   <span>
-                    I agree to the <Link href={routes.terms} className="text-[#d9272e] hover:underline">Terms of Service</Link> and <Link href={routes.privacy} className="text-[#d9272e] hover:underline">Privacy Policy</Link>.
+                    I agree to the <Link href={routes.terms} className="font-medium text-[#e11d2e] hover:underline">Terms of Service</Link> and <Link href={routes.privacy} className="font-medium text-[#e11d2e] hover:underline">Privacy Policy</Link>
                   </span>
                 </label>
-                {errors.termsAccepted ? <p id="signup-terms-error" className="mt-1.5 text-[11px] text-[#d52b35]">{errors.termsAccepted}</p> : null}
+                {errors.termsAccepted ? <p id="signup-terms-error" className="mt-1.5 text-[12px] text-[#d52b35]">{errors.termsAccepted}</p> : null}
               </div>
 
               {successMessage ? (
-                <p role="status" className="mt-4 text-center text-[12px] font-medium text-green-600">
+                <p role="status" className="mt-4 rounded-[12px] border border-[#c8ecd3] bg-[#f1fbf4] px-3.5 py-2.5 text-center text-[13px] font-medium text-green-700">
                   {successMessage}
                 </p>
               ) : null}
               {apiError ? (
-                <p role="alert" className="mt-4 text-center text-[12px] text-[#d52b35]">
+                <p role="alert" className="mt-4 rounded-[12px] border border-[#f6c9cd] bg-[#fff4f5] px-3.5 py-2.5 text-center text-[13px] text-[#d52b35]">
                   {apiError}
                 </p>
               ) : null}
-              <button type="submit" disabled={isSubmitting} className="mt-5 h-11 w-full rounded-[9px] bg-navy text-[12px] font-medium text-white shadow-[0_3px_5px_rgba(11,31,77,0.18)] transition hover:bg-navy-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy disabled:cursor-not-allowed disabled:opacity-60">
-                {isSubmitting ? "Creating Account..." : "Create Account"}
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="mt-5 lg:mt-4 inline-flex h-12 lg:h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-[14px] bg-linear-to-b from-[#12307a] to-navy text-[15px] font-medium text-white shadow-[0_10px_24px_-10px_rgba(11,31,77,0.7)] transition hover:-translate-y-px hover:shadow-[0_14px_28px_-10px_rgba(11,31,77,0.75)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0 motion-reduce:transition-none"
+              >
+                {isSubmitting ? (
+                  <>
+                    <span aria-hidden="true" className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white motion-reduce:animate-none" />
+                    Creating Account...
+                  </>
+                ) : (
+                  "Create Account"
+                )}
               </button>
             </form>
 
-            <p className="mt-8 text-center text-[11px] text-foreground">
-              Already have an account? <Link href={routes.login} className="font-medium text-[#d9272e] hover:underline">Log in</Link>
+            <p className="mt-6 lg:mt-4 text-center text-[14px] text-[#64748b]">
+              Already have an account?{" "}
+              <Link href={routes.login} className="font-semibold text-[#e11d2e] hover:underline">Log in</Link>
             </p>
-          </ScrollAnimatedElement>
-        </div>
+          </div>
+        </ScrollAnimatedElement>
       </div>
     </section>
   );

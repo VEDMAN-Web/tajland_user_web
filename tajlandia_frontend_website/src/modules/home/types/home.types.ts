@@ -1,6 +1,8 @@
 export type {
   HomeCta,
   HomeFeatureCard,
+  HomeHeroFilm,
+  HomeHeroStoryBlock,
   HomeHowItWorksStep,
   HomeMediaAsset,
   HomePageContent,

@@ -1,5 +1,16 @@
+import { stopPush } from "@/lib/push/onesignal";
+import { EXPLORE_STATE_KEY } from "@/lib/explore/explore-signals";
+
 const TOKEN_KEY = "tajlandia_auth_token";
 const USER_KEY = "tajlandia_user";
+
+// Exported so other modules (e.g. useAuth's cross-tab storage listener) can react to
+// these keys without duplicating the literal strings.
+export const AUTH_TOKEN_KEY = TOKEN_KEY;
+export const AUTH_USER_KEY = USER_KEY;
+
+/** Fired on `window` when a session is saved in this tab (login, OTP, Google). */
+export const AUTH_SIGNED_IN_EVENT = "tajlandia:signed-in";
 
 export function getStoredToken(): string | null {
   try {
@@ -30,22 +41,42 @@ export function setAuthToken(token: string, rememberMe = true): void {
 }
 
 export function setAuthUser(user: Record<string, unknown>, rememberMe = true): void {
+  // Login / Google responses carry the *previous* login time. A user who never logged in has
+  // none: the backend sends `null`, or leaves the field out (it has no default). `/auth/me`
+  // later reports the current time, so decide it once here and keep it for the session
+  // (a stored value wins on profile updates).
+  const isFirstLogin =
+    typeof user.isFirstLogin === "boolean" ? user.isFirstLogin : user.lastLoginAt == null;
   try {
     const storage = rememberMe ? localStorage : sessionStorage;
     const otherStorage = rememberMe ? sessionStorage : localStorage;
-    storage.setItem(USER_KEY, JSON.stringify(user));
+    storage.setItem(USER_KEY, JSON.stringify({ ...user, isFirstLogin }));
     otherStorage.removeItem(USER_KEY);
   } catch {
     // Fail silently if localStorage is unavailable
   }
+  if (typeof window !== "undefined") window.dispatchEvent(new Event(AUTH_SIGNED_IN_EVENT));
+}
+
+/** True when the session was saved with "remember me" (localStorage). */
+export function isRememberedSession(): boolean {
+  try {
+    return Boolean(localStorage.getItem(TOKEN_KEY));
+  } catch {
+    return false;
+  }
 }
 
 export function clearAuth(): void {
+  // Signed out: this browser stops getting the user's push notifications.
+  stopPush();
   try {
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
     sessionStorage.removeItem(TOKEN_KEY);
     sessionStorage.removeItem(USER_KEY);
+    // Where the previous user left Explore Map is not for the next one.
+    sessionStorage.removeItem(EXPLORE_STATE_KEY);
   } catch {
     // Fail silently if localStorage is unavailable
   }

@@ -1,0 +1,365 @@
+"use client";
+
+import Link from "next/link";
+import { routes } from "@/lib/constants/routes";
+import { cn } from "@/lib/utils/cn";
+import { plotCardStatus, type PlotCardStatus } from "../constants/plot-status";
+import type { Translate } from "../types/explore-filters.types";
+import type { ExplorePlot } from "../types/explore-map.types";
+import { PlaceThumbnail } from "./PlaceThumbnail";
+
+type PlotCardProps = {
+  plot: ExplorePlot;
+  selected: boolean;
+  onSelect: (plot: ExplorePlot) => void;
+  /** True while this plot's Add to Cart request runs. */
+  isAddingToCart: boolean;
+  onAddToCart: (plot: ExplorePlot) => void;
+  /** True while this plot's Remove from cart request runs. */
+  isRemovingFromCart: boolean;
+  onRemoveFromCart: (plot: ExplorePlot) => void;
+  /** True while this plot's deed (certificate) is being looked up. */
+  isOpeningDeed: boolean;
+  onViewDeed: (plot: ExplorePlot) => void;
+  t: Translate;
+};
+
+const STATUS_BADGE: Record<PlotCardStatus, { label: string; className: string }> = {
+  available: { label: "Available", className: "border-[#bbf0d0] text-[#18a957]" },
+  inCart: { label: "In Cart", className: "border-[#c9d3e6] text-[#001f54]" },
+  locked: { label: "Locked", className: "border-[#f6df9c] text-[#c8941a]" },
+  taken: { label: "Claimed", className: "border-[#f6c4c4] text-[#d64242]" },
+  owned: { label: "Your plot", className: "border-[#c9d3e6] text-[#001f54]" },
+};
+
+/** Glass tint per zone category: card wash, border, glow and the corner tag. */
+const TIER_THEME: Record<string, { card: string; border: string; glow: string; tag: string }> = {
+  icon: {
+    card: "bg-linear-to-br from-[#fff3cf] via-[#fffaea] to-white",
+    border: "border-[#f2dd9c]",
+    glow: "bg-[#f5c542]/35",
+    tag: "bg-[#fde68a] text-[#8a5a00]",
+  },
+  popular: {
+    card: "bg-linear-to-br from-[#d9f5e5] via-[#f1fbf5] to-white",
+    border: "border-[#b9e7cc]",
+    glow: "bg-[#2cbf65]/30",
+    tag: "bg-[#bbf0d0] text-[#0f7a41]",
+  },
+  standard: {
+    card: "bg-linear-to-br from-[#dce9ff] via-[#f1f6ff] to-white",
+    border: "border-[#c3d6f6]",
+    glow: "bg-[#4f8cf0]/30",
+    tag: "bg-[#cfe0fb] text-[#1d4a99]",
+  },
+};
+
+function formatMoney(amount: number, currency: string) {
+  try {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency,
+      minimumFractionDigits: 2,
+    }).format(amount);
+  } catch {
+    // Unknown currency code from the API: show the number without a symbol.
+    return amount.toFixed(2);
+  }
+}
+
+function CartIcon() {
+  return (
+    <svg viewBox="0 0 16 16" aria-hidden="true" className="h-3.5 w-3.5">
+      <path
+        d="M1.5 2h2l1.6 7.2a1 1 0 0 0 1 .8h5.6a1 1 0 0 0 1-.76L13.9 5H4.3"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <circle cx="6.5" cy="13" r="1.1" fill="currentColor" />
+      <circle cx="11.5" cy="13" r="1.1" fill="currentColor" />
+    </svg>
+  );
+}
+
+function LockIcon() {
+  return (
+    <svg viewBox="0 0 16 16" aria-hidden="true" className="h-3.5 w-3.5">
+      <rect x="3" y="7" width="10" height="7" rx="1.5" fill="currentColor" />
+      <path
+        d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+      />
+    </svg>
+  );
+}
+
+function GiftIcon() {
+  return (
+    <svg viewBox="0 0 16 16" aria-hidden="true" className="h-3 w-3 shrink-0">
+      <path
+        d="M2.5 7h11v7h-11zM1.5 4.5h13V7h-13zM8 4.5V14M8 4.5C6.5 2 4 2.3 4.5 4.5M8 4.5C9.5 2 12 2.3 11.5 4.5"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.3"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+/** Plot in the area list (Figma "list of plots" card). Actions aren't wired up yet. */
+export function PlotCard({
+  plot,
+  selected,
+  onSelect,
+  isAddingToCart,
+  onAddToCart,
+  isRemovingFromCart,
+  onRemoveFromCart,
+  isOpeningDeed,
+  onViewDeed,
+  t,
+}: PlotCardProps) {
+  const status = plotCardStatus(plot.status, plot.isOwned, plot.isInCart);
+  const badge = STATUS_BADGE[status];
+  const tier = plot.zoneCategory?.type;
+  const plotName = plot.plotName?.trim() || plot.name;
+  const theme = tier ? TIER_THEME[tier.toLowerCase()] : undefined;
+
+  const actionClass =
+    "flex h-[38px] min-w-[120px] shrink-0 items-center justify-center gap-2 rounded-[8px] px-4 text-[12px] font-medium";
+
+  return (
+    <article
+      // The whole card selects the plot; its own buttons and links keep their own action.
+      onClick={(event) => {
+        if ((event.target as HTMLElement).closest("a, button")) return;
+        onSelect(plot);
+      }}
+      className={cn(
+        // Content height on phones; a fixed 164px from sm up.
+        "group relative isolate flex shrink-0 cursor-pointer flex-col gap-3 rounded-[16px] border p-[14px] shadow-[0_1px_2px_rgba(0,0,0,0.05),inset_0_1px_0_rgba(255,255,255,0.9)] transition-[border-color,box-shadow] duration-200 hover:shadow-[0_8px_20px_-12px_rgba(11,31,77,0.3),inset_0_1px_0_rgba(255,255,255,0.9)] sm:h-[164px]",
+        theme ? theme.card : "bg-white",
+        selected
+          ? "border-[#001f54]"
+          : theme
+            ? theme.border
+            : "border-[#e9ecef] hover:border-[#cfd8e3]",
+      )}
+    >
+      {theme ? (
+        // Frosted look: a coloured glow in the corner and a soft white sheen, behind the content.
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 -z-10 overflow-hidden rounded-[15px]"
+        >
+          <span className={cn("absolute -right-6 -top-8 h-28 w-28 rounded-full blur-2xl", theme.glow)} />
+          <span className="absolute inset-0 bg-linear-to-br from-white/70 via-white/10 to-transparent" />
+          {/* Shimmer: one diagonal sweep when the card is hovered. Only a transform, no
+              running animation, so a long list stays light. */}
+          <span className="absolute inset-y-0 left-0 w-1/3 -translate-x-[130%] -skew-x-[20deg] bg-linear-to-r from-transparent via-white/80 to-transparent group-hover:translate-x-[430%] group-hover:transition-transform group-hover:duration-[900ms] group-hover:ease-out motion-reduce:hidden" />
+        </span>
+      ) : null}
+      {selected ? (
+        <span className="absolute -top-2 right-3 flex items-center gap-1 rounded-full bg-[#001f54] px-2 py-[3px] text-[8px] font-bold uppercase leading-none tracking-[0.06em] text-white">
+          <span aria-hidden="true" className="h-1 w-1 rounded-full bg-white" />
+          {t("Selected")}
+        </span>
+      ) : null}
+
+      {/* The whole top area selects the plot; the action button stays separate. */}
+      <button
+        type="button"
+        onClick={() => onSelect(plot)}
+        aria-pressed={selected}
+        // The tutorial points at the first plot that can still be bought.
+        data-tour={status === "available" ? "plot-card" : undefined}
+        className="flex min-w-0 cursor-pointer gap-3 text-left"
+      >
+        <span className="relative shrink-0">
+          <PlaceThumbnail
+            src={plot.images?.[0] ?? plot.imageUrl}
+            size={99}
+            className="h-[84px] w-[84px] rounded-[12px]"
+          />
+          {tier ? (
+            <span
+              className={cn(
+                "absolute left-1.5 top-1.5 rounded-[4px] px-1.5 py-0.5 text-[8px] font-semibold uppercase leading-none shadow-[0_1px_3px_rgba(0,0,0,0.15)]",
+                theme?.tag ?? "bg-[#fde68a] text-[#8a5a00]",
+              )}
+            >
+              {t(tier.charAt(0) + tier.slice(1).toLowerCase())}
+            </span>
+          ) : null}
+        </span>
+
+        <span className="flex min-w-0 flex-1 flex-col">
+          {/* Name on one line ("…" when too long, full name on hover) with the status badge
+              pinned to the top-right corner of the row. */}
+          <span className="flex items-center justify-between gap-2">
+            <strong
+              title={plotName ?? undefined}
+              className="min-w-0 flex-1 truncate text-[13px] font-medium leading-5 text-[#0b1f33]"
+            >
+              {plotName ?? plot.plotNumber}
+            </strong>
+            <span
+              className={cn(
+                "shrink-0 rounded-full border bg-white px-2 py-[3px] text-[8px] font-bold uppercase leading-none tracking-[0.06em]",
+                badge.className,
+              )}
+            >
+              {t(badge.label)}
+            </span>
+          </span>
+          <span className="mt-0.5 flex min-w-0 items-center gap-1 text-[10px] leading-4 text-[#6b7785]">
+            {plot.isGifted ? (
+              <span className="text-[#001f54]" title={t("Gifted plot")}>
+                <GiftIcon />
+              </span>
+            ) : null}
+            <span className="truncate">
+              {plotName ? plot.plotNumber : (plot.region?.name ?? "")}
+            </span>
+          </span>
+
+          <span className="mt-auto grid grid-cols-2 border-t border-[#eef1f5] pt-2">
+            <span className="min-w-0 pr-2">
+              <span className="block text-[9px] leading-3 text-[#8a94a3]">
+                {t("Total Rai")}
+              </span>
+              <span className="mt-1 block truncate text-[13px] font-medium leading-4 text-[#d64242]">
+                {`${plot.sizeRai} ${t("Rai")}`}
+              </span>
+            </span>
+            <span className="min-w-0 border-l border-[#eef1f5] pl-2">
+              <span className="block text-[9px] leading-3 text-[#8a94a3]">
+                {t("$ per Rai")}
+              </span>
+              <span className="mt-1 block truncate text-[13px] font-medium leading-4 text-[#0b1f33]">
+                {formatMoney(plot.pricePerRai, plot.currency)}
+              </span>
+            </span>
+          </span>
+        </span>
+      </button>
+
+      <div className="mt-auto flex items-end justify-between gap-3">
+        <div className="min-w-0">
+          <span className="block text-[9px] uppercase leading-3 tracking-[0.04em] text-[#8a94a3]">
+            {t("Total Price")}
+          </span>
+          <span className="mt-1 flex items-baseline gap-1">
+            <span className="text-[18px] font-semibold leading-6 text-[#001f54]">
+              {formatMoney(plot.totalPrice, plot.currency)}
+            </span>
+            <span className="text-[9px] uppercase text-[#8a94a3]">{plot.currency}</span>
+          </span>
+        </div>
+
+        {status === "available" ? (
+          <button
+            type="button"
+            disabled={isAddingToCart}
+            onClick={() => onAddToCart(plot)}
+            className={cn(
+              actionClass,
+              "cursor-pointer bg-[#001f54] text-white hover:bg-[#0b2d6b] disabled:cursor-wait disabled:opacity-70",
+            )}
+          >
+            <CartIcon />
+            {t(isAddingToCart ? "Adding..." : "Add to Cart")}
+          </button>
+        ) : status === "inCart" ? (
+          // Two buttons beside the price, so both are narrower than the single one.
+          <div className="flex shrink-0 items-center gap-2">
+            <Link
+              href={routes.cart}
+              className={cn(
+                actionClass,
+                "min-w-0 cursor-pointer bg-[#eef2f7] px-3 text-[#001f54] hover:bg-[#e2e8f1]",
+              )}
+            >
+              {t("View Cart")}
+            </Link>
+            <button
+              type="button"
+              disabled={isRemovingFromCart}
+              onClick={() => onRemoveFromCart(plot)}
+              className={cn(
+                actionClass,
+                "min-w-0 cursor-pointer border border-[#f6c4c4] bg-white px-3 text-[#d64242] hover:bg-[#fff5f5] disabled:cursor-wait disabled:opacity-70",
+              )}
+            >
+              {t(isRemovingFromCart ? "Removing..." : "Remove")}
+            </button>
+          </div>
+        ) : status === "owned" ? (
+          <button
+            type="button"
+            disabled={isOpeningDeed}
+            onClick={() => onViewDeed(plot)}
+            className={cn(
+              actionClass,
+              "cursor-pointer bg-[#eef2f7] text-[#001f54] hover:bg-[#e2e8f1] disabled:cursor-wait disabled:opacity-70",
+            )}
+          >
+            {isOpeningDeed ? t("Opening...") : `${t("View Deed")} →`}
+          </button>
+        ) : (
+          <button
+            type="button"
+            disabled
+            // Clicks pass through to the card (a disabled button swallows them).
+            className={cn(actionClass, "pointer-events-none bg-[#eef1f5] text-[#a0aab6]")}
+          >
+            <LockIcon />
+            {t(status === "locked" ? "Locked" : "Claimed")}
+          </button>
+        )}
+      </div>
+    </article>
+  );
+}
+
+const bone = "animate-pulse rounded-[6px] bg-[#eef1f5] motion-reduce:animate-none";
+
+/** Card outline in grey blocks while the area's plots load (Figma loading state). */
+export function PlotCardSkeleton() {
+  return (
+    <div
+      aria-hidden="true"
+      className="flex shrink-0 flex-col gap-3 rounded-[12px] border border-[#e9ecef] bg-white p-[14px] sm:h-[164px]"
+    >
+      <div className="flex gap-3">
+        <span
+          className={cn(
+            bone,
+            "h-[84px] w-[84px] shrink-0 rounded-[12px]",
+          )}
+        />
+        <div className="flex min-w-0 flex-1 flex-col">
+          <div className="flex justify-between gap-2">
+            <span className={cn(bone, "h-3.5 w-2/5")} />
+            <span className={cn(bone, "h-3.5 w-14 rounded-full")} />
+          </div>
+          <span className={cn(bone, "mt-2 h-2.5 w-1/4")} />
+          <div className="mt-auto grid grid-cols-2 gap-2 border-t border-[#eef1f5] pt-2">
+            <span className={cn(bone, "h-6")} />
+            <span className={cn(bone, "h-6")} />
+          </div>
+        </div>
+      </div>
+      <div className="mt-auto flex items-end justify-between gap-3">
+        <span className={cn(bone, "h-7 w-24")} />
+        <span className={cn(bone, "h-[38px] w-[120px] rounded-[8px]")} />
+      </div>
+    </div>
+  );
+}

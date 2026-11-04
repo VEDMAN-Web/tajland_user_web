@@ -1,198 +1,154 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { BrandLogo } from "@/components/ui/BrandLogo";
+import { useCartSnapshot } from "@/lib/cart/cart-snapshot";
 import { routes } from "@/lib/constants/routes";
+import type { AccountKey } from "./AccountMenu";
 import { useDashboardLanguage } from "./DashboardLanguageContext";
+import { LanguageDropdown, SidebarContent, type NavbarActive } from "./DashboardSidebar";
+import { NotificationBell } from "./NotificationBell";
 
 type DashboardNavbarProps = {
-  active: "home" | "explore" | "my-land" | "none";
+  active: NavbarActive;
+  /** The current account page; the drawer then shows the account menu, like the sidebar. */
+  account?: AccountKey | null;
   overlay?: boolean;
 };
 
+const controlHeight = "h-11";
+const controlShadow = "shadow-[0_6px_20px_rgba(11,31,77,0.08)]";
+
+// Round icon button. With a `label` (inside a `group` link) it grows into a pill on
+// hover / keyboard focus and shows the label beside the icon.
 function Icon({
   children,
   active = false,
+  badge,
+  label,
 }: {
   children: React.ReactNode;
   active?: boolean;
+  badge?: number;
+  label?: string;
 }) {
   return (
     <span
-      className={`box-border flex h-9 w-9 items-center justify-center rounded-full p-2 shadow-[0_5px_20px_rgba(11,31,77,0.08)] ${active ? "bg-navy" : "bg-white"}`}
+      className={`relative box-border flex ${controlHeight} min-w-11 items-center justify-center rounded-full px-3 ${controlShadow} transition-shadow duration-300 group-hover:shadow-[0_8px_24px_rgba(11,31,77,0.16)] group-focus-visible:shadow-[0_8px_24px_rgba(11,31,77,0.16)] motion-reduce:transition-none ${active ? "bg-navy text-white" : "bg-white text-navy"}`}
     >
       {children}
+      {label ? (
+        <span
+          aria-hidden="true"
+          className="max-w-0 overflow-hidden whitespace-nowrap font-manrope text-[14px] font-medium leading-none opacity-0 transition-[max-width,opacity,margin] duration-300 ease-out group-hover:ml-2 group-hover:mr-0.5 group-hover:max-w-[96px] group-hover:opacity-100 group-focus-visible:ml-2 group-focus-visible:mr-0.5 group-focus-visible:max-w-[96px] group-focus-visible:opacity-100 motion-reduce:transition-none"
+        >
+          {label}
+        </span>
+      ) : null}
+      {badge && badge > 0 ? (
+        // Keyed by the count, so each change replays the pop.
+        <span key={badge} className="badge-pop absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#e11d2e] px-1 font-manrope text-[10px] font-semibold leading-none text-white">
+          {badge}
+        </span>
+      ) : null}
     </span>
   );
 }
 
-export function DashboardNavbar({ active, overlay = false }: DashboardNavbarProps) {
+// Items in the cart: the shared snapshot, which updates the moment a plot is added or
+// removed, reloads when the cart changes elsewhere and when the tab regains focus.
+function useCartCount() {
+  return useCartSnapshot()?.count ?? 0;
+}
+
+function CartLink({ count, isActive, label }: { count: number; isActive: boolean; label: string }) {
+  return (
+    <Link
+      href={routes.cart}
+      aria-label={count > 0 ? `Cart, ${count} items` : "Cart"}
+      data-tour="cart-button"
+      className="group inline-flex rounded-full outline-none focus-visible:ring-2 focus-visible:ring-navy/40"
+    >
+      <Icon active={isActive} badge={count} label={label}>
+        <img
+          src={isActive ? "/images/dashboard/navbar/cart-active.png" : "/images/dashboard/navbar/cart-default.png"}
+          alt=""
+          className="h-5 w-5 object-contain"
+        />
+      </Icon>
+    </Link>
+  );
+}
+
+/**
+ * The dashboard's top chrome that is not the sidebar:
+ * - lg and up: just the cart button, floating at the top right (the links live in the sidebar);
+ * - below lg: a fixed top bar (logo, cart, profile, menu button) and the drawer that slides
+ *   in from the right with the same links and the language choice.
+ */
+export function DashboardNavbar({ active, account = null, overlay = false }: DashboardNavbarProps) {
   const pathname = usePathname();
-  const { language, setLanguage, t } = useDashboardLanguage();
-  const [isLanguageOpen, setIsLanguageOpen] = useState(false);
+  const { t } = useDashboardLanguage();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const cartCount = useCartCount();
   const isCartActive = pathname === routes.cart;
   const accountMenuRoutes = [
     routes.profile,
     routes.editProfile,
     routes.changePassword,
-    routes.purchases,
-    routes.certificates,
-    routes.settings,
     routes.helpSupport,
     routes.dashboardTerms,
     routes.dashboardPrivacy,
   ];
   const isProfileActive = accountMenuRoutes.some((route) => pathname === route);
-  const isHomeActive = active === "home" && pathname === routes.dashboard;
-  const activeClass = "bg-navy text-white";
-  const navClass = overlay ? "absolute inset-x-0 top-0 z-20" : "sticky top-0 z-50";
+  // Overlay (Explore Map): above the map's search bar (z-20) and panels (z-30), so
+  // the drawer opens on top of them. `w-screen` (the full window, scrollbar included)
+  // rather than `inset-x-0`: the map page has no page scrollbar and most pages do, so
+  // otherwise the bar would be a scrollbar wider on one of them.
+  const barClass = overlay ? "fixed left-0 top-0 z-40 w-screen" : "fixed left-0 top-0 z-50 w-screen";
+
+  function closeMobileMenu() {
+    setIsMobileMenuOpen(false);
+  }
+
+  // Open drawer: Escape closes it and the page behind doesn't scroll.
+  useEffect(() => {
+    if (!isMobileMenuOpen) return;
+    function handleKey(event: KeyboardEvent) {
+      if (event.key === "Escape") setIsMobileMenuOpen(false);
+    }
+    const { overflow } = document.body.style;
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", handleKey);
+    return () => {
+      document.body.style.overflow = overflow;
+      window.removeEventListener("keydown", handleKey);
+    };
+  }, [isMobileMenuOpen]);
 
   return (
-    <header
-      className={`relative ${navClass} ${overlay ? "bg-transparent" : "bg-white"} pt-6`}
-    >
-      <div className="mx-auto flex h-[54px] w-[92%] max-w-none items-center justify-between px-5 sm:px-8">
-        <BrandLogo compact href={routes.dashboard} />
-        <div className="flex items-center gap-3">
-          <nav className="hidden h-10 items-center gap-1 rounded-full bg-white p-1 shadow-[0_5px_20px_rgba(11,31,77,0.1)] lg:flex">
-            <Link
-              href={routes.dashboard}
-              className={`inline-flex h-8 items-center rounded-full px-4 text-[14px] font-medium ${isHomeActive ? activeClass : "hover:bg-[#f5f7fa]"}`}
-              style={{ fontFamily: "var(--font-manrope)" }}
-            >
-              {t("Home")}
-            </Link>
-            <Link
-              href="/dashboard/explore"
-              className={`inline-flex h-8 items-center rounded-full px-4 text-[14px] font-medium ${active === "explore" ? activeClass : "hover:bg-[#f5f7fa]"}`}
-              style={{ fontFamily: "var(--font-manrope)" }}
-            >
-              {t("Explore Map")}
-            </Link>
-            <Link
-              href={routes.land}
-              className={`inline-flex h-8 items-center rounded-full px-4 text-[14px] font-medium ${active === "my-land" ? activeClass : "hover:bg-[#f5f7fa]"}`}
-              style={{ fontFamily: "var(--font-manrope)" }}
-            >
-              {t("My Land")}
-            </Link>
-          </nav>
-          <button
-            type="button"
-            aria-label="Open dashboard menu"
-            aria-expanded={isMobileMenuOpen}
-            onClick={() => setIsMobileMenuOpen((open) => !open)}
-            className="flex h-9 w-9 flex-col items-center justify-center gap-1.5 rounded-full bg-white shadow-[0_5px_20px_rgba(11,31,77,0.08)] lg:hidden"
-          >
-            <span className="h-0.5 w-4 rounded-full bg-navy" />
-            <span className="h-0.5 w-4 rounded-full bg-navy" />
-            <span className="h-0.5 w-4 rounded-full bg-navy" />
-          </button>
+    <>
+      {/* lg and up: language + cart, top right (above the Explore Map's own controls, which start lower). */}
+      <div className="fixed right-6 top-4 z-40 hidden items-center gap-2 lg:flex">
+        <LanguageDropdown />
+        <NotificationBell />
+        <CartLink count={cartCount} isActive={isCartActive} label={t("Cart")} />
+      </div>
+
+      <header className={`${barClass} border-b border-[#e6eaf3] bg-white lg:hidden`}>
+        <div className="relative mx-auto flex h-16 w-full items-center justify-between px-5 sm:px-8">
+          <BrandLogo compact href={routes.dashboard} />
           <div className="flex items-center gap-2">
-            <div className="relative hidden lg:block" data-language-selector="true">
-              <button
-                type="button"
-                aria-expanded={isLanguageOpen}
-                onClick={() => setIsLanguageOpen((open) => !open)}
-                className="flex h-9 min-w-20 items-center justify-center gap-2 rounded-full bg-white px-3 text-[10px] shadow-[0_5px_20px_rgba(11,31,77,0.08)]"
-              >
-                <Image
-                  src={
-                    language === "EN"
-                      ? "/images/dashboard/en-flag.svg"
-                      : language === "PL"
-                        ? "/images/dashboard/pl-flag.svg"
-                        : "/images/dashboard/th-flag.png"
-                  }
-                  alt=""
-                  width={20}
-                  height={14}
-                  className="h-[14px] w-5 object-cover"
-                />{" "}
-                <span
-                  className="text-[15px] font-medium"
-                  style={{ fontFamily: "'Rethink Sans', sans-serif" }}
-                >
-                  {language}
-                </span>
-                <span
-                  aria-hidden="true"
-                  className="ml-1 inline-block h-2 w-2 -translate-y-0.5 rotate-45 border-b-2 border-r-2 border-navy"
-                />
-              </button>
-              {isLanguageOpen ? (
-                <div className="absolute right-0 top-10 z-20 w-40 rounded-xl bg-white p-1 text-[10px] shadow-[0_8px_24px_rgba(11,31,77,0.14)]">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setLanguage("EN");
-                      setIsLanguageOpen(false);
-                    }}
-                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left hover:bg-[#f5f7fa]"
-                  >
-                    <Image
-                      src="/images/dashboard/en-flag.svg"
-                      alt=""
-                      width={20}
-                      height={14}
-                    />{" "}
-                    EN — English
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setLanguage("PL");
-                      setIsLanguageOpen(false);
-                    }}
-                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left hover:bg-[#f5f7fa]"
-                  >
-                    <Image
-                      src="/images/dashboard/pl-flag.svg"
-                      alt=""
-                      width={20}
-                      height={14}
-                    />{" "}
-                    PL — Polish
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setLanguage("TH");
-                      setIsLanguageOpen(false);
-                    }}
-                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left hover:bg-[#f5f7fa]"
-                  >
-                    <Image
-                      src="/images/dashboard/th-flag.png"
-                      alt=""
-                      width={20}
-                      height={14}
-                      className="h-[14px] w-5 object-cover"
-                    />{" "}
-                    TH — Thai
-                  </button>
-                </div>
-              ) : null}
-            </div>
-            <Link href={routes.cart} aria-label="Cart">
-              <Icon active={isCartActive}>
-                <img
-                  src={
-                    isCartActive
-                      ? "/images/dashboard/navbar/cart-active.png"
-                      : "/images/dashboard/navbar/cart-default.png"
-                  }
-                  alt=""
-                  className="h-5 w-5 object-contain"
-                />
-              </Icon>
-            </Link>
-            <Link href={routes.profile} aria-label="Profile">
-              <Icon active={isProfileActive}>
+            <NotificationBell />
+            <CartLink count={cartCount} isActive={isCartActive} label={t("Cart")} />
+            <Link
+              href={routes.profile}
+              aria-label="Profile"
+              className="group inline-flex rounded-full outline-none focus-visible:ring-2 focus-visible:ring-navy/40"
+            >
+              <Icon active={isProfileActive} label={t("Profile")}>
                 <img
                   src={
                     isProfileActive
@@ -204,56 +160,64 @@ export function DashboardNavbar({ active, overlay = false }: DashboardNavbarProp
                 />
               </Icon>
             </Link>
+            <button
+              type="button"
+              aria-label={t("Open dashboard menu")}
+              aria-expanded={isMobileMenuOpen}
+              data-tour="nav-menu"
+              onClick={() => setIsMobileMenuOpen((open) => !open)}
+              className={`flex ${controlHeight} w-11 flex-col items-center justify-center gap-1.5 rounded-full bg-white ${controlShadow}`}
+            >
+              <span className="h-0.5 w-4 rounded-full bg-navy" />
+              <span className="h-0.5 w-4 rounded-full bg-navy" />
+              <span className="h-0.5 w-4 rounded-full bg-navy" />
+            </button>
           </div>
         </div>
+      </header>
+
+      {/* Phones / tablets: the menu slides in from the right. Kept mounted so it can animate out. */}
+      <div
+        className={`fixed inset-0 z-[60] lg:hidden ${isMobileMenuOpen ? "" : "pointer-events-none"}`}
+        aria-hidden={!isMobileMenuOpen}
+        inert={!isMobileMenuOpen}
+      >
+        <button
+          type="button"
+          tabIndex={-1}
+          aria-label={t("Close")}
+          onClick={closeMobileMenu}
+          className={`absolute inset-0 cursor-default bg-[#071536]/40 transition-opacity duration-300 motion-reduce:transition-none ${isMobileMenuOpen ? "opacity-100" : "opacity-0"}`}
+        />
+        <aside
+          role="dialog"
+          aria-modal="true"
+          aria-label={t("Menu")}
+          className={`absolute inset-y-0 right-0 flex w-[min(300px,85vw)] flex-col overflow-y-auto bg-white shadow-[-12px_0_32px_rgba(11,31,77,0.16)] transition-transform duration-300 ease-out motion-reduce:transition-none ${isMobileMenuOpen ? "translate-x-0" : "translate-x-full"}`}
+        >
+          <div className="flex h-16 shrink-0 items-center justify-between border-b border-[#edf0f3] px-5">
+            <BrandLogo compact href={routes.dashboard} />
+            <button
+              type="button"
+              aria-label={t("Close")}
+              onClick={closeMobileMenu}
+              className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full bg-[#f4f7fa] text-navy"
+            >
+              <svg viewBox="0 0 16 16" aria-hidden="true" className="h-3.5 w-3.5">
+                <path d="M3.5 3.5l9 9M12.5 3.5l-9 9" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+              </svg>
+            </button>
+          </div>
+          <SidebarContent
+            mode={account ? "account" : "main"}
+            active={active}
+            account={account}
+            showLogo={false}
+            showLanguage
+            onNavigate={closeMobileMenu}
+          />
+        </aside>
       </div>
-      {isMobileMenuOpen ? (
-        <div className="absolute inset-x-0 top-full z-30 border-t border-[#edf0f3] bg-white px-5 pb-4 pt-3 shadow-[0_10px_24px_rgba(11,31,77,0.1)] lg:hidden">
-          <nav className="grid gap-1">
-            <Link
-              href={routes.dashboard}
-              onClick={() => setIsMobileMenuOpen(false)}
-              className={`rounded-[9px] px-3 py-3 text-[13px] ${isHomeActive ? "bg-navy text-white" : "text-navy hover:bg-[#f5f7fa]"}`}
-            >
-              {t("Home")}
-            </Link>
-            <Link
-              href={routes.dashboardExplore}
-              onClick={() => setIsMobileMenuOpen(false)}
-              className={`rounded-[9px] px-3 py-3 text-[13px] ${active === "explore" ? "bg-navy text-white" : "text-navy hover:bg-[#f5f7fa]"}`}
-            >
-              {t("Explore Map")}
-            </Link>
-            <Link
-              href={routes.land}
-              onClick={() => setIsMobileMenuOpen(false)}
-              className={`rounded-[9px] px-3 py-3 text-[13px] ${active === "my-land" ? "bg-navy text-white" : "text-navy hover:bg-[#f5f7fa]"}`}
-            >
-              {t("My Land")}
-            </Link>
-          </nav>
-          <div className="mt-3 border-t border-[#edf0f3] pt-3" data-language-selector="true">
-            <p className="px-3 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#8b949e]">
-              {t("Language")}
-            </p>
-            <div className="mt-2 grid grid-cols-3 gap-2">
-              {(["EN", "PL", "TH"] as const).map((option) => (
-                <button
-                  key={option}
-                  type="button"
-                  onClick={() => {
-                    setLanguage(option);
-                    setIsMobileMenuOpen(false);
-                  }}
-                  className={`rounded-[9px] border px-2 py-2 text-[11px] ${language === option ? "border-navy bg-navy text-white" : "border-[#e3e8ed] text-navy"}`}
-                >
-                  {option === "EN" ? "English" : option === "PL" ? "Polish" : "Thai"}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      ) : null}
-    </header>
+    </>
   );
 }

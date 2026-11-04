@@ -1,13 +1,17 @@
 "use client";
 
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { routes } from "@/lib/constants/routes";
 import { useAuth } from "@/lib/hooks/useAuth";
+import { useDashboardLanguage } from "./DashboardLanguageContext";
+import { PageLoader } from "@/components/ui/PageLoader";
 
 export function DashboardAuthGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
+  const pathname = usePathname();
   const { isAuthenticated, isLoading } = useAuth();
+  const { t } = useDashboardLanguage();
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -16,7 +20,9 @@ export function DashboardAuthGuard({ children }: { children: React.ReactNode }) 
   }, [isAuthenticated, isLoading, router]);
 
   if (isLoading || !isAuthenticated) {
-    return <div className="flex min-h-[100svh] items-center justify-center bg-white text-sm text-muted">Loading dashboard...</div>;
+    // Explore Map is a map, not the dashboard: a plain "Loading" there.
+    const label = pathname.startsWith(routes.dashboardExplore) ? "Loading..." : "Loading dashboard...";
+    return <PageLoader label={t(label)} />;
   }
 
   return children;

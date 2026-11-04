@@ -17,8 +17,7 @@ const animationClasses: Record<AnimationType, string> = {
   'slide-in-right': 'animate-slide-in-right',
   'scale-in': 'animate-scale-in',
   'fade-in-scale': 'animate-fade-in-scale',
-  'slide-in-right-dark': 'animate-slide-in-right-dark',
-};
+  'slide-in-right-dark': 'animate-slide-in-right-dark',};
 
 export function useScrollAnimation(config: ScrollAnimationConfig) {
   const ref = useRef<HTMLElement>(null);

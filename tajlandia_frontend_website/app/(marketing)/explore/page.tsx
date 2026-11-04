@@ -1,15 +1,18 @@
 import type { Metadata } from "next";
-import { ExploreMapPage } from "@/modules/explore-map";
-import { createPageMetadata } from "@/lib/seo/metadata";
+import { ExploreMapPage, fetchExploreRegions, fetchPublicMapRegions } from "@/modules/explore-map";
+import { getPageMetadata } from "@/lib/seo/metadata";
 import { routes } from "@/lib/constants/routes";
 
-export const metadata: Metadata = createPageMetadata({
-  title: "Explore Map",
-  description: "An interactive map of Thailand is coming next.",
-  path: routes.explore,
-  index: false,
-});
+export async function generateMetadata(): Promise<Metadata> {
+  return getPageMetadata({
+    title: "Explore Map",
+    description:
+      "Browse an interactive map of Thailand by region, see which plots are available and choose the one you want to collect.",
+    path: routes.explore,
+  });
+}
 
-export default function Page() {
-  return <ExploreMapPage />;
+export default async function Page() {
+  const [regions, destinations] = await Promise.all([fetchPublicMapRegions(), fetchExploreRegions()]);
+  return <ExploreMapPage regions={regions} destinations={destinations} />;
 }
