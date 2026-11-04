@@ -18,7 +18,7 @@ export const homePageContent: HomePageContent = {
       width: 800,
       height: 600,
     },
-    // Our own film: 24fps frames extracted from the 4K source (1920x1080 desktop, 960x540 mobile).
+    // Our own film: 24fps frames extracted from the 4K source (1600x900 desktop, 800x450 mobile).
     film: {
       desktop: {
         framePath: "/images/home/hero-film/desktop/frame-{frame}.webp",
@@ -31,8 +31,8 @@ export const homePageContent: HomePageContent = {
       poster: {
         src: "/images/home/hero-film/desktop/frame-0001.webp",
         alt: "Aerial view through the clouds over a tropical coastline and bay",
-        width: 1920,
-        height: 1080,
+        width: 1600,
+        height: 900,
       },
     },
     story: [
