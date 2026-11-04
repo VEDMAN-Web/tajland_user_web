@@ -17,6 +17,7 @@ import type { OrderListEntry } from "./schemas/orders.schema";
 import { getLandOverview, getLandPlots, type LandPlotsQuery } from "./services/lands.client";
 import { getOrders, type OrdersQuery, type OrdersSortBy } from "./services/orders.client";
 import { OwnedPlotCard } from "./OwnedPlotCard";
+import { formatCount } from "@/lib/utils/format-count";
 
 type PurchaseSort =
   "recommended" | "price-low" | "price-high" | "area-small" | "area-large" | "newest";
@@ -506,7 +507,7 @@ export function MyLandPage() {
               icon={<PinIcon />}
               label={t("Regions")}
               // `totalLands` counts regions, not plots. Two digits, as on the dashboard.
-              value={statValue(String(totals?.totalLands ?? 0).padStart(2, "0"))}
+              value={statValue(formatCount(totals?.totalLands ?? 0))}
               badge={plotCountBadge(plotCount, t)}
             />
             <PurchaseStat
@@ -891,7 +892,7 @@ export function MyPurchasesPage() {
             <PurchaseStat
               icon={<PinIcon />}
               label={t("Regions")}
-              value={statValue(String(totals?.totalLands ?? 0).padStart(2, "0"))}
+              value={statValue(formatCount(totals?.totalLands ?? 0))}
               badge={plotCountBadge(plotCount, t)}
             />
             <PurchaseStat

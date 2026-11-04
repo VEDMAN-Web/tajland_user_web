@@ -14,6 +14,7 @@ import { ScrollAnimatedElement } from "@/components/animations/ScrollAnimatedEle
 import { useAuth } from "@/lib/hooks/useAuth";
 import { useDashboardLanguage } from "./DashboardLanguageContext";
 import { PageLoader } from "@/components/ui/PageLoader";
+import { formatCount } from "@/lib/utils/format-count";
 import type { DashboardData, FeaturedRegion } from "./schemas/dashboard.schema";
 import { getDashboard } from "./services/dashboard.client";
 
@@ -197,7 +198,7 @@ export function DashboardPage() {
                     icon="/images/dashboard/cards/ic_region.svg"
                     background="/images/dashboard/regions-bg.png"
                     // Two digits, as in Figma ("05").
-                    value={String(collection.regionsCount).padStart(2, "0")}
+                    value={formatCount(collection.regionsCount)}
                     label={t("Regions")}
                   />
                   <Stat

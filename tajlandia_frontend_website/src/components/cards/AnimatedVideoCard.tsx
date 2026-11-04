@@ -50,13 +50,17 @@ export function AnimatedVideoCard({
   const [isMuted, setIsMuted] = useState(true);
 
   useEffect(() => {
-    const container = interactionTargetRef?.current ?? containerRef.current;
+    const stage = interactionTargetRef?.current ?? containerRef.current;
+    // Listen on the stage's parent: the stage itself is what tilts, so its own
+    // hit area moves under the pointer (enter/leave flicker, and `mouseenter`
+    // restarts a video the user just paused).
+    const container = (interactionTargetRef && stage?.parentElement) || stage;
     const video = videoRef.current;
     if (!container || !video) return;
 
     // Initialize video volume
     video.volume = 0.7;
-    video.muted = true;
+    video.muted = isMuted;
 
     // The tilt is written straight to the DOM once per frame, so moving the
     // mouse never re-renders the card.
@@ -85,11 +89,33 @@ export function AnimatedVideoCard({
       writeTilt(rotationX, rotationY, HOVER_SCALE);
     };
 
+    // Over the control bar the card stays flat, so the buttons don't slide
+    // away from the pointer while it is aiming at them.
+    const isOverControls = (target: EventTarget | null) =>
+      target instanceof Element && target.closest("[data-video-controls]") !== null;
+
+    // The tilt moves the bar away from a pointer that is aiming at it, so the
+    // buttons could never be hit. The strip along the bottom edge (measured on
+    // the stable listener box, not on the tilted bar) therefore keeps the card
+    // flat, and the bar sits still under the pointer.
+    const CONTROLS_MARGIN = 32;
+    const inControlsZone = (y: number) => {
+      const bar = container.querySelector<HTMLElement>("[data-video-controls]");
+      if (!bar) return false;
+      return y >= container.getBoundingClientRect().bottom - bar.offsetHeight - CONTROLS_MARGIN;
+    };
+
     const handleMouseMove = (e: MouseEvent) => {
+      setShowControls(true);
+      if (inControlsZone(e.clientY)) {
+        cancelAnimationFrame(frameId);
+        frameId = 0;
+        writeTilt(0, 0, 1);
+        return;
+      }
       pointerX = e.clientX;
       pointerY = e.clientY;
       if (!frameId) frameId = requestAnimationFrame(applyTilt);
-      setShowControls(true);
     };
 
     const handleMouseLeave = () => {
@@ -106,8 +132,9 @@ export function AnimatedVideoCard({
       }
     };
 
-    const handleTouchStart = () => {
+    const handleTouchStart = (e: TouchEvent) => {
       setShowControls(true);
+      if (isOverControls(e.target)) return;
       if (videoRef.current) {
         if (isPlaying) {
           videoRef.current.pause();
@@ -131,7 +158,7 @@ export function AnimatedVideoCard({
       container.removeEventListener("mouseenter", handleMouseEnter);
       container.removeEventListener("touchstart", handleTouchStart);
     };
-  }, [interactionTargetRef, isPlaying]);
+  }, [interactionTargetRef, isPlaying, isMuted]);
 
   useEffect(() => {
     const animationTarget = interactionTargetRef?.current ?? containerRef.current;
@@ -168,6 +195,48 @@ export function AnimatedVideoCard({
     );
     observer.observe(container);
     return () => observer.disconnect();
+  }, []);
+
+  // Space toggles play/pause while the card is mostly on screen, instead of
+  // scrolling the page. Typing in a field or pressing a control keeps its own
+  // Space behaviour.
+  useEffect(() => {
+    const container = containerRef.current;
+    const video = videoRef.current;
+    if (!container || !video) return;
+
+    let mostlyVisible = false;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        mostlyVisible = entries[0]?.isIntersecting ?? false;
+      },
+      { threshold: 0.5 },
+    );
+    observer.observe(container);
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.code !== "Space" || e.repeat || e.defaultPrevented || !mostlyVisible) return;
+      if (e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) return;
+      const target = e.target;
+      if (
+        target instanceof HTMLElement &&
+        (target.isContentEditable || target.closest("input, textarea, select, button, a, [role='dialog']"))
+      ) {
+        return;
+      }
+      e.preventDefault();
+      if (video.paused) {
+        void video.play().catch(() => {});
+      } else {
+        video.pause();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("keydown", handleKeyDown);
+    };
   }, []);
 
   const handlePlayPause = () => {
@@ -271,7 +340,8 @@ export function AnimatedVideoCard({
 
       {/* Video Controls */}
       <div
-        className={`absolute bottom-0 left-0 right-0 px-4 py-3 transition-opacity duration-300 ${
+        data-video-controls
+        className={`absolute bottom-0 left-0 right-0 z-10 px-4 py-3 transition-opacity duration-300 ${
           showControls ? "opacity-100" : "opacity-0"
         }`}
       >
@@ -281,8 +351,9 @@ export function AnimatedVideoCard({
           <div className="flex items-center gap-3">
             {/* Play/Pause Button */}
             <button
+              type="button"
               onClick={handlePlayPause}
-              className="text-white hover:text-brand-red transition-colors p-1 rounded-full hover:bg-white/10"
+              className="text-white hover:text-brand-red transition-colors p-2 rounded-full hover:bg-white/10"
               title={isPlaying ? "Pause" : "Play"}
             >
               {isPlaying ? (
@@ -305,6 +376,7 @@ export function AnimatedVideoCard({
 
             {/* Previous/Rewind Button */}
             <button
+              type="button"
               onClick={() => {
                 if (videoRef.current) {
                   videoRef.current.currentTime = Math.max(
@@ -313,7 +385,7 @@ export function AnimatedVideoCard({
                   );
                 }
               }}
-              className="text-white hover:text-brand-red transition-colors p-1 rounded-full hover:bg-white/10"
+              className="text-white hover:text-brand-red transition-colors p-2 rounded-full hover:bg-white/10"
               title="Rewind 10s"
             >
               <svg className="w-5 h-5" fill="white" viewBox="0 0 24 24">
@@ -337,6 +409,7 @@ export function AnimatedVideoCard({
 
             {/* Next/Forward Button */}
             <button
+              type="button"
               onClick={() => {
                 if (videoRef.current) {
                   videoRef.current.currentTime = Math.min(
@@ -345,7 +418,7 @@ export function AnimatedVideoCard({
                   );
                 }
               }}
-              className="text-white hover:text-brand-red transition-colors p-1 rounded-full hover:bg-white/10"
+              className="text-white hover:text-brand-red transition-colors p-2 rounded-full hover:bg-white/10"
               title="Forward 10s"
             >
               <svg className="w-5 h-5" fill="white" viewBox="0 0 24 24">
@@ -356,8 +429,9 @@ export function AnimatedVideoCard({
 
             {/* Fullscreen Button */}
             <button
+              type="button"
               onClick={handleFullscreen}
-              className="text-white hover:text-brand-red transition-colors p-1 rounded-full hover:bg-white/10"
+              className="text-white hover:text-brand-red transition-colors p-2 rounded-full hover:bg-white/10"
               title="Fullscreen"
             >
               <svg
@@ -376,8 +450,9 @@ export function AnimatedVideoCard({
 
             {/* Mute/Unmute Button */}
             <button
+              type="button"
               onClick={handleMuteToggle}
-              className="text-white hover:text-brand-red transition-colors p-1 rounded-full hover:bg-white/10"
+              className="text-white hover:text-brand-red transition-colors p-2 rounded-full hover:bg-white/10"
               title={isMuted ? "Unmute" : "Mute"}
             >
               {isMuted ? (

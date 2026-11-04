@@ -13,6 +13,8 @@ import {
 export const BLOG_PAGE_SIZE = 6;
 // Published articles change rarely; serve them from the cache for a few minutes.
 const BLOG_REVALIDATE_SECONDS = 300;
+// The admin panel drops this tag right after a blog is created, changed or deleted.
+export const BLOG_CACHE_TAG = "blog";
 const BLOG_TIMEOUT_MS = 15_000;
 const BLOG_ID = /^[a-f\d]{24}$/i;
 
@@ -27,7 +29,7 @@ export async function fetchBlogPage(
   const response = await apiGet(
     `/page/blog?page=${page}&limit=${limit}`,
     apiEnvelope(blogListPageSchema),
-    { revalidate: BLOG_REVALIDATE_SECONDS, timeoutMs: BLOG_TIMEOUT_MS },
+    { revalidate: BLOG_REVALIDATE_SECONDS, tags: [BLOG_CACHE_TAG], timeoutMs: BLOG_TIMEOUT_MS },
   );
   return response.data;
 }
@@ -39,6 +41,7 @@ export const fetchBlogPost = cache(async (blogId: string): Promise<BlogDetail | 
   try {
     const response = await apiGet(`/page/blog/${blogId}`, apiEnvelope(blogDetailSchema), {
       revalidate: BLOG_REVALIDATE_SECONDS,
+      tags: [BLOG_CACHE_TAG],
       timeoutMs: BLOG_TIMEOUT_MS,
     });
     return response.data;

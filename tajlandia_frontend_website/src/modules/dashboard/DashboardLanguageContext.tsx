@@ -131,7 +131,7 @@ const translations: Record<string, Record<Exclude<DashboardLanguage, "EN">, stri
   Leaderboard: { PL: "Ranking", TH: "กระดานผู้นำ" },
   "Loading leaderboard...": { PL: "Ładowanie rankingu...", TH: "กำลังโหลดกระดานผู้นำ..." },
   Top: { PL: "Najwięksi", TH: "สุดยอด" },
-  "Owner's": { PL: "Właściciele", TH: "เจ้าของ" },
+  "Owners": { PL: "Właściciele", TH: "เจ้าของ" },
   "Discover the collectors who won the largest pieces of Thailand.": {
     PL: "Poznaj kolekcjonerów, którzy zdobyli największe kawałki Tajlandii.",
     TH: "พบกับนักสะสมที่ครอบครองผืนดินที่ใหญ่ที่สุดในประเทศไทย",

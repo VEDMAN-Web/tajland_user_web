@@ -452,7 +452,7 @@ function LeaderboardBoard({ state, onRetry, ownerHref, exploreHref, t }: Leaderb
       >
         <header className="text-center">
           <h1 className="font-[family-name:var(--font-playfair-display)] text-[36px] font-semibold leading-[1.1] tracking-[-0.02em] text-navy sm:text-[44px]">
-            {t("Top")} <span className="italic text-brand-red">{t("Owner's")}</span>
+            {t("Top")} <span className="italic text-brand-red">{t("Owners")}</span>
           </h1>
           <p className="mx-auto mt-2 max-w-[520px] font-manrope text-[14px] leading-6 text-[#718096] sm:mt-3 sm:text-[16px]">
             {t("Discover the collectors who won the largest pieces of Thailand.")}

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { Container } from "@/components/ui/Container";
+import { isAllowedRemoteImage } from "@/lib/config/remote-images";
 import { ScrollAnimatedElement } from "@/components/animations/ScrollAnimatedElement";
 import { BlogCoverImage } from "./components/BlogCoverImage";
 import type { BlogListItem, BlogListPage } from "./schemas/blog.schema";
@@ -119,6 +120,7 @@ export function BlogPage({ initialPage }: BlogPageProps) {
           <div className="mx-auto mt-8 grid max-w-[1160px] grid-cols-1 gap-6 sm:grid-cols-2 lg:mt-10 lg:grid-cols-3 lg:gap-8">
             {posts.map((post, index) => {
               const date = formatBlogDate(post.publishedAt);
+              const hasCover = isAllowedRemoteImage(post.coverImage);
 
               return (
                 <article key={post._id} className="h-full">
@@ -126,24 +128,32 @@ export function BlogPage({ initialPage }: BlogPageProps) {
                     href={blogHref(post)}
                     className="group relative flex h-full min-w-0 flex-col overflow-hidden rounded-[24px] border border-[#e6eaf3] bg-white p-3 text-left shadow-[0_1px_2px_rgba(11,31,77,0.04)] transition duration-300 hover:-translate-y-1.5 hover:border-navy/15 hover:shadow-[0_28px_50px_-28px_rgba(11,31,77,0.35)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy motion-reduce:transition-none motion-reduce:hover:translate-y-0"
                   >
-                    <div className="relative aspect-[16/10] w-full overflow-hidden rounded-[18px] bg-[#eef2f4]">
-                      <BlogCoverImage
-                        src={post.coverImage}
-                        alt={post.title}
-                        priority={index < 3}
-                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 360px"
-                        className="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.06] motion-reduce:transition-none motion-reduce:group-hover:scale-100"
-                      />
-                      <div aria-hidden="true" className="absolute inset-0 bg-linear-to-t from-[#071536]/35 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
-                      {date ? (
-                        <span className="absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-full bg-white/95 px-2.5 py-1 text-[11px] font-medium leading-none text-navy shadow-[0_2px_8px_rgba(11,31,77,0.18)]">
+                    {hasCover ? (
+                      <div className="relative aspect-[16/10] w-full overflow-hidden rounded-[18px] bg-[#eef2f4]">
+                        <BlogCoverImage
+                          src={post.coverImage}
+                          alt={post.title}
+                          priority={index < 3}
+                          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 360px"
+                          className="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.06] motion-reduce:transition-none motion-reduce:group-hover:scale-100"
+                        />
+                        <div aria-hidden="true" className="absolute inset-0 bg-linear-to-t from-[#071536]/35 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+                        {date ? (
+                          <span className="absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-full bg-white/95 px-2.5 py-1 text-[11px] font-medium leading-none text-navy shadow-[0_2px_8px_rgba(11,31,77,0.18)]">
+                            <CalendarIcon />
+                            {date}
+                          </span>
+                        ) : null}
+                      </div>
+                    ) : null}
+
+                    <div className={`relative flex flex-1 flex-col px-2 pb-2 ${hasCover ? "pt-5" : "pt-3"}`}>
+                      {!hasCover && date ? (
+                        <p className="mb-3 inline-flex items-center gap-1.5 text-[12px] font-medium leading-none text-[#8a99aa]">
                           <CalendarIcon />
                           {date}
-                        </span>
+                        </p>
                       ) : null}
-                    </div>
-
-                    <div className="relative flex flex-1 flex-col px-2 pb-2 pt-5">
                       <p className="inline-flex items-center gap-1.5 text-[12px] font-medium leading-none text-[#8a99aa]">
                         <UserIcon />
                         {blogAuthorName(post.authorName)}

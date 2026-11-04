@@ -33,6 +33,12 @@ describe("BlogPage", () => {
     expect(screen.queryByRole("button", { name: "Show More" })).not.toBeInTheDocument();
   });
 
+  it("renders no cover box for articles without a cover image", () => {
+    const { container } = render(<BlogPage initialPage={blogPage(1)} />);
+    expect(container.querySelector(".aspect-\\[16\\/10\\]")).not.toBeInTheDocument();
+    expect(screen.getByText("Oct 10, 2026", { exact: false })).toBeInTheDocument();
+  });
+
   it("offers Show More while pages remain", () => {
     render(<BlogPage initialPage={blogPage(6, 2)} />);
     expect(screen.getByRole("button", { name: "Show More" })).toBeInTheDocument();

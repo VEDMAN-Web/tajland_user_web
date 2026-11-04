@@ -71,8 +71,8 @@ export function TestimonialsSection({ content, locale = "en" }: TestimonialsSect
               <HomeMedia
                 image={featured.image}
                 priority
-                sizes="(max-width: 1024px) 86vw, 446px"
-                className="h-[460px] w-auto max-w-full object-contain transition-transform duration-500 ease-out hover:scale-[1.03] sm:h-[540px] lg:h-[600px]"
+                sizes="(max-width: 1024px) 86vw, 480px"
+                className="h-[460px] w-auto max-w-full rounded-xl border border-[#e3e8ef] bg-white object-contain transition-transform duration-500 ease-out hover:scale-[1.03] sm:h-[540px] lg:h-[630px]"
               />
             </CertificateReveal>
           ) : null}

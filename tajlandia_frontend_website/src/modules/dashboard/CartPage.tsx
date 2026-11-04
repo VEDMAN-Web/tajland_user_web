@@ -536,8 +536,8 @@ function FilledCart({
   return (
     <>
       <ProgressBanner cart={cart} t={t} />
-      <div className="mt-6 grid items-start gap-6 sm:mt-4 lg:grid-cols-[minmax(0,1fr)_360px]">
-        <section>
+      <div className="mt-6 grid items-start gap-6 sm:mt-4 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-stretch">
+        <section className="lg:flex lg:flex-col">
           <div className="flex items-center justify-between gap-3">
             <h2 className="font-manrope text-[18px] font-semibold text-navy sm:text-[20px]">
               {t("Selected Plots")}
@@ -571,7 +571,10 @@ function FilledCart({
               {t(actionError)}
             </p>
           ) : null}
-          <div className="mt-3 space-y-3">
+          {/* From lg the list is as tall as the order summary beside it and scrolls inside that box
+              (absolute, so its own height never stretches the row). */}
+          <div className="mt-3 lg:relative lg:min-h-[24rem] lg:flex-1">
+          <div className="space-y-3 lg:absolute lg:inset-x-[-4px] lg:inset-y-0 lg:overflow-y-auto lg:overscroll-contain lg:px-1 lg:py-1 lg:pr-2 lg:[scrollbar-color:#cfd6df_transparent] lg:[scrollbar-width:thin]">
             {cart.items.map((item) => (
               <CartItemCard
                 key={item.plotId}
@@ -585,9 +588,16 @@ function FilledCart({
               />
             ))}
           </div>
+          </div>
         </section>
 
-        <OrderSummary cart={cart} coupon={coupon} remainingRai={remainingRai} t={t} />
+        <OrderSummary
+          cart={cart}
+          coupon={coupon}
+          remainingRai={remainingRai}
+          onReservationExpired={onReservationExpired}
+          t={t}
+        />
       </div>
     </>
   );
@@ -712,15 +722,31 @@ function OrderSummary({
   cart,
   coupon,
   remainingRai,
+  onReservationExpired,
   t,
 }: {
   cart: CartView;
   coupon: CouponControls;
   remainingRai: number;
+  onReservationExpired: () => void;
   t: Translate;
 }) {
+  // The earliest lock still running: "all your plots" is held until it ends.
+  // Plots with no lock left (0) are already shown as expired on their cards.
+  const running = Object.values(cart.deadlines ?? {}).filter((deadline) => deadline > 0);
+  const deadline = running.length ? Math.min(...running) : null;
+
   return (
     <aside>
+      {deadline !== null && cart.checkoutEligible ? (
+        <ReservationCountdown
+          deadline={deadline}
+          template="Complete checkout within {time} to keep all your plots"
+          onExpire={onReservationExpired}
+          t={t}
+          className="mb-3 px-3 py-1 text-[12px]"
+        />
+      ) : null}
       <CouponForm coupon={coupon} discount={cart.discount} t={t} />
       <div className="mt-3">
         <OrderSummaryCard summary={cart} t={t}>

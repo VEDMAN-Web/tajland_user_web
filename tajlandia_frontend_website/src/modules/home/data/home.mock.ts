@@ -18,22 +18,21 @@ export const homePageContent: HomePageContent = {
       width: 800,
       height: 600,
     },
-    // Demo only: third-party reference frames, git-ignored. Swap for our own
-    // film (same folder layout) before anything ships.
+    // Our own film: 24fps frames extracted from the 4K source (1920x1080 desktop, 960x540 mobile).
     film: {
       desktop: {
-        framePath: "/images/home/hero-film-demo/desktop/frame-{frame}.webp",
-        frameCount: 383,
+        framePath: "/images/home/hero-film/desktop/frame-{frame}.webp",
+        frameCount: 382,
       },
       mobile: {
-        framePath: "/images/home/hero-film-demo/mobile/frame-{frame}.webp",
-        frameCount: 383,
+        framePath: "/images/home/hero-film/mobile/frame-{frame}.webp",
+        frameCount: 382,
       },
       poster: {
-        src: "/images/home/hero-film-demo/desktop/frame-0001.webp",
+        src: "/images/home/hero-film/desktop/frame-0001.webp",
         alt: "Aerial view through the clouds over a tropical coastline and bay",
-        width: 1600,
-        height: 900,
+        width: 1920,
+        height: 1080,
       },
     },
     story: [
@@ -186,10 +185,10 @@ export const homePageContent: HomePageContent = {
         name: "Amelia Hart",
         role: "Lifestyle buyer, UK",
         image: {
-          src: "/images/home/certificate.png",
+          src: "/images/home/certificate-keepsake.png",
           alt: "Tajlandia certificate of symbolic ownership",
-          width: 435,
-          height: 593,
+          width: 2584,
+          height: 3764,
         },
         order: 1,
         isActive: true,
