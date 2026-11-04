@@ -24,7 +24,7 @@ export function SearchResultRow({ result, onSelect, t }: SearchResultRowProps) {
         <strong className="block truncate text-[12px] font-medium text-navy">
           {result.name}
         </strong>
-        <PlaceCounts zone={result.zone} plots={result.plots} t={t} />
+        <PlaceCounts zone={result.zone} plots={result.plots} showZones={false} t={t} />
       </span>
       <span
         aria-hidden="true"
