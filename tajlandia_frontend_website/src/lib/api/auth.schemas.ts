@@ -7,6 +7,7 @@ export const authResponseBaseSchema = z.object({
   message: z.string(),
 });
 
+
 export const loginResponseSchema = authResponseBaseSchema.extend({
   data: z
     .object({
